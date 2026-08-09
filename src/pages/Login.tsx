@@ -1,0 +1,153 @@
+import { useState } from 'react'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { rotaInicial, useAuth } from '../auth/AuthProvider'
+import { IconeOnibus } from '../components/icons'
+import { mensagemErro, supabase } from '../lib/supabase'
+import { useToast } from '../components/ui/Toast'
+
+export default function Login() {
+  const { sessao, perfil, entrar, carregando } = useAuth()
+  const navegar = useNavigate()
+  const local = useLocation() as { state?: { de?: string } }
+  const toast = useToast()
+
+  const [email, setEmail] = useState('')
+  const [senha, setSenha] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
+
+  // Já autenticado: vai para o painel do próprio perfil (RF21)
+  if (!carregando && sessao && perfil) {
+    return <Navigate to={local.state?.de ?? rotaInicial(perfil.tipo)} replace />
+  }
+
+  async function submeter(e: React.FormEvent) {
+    e.preventDefault()
+    setErro(null)
+    setEnviando(true)
+    try {
+      await entrar(email.trim(), senha)
+      // O redirecionamento definitivo ocorre no <Navigate> acima, assim que o
+      // perfil termina de carregar e o tipo é conhecido.
+      navegar(local.state?.de ?? '/login', { replace: true })
+    } catch (err) {
+      const msg = mensagemErro(err)
+      setErro(
+        msg.includes('Invalid login credentials') ? 'E-mail ou senha incorretos.' : msg,
+      )
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  async function recuperarSenha() {
+    if (!email.trim()) {
+      toast.alerta('Informe seu e-mail para receber o link de redefinição.')
+      return
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/login`,
+    })
+    if (error) toast.erro(mensagemErro(error))
+    else toast.sucesso('Link de redefinição enviado para o seu e-mail.')
+  }
+
+  return (
+    <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[1.05fr_1fr]">
+      {/* Painel institucional */}
+      <div className="hidden flex-col justify-between bg-primary p-11 text-primary-fg lg:flex">
+        <div className="flex items-center gap-2.5">
+          <IconeOnibus size={30} />
+          <span className="text-[15px] font-semibold tracking-[0.02em]">GTPORTE</span>
+        </div>
+
+        <div className="max-w-[440px]">
+          <div className="mb-[18px] font-mono text-[11px] uppercase tracking-[0.16em] opacity-60">
+            Setor de Transporte · Araçatuba
+          </div>
+          <h1 className="mb-[18px] text-[36px] font-medium leading-[1.15] tracking-[-0.015em]">
+            Gestão do transporte acadêmico municipal, sem papel.
+          </h1>
+          <p className="text-[14.5px] leading-[1.55] opacity-75">
+            Cadastro digital, validação de documentos, distribuição automática por horário de aulas
+            e confirmação diária de presença — em um só lugar.
+          </p>
+        </div>
+
+        <div className="font-mono text-[11px] tracking-[0.06em] opacity-50">
+          © 2026 Prefeitura de Araçatuba · Núcleo de TI
+        </div>
+      </div>
+
+      {/* Formulário */}
+      <div className="flex items-center justify-center bg-bg p-8 lg:p-11">
+        <form onSubmit={submeter} className="w-full max-w-[400px]">
+          <div className="mb-2 flex items-center gap-2 lg:hidden">
+            <span className="text-primary">
+              <IconeOnibus size={24} />
+            </span>
+            <span className="text-[15px] font-semibold">GTPORTE</span>
+          </div>
+
+          <div className="eyebrow mb-2">Entrar</div>
+          <h2 className="mb-1.5 text-[26px] font-semibold tracking-[-0.01em]">Acesse sua conta</h2>
+          <p className="mb-6 text-[13.5px] text-muted">Estudante, motorista ou administrador.</p>
+
+          <div className="flex flex-col gap-3.5">
+            <label className="block">
+              <span className="field-label">E-mail institucional</span>
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="voce@aracatuba.sp.gov.br"
+                className="field"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 flex items-baseline justify-between">
+                <span className="text-xs font-medium">Senha</span>
+                <button
+                  type="button"
+                  onClick={recuperarSenha}
+                  className="text-xs text-primary hover:text-primary-hover"
+                >
+                  Esqueci minha senha
+                </button>
+              </span>
+              <input
+                type="password"
+                required
+                autoComplete="current-password"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                placeholder="••••••••"
+                className="field"
+              />
+            </label>
+
+            {erro && (
+              <div className="rounded-btn border border-danger/30 bg-bg-danger px-3 py-2.5 text-[12.5px] text-danger">
+                {erro}
+              </div>
+            )}
+
+            <button type="submit" disabled={enviando} className="btn-primary mt-2 w-full py-3">
+              {enviando ? 'Entrando…' : 'Entrar'}
+            </button>
+
+            <div className="mt-3 text-center text-[12.5px] text-muted">
+              Ainda não tem cadastro?{' '}
+              <Link to="/cadastro" className="font-medium text-primary hover:text-primary-hover">
+                Cadastre-se como estudante
+              </Link>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}

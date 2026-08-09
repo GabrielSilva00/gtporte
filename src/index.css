@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    @apply h-full;
+  }
+
+  body {
+    @apply bg-bg text-ink font-sans antialiased;
+    font-feature-settings: 'ss01', 'cv11';
+  }
+
+  ::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #dad3c3;
+    border-radius: 99px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@layer components {
+  /* Campos de formulario - padrao visual do prototipo */
+  .field {
+    @apply w-full rounded-field border border-edge bg-surface px-3 py-2.5 text-[13.5px] text-ink outline-none
+           placeholder:text-soft focus:border-primary/40 focus:ring-2 focus:ring-primary/10;
+  }
+
+  .field-label {
+    @apply mb-1.5 block text-xs font-medium text-ink;
+  }
+
+  .card {
+    @apply rounded-card border border-edge bg-surface;
+  }
+
+  .btn {
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-btn text-[13px] font-medium
+           transition-colors disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary px-4 py-2.5 text-primary-fg hover:bg-primary-hover;
+  }
+
+  .btn-ghost {
+    @apply btn border border-edge bg-surface px-4 py-2.5 text-ink hover:bg-bg;
+  }
+
+  .btn-danger {
+    @apply btn border border-danger bg-surface px-4 py-2.5 text-danger hover:bg-bg-danger;
+  }
+
+  .btn-success {
+    @apply btn bg-success px-4 py-2.5 text-white hover:brightness-95;
+  }
+
+  .th {
+    @apply px-[18px] py-3 text-left text-[11.5px] font-medium text-muted;
+  }
+
+  .td {
+    @apply px-[18px] py-3 align-middle;
+  }
+
+  .eyebrow {
+    @apply font-mono text-[11px] uppercase tracking-[0.14em] text-muted;
+  }
+}

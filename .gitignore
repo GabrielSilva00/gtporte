@@ -1,0 +1,16 @@
+node_modules
+dist
+dist-ssr
+*.local
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+.vscode/*
+!.vscode/extensions.json
+.vercel
+*.tsbuildinfo
+
+# Documentos do relatorio academico, mantidos apenas localmente
+uploads/

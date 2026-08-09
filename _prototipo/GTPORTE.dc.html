@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  :root {
+    --bg:#F5F3EE; --surface:#FFFFFF; --ink:#1B1D1E; --muted:#6B7570;
+    --soft:#8B948E; --border:#E5E1D6; --line:#EEEAE0;
+    --primary:#1F3A2E; --primary-hover:#152820; --primary-fg:#F5F3EE;
+    --accent:#C4633A; --success:#2E7D5A; --warn:#B8862B; --danger:#9E3E3E;
+    --tint:#EEF1EF;
+  }
+  html, body { margin:0; padding:0; background:var(--bg); color:var(--ink);
+    font-family:'Söhne','Helvetica Neue',Helvetica,Arial,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    -webkit-font-smoothing:antialiased; font-feature-settings:'ss01','cv11'; }
+  * { box-sizing:border-box; }
+  a { color:var(--primary); text-decoration:none; }
+  a:hover { color:var(--primary-hover); }
+  button { font-family:inherit; }
+  input, textarea, select { font-family:inherit; }
+  ::-webkit-scrollbar { width:9px; height:9px; }
+  ::-webkit-scrollbar-thumb { background:#DAD3C3; border-radius:99px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  .mono { font-family:ui-monospace,'SF Mono',SFMono-Regular,Menlo,Consolas,monospace; }
+</style>
+</helmet>
+
+<sc-if value="{{ isAuth }}" hint-placeholder-val="">
+  <!-- ============ AUTH SHELL (Login / Cadastro) ============ -->
+  <div style="min-height:100vh; display:grid; grid-template-columns:1.05fr 1fr;">
+    <!-- Left brand panel -->
+    <div style="background:var(--primary); color:var(--primary-fg); padding:44px; display:flex; flex-direction:column; justify-content:space-between;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="7.5" cy="18" r="1.6" fill="currentColor"/><circle cx="16.5" cy="18" r="1.6" fill="currentColor"/><path d="M3 10h18M8 6V4h8v2"/></svg>
+        <div style="font-weight:600; letter-spacing:0.02em; font-size:15px;">GTPORTE</div>
+      </div>
+
+      <div style="max-width:440px;">
+        <div class="mono" style="font-size:11px; letter-spacing:0.16em; text-transform:uppercase; opacity:0.6; margin-bottom:18px;">Setor de Transporte · Araçatuba</div>
+        <h1 style="font-weight:500; font-size:36px; line-height:1.15; margin:0 0 18px 0; letter-spacing:-0.015em;">Gestão do transporte acadêmico municipal, sem papel.</h1>
+        <p style="font-size:14.5px; line-height:1.55; opacity:0.75; margin:0;">Cadastro digital, validação de documentos, distribuição automática por horário de aulas e confirmação diária de presença — em um só lugar.</p>
+      </div>
+
+      <div class="mono" style="font-size:11px; opacity:0.5; letter-spacing:0.06em;">© 2026 Prefeitura de Araçatuba · Núcleo de TI</div>
+    </div>
+
+    <!-- Right form -->
+    <div style="background:var(--bg); display:flex; align-items:center; justify-content:center; padding:44px;">
+      <div style="width:100%; max-width:400px;">
+
+        <!-- LOGIN -->
+        <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+          <div>
+            <div class="mono" style="font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin-bottom:8px;">Entrar</div>
+            <h2 style="font-size:26px; font-weight:600; margin:0 0 6px 0; letter-spacing:-0.01em;">Acesse sua conta</h2>
+            <p style="font-size:13.5px; color:var(--muted); margin:0 0 26px 0;">Estudante, motorista ou administrador.</p>
+
+            <div style="display:flex; flex-direction:column; gap:14px;">
+              <label style="display:block;">
+                <div style="font-size:12px; font-weight:500; color:var(--ink); margin-bottom:6px;">E-mail institucional</div>
+                <input type="email" placeholder="voce@aracatuba.sp.gov.br" style="width:100%; padding:11px 13px; border:1px solid var(--border); border-radius:8px; background:var(--surface); font-size:13.5px; outline:none; color:var(--ink);">
+              </label>
+              <label style="display:block;">
+                <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
+                  <span style="font-size:12px; font-weight:500;">Senha</span>
+                  <a href="#" style="font-size:12px;">Esqueci minha senha</a>
+                </div>
+                <input type="password" placeholder="••••••••" style="width:100%; padding:11px 13px; border:1px solid var(--border); border-radius:8px; background:var(--surface); font-size:13.5px; outline:none;">
+              </label>
+
+              <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted); margin-top:2px;">
+                <input type="checkbox" style="accent-color:var(--primary);"> Manter conectado neste dispositivo
+              </label>
+
+              <button onClick="{{ goDashboard }}" style="margin-top:8px; padding:12px; background:var(--primary); color:var(--primary-fg); border:none; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer;">Entrar</button>
+
+              <div style="text-align:center; font-size:12.5px; color:var(--muted); margin-top:14px;">
+                Ainda não tem cadastro? <a href="#" onClick="{{ goCadastro }}" style="font-weight:500;">Cadastre-se como estudante</a>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- CADASTRO -->
+        <sc-if value="{{ isCadastro }}" hint-placeholder-val="">
+          <div>
+            <div class="mono" style="font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin-bottom:8px;">Cadastro de estudante</div>
+            <h2 style="font-size:24px; font-weight:600; margin:0 0 6px 0; letter-spacing:-0.01em;">Solicitar transporte acadêmico</h2>
+            <p style="font-size:13.5px; color:var(--muted); margin:0 0 22px 0;">Preencha seus dados e envie os documentos. Você recebe a confirmação por e-mail.</p>
+
+            <div style="display:flex; gap:8px; margin-bottom:22px;">
+              <div style="flex:1; height:3px; background:var(--primary); border-radius:99px;"></div>
+              <div style="flex:1; height:3px; background:var(--border); border-radius:99px;"></div>
+              <div style="flex:1; height:3px; background:var(--border); border-radius:99px;"></div>
+            </div>
+            <div class="mono" style="font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:14px;">Etapa 1 de 3 · Dados pessoais</div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+              <label style="grid-column:1/-1;">
+                <div style="font-size:12px; font-weight:500; margin-bottom:6px;">Nome completo</div>
+                <input placeholder="Como está no RG" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:7px; background:var(--surface); font-size:13.5px; outline:none;">
+              </label>
+              <label>
+                <div style="font-size:12px; font-weight:500; margin-bottom:6px;">CPF</div>
+                <input placeholder="000.000.000-00" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:7px; background:var(--surface); font-size:13.5px; outline:none;">
+              </label>
+              <label>
+                <div style="font-size:12px; font-weight:500; margin-bottom:6px;">Data de nascimento</div>
+                <input type="date" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:7px; background:var(--surface); font-size:13.5px; outline:none;">
+              </label>
+              <label>
+                <div style="font-size:12px; font-weight:500; margin-bottom:6px;">E-mail</div>
+                <input type="email" placeholder="voce@email.com" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:7px; background:var(--surface); font-size:13.5px; outline:none;">
+              </label>
+              <label>
+                <div style="font-size:12px; font-weight:500; margin-bottom:6px;">Telefone</div>
+                <input placeholder="(18) 9 0000-0000" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:7px; background:var(--surface); font-size:13.5px; outline:none;">
+              </label>
+              <label style="grid-column:1/-1;">
+                <div style="font-size:12px; font-weight:500; margin-bottom:6px;">Senha de acesso</div>
+                <input type="password" placeholder="Mínimo 8 caracteres" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:7px; background:var(--surface); font-size:13.5px; outline:none;">
+              </label>
+            </div>
+
+            <div style="display:flex; gap:8px; margin-top:22px;">
+              <button onClick="{{ goLogin }}" style="flex:1; padding:11px; background:var(--surface); color:var(--ink); border:1px solid var(--border); border-radius:8px; font-size:13.5px; cursor:pointer;">Voltar ao login</button>
+              <button style="flex:1.4; padding:11px; background:var(--primary); color:var(--primary-fg); border:none; border-radius:8px; font-size:13.5px; font-weight:500; cursor:pointer;">Continuar →</button>
+            </div>
+          </div>
+        </sc-if>
+
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isApp }}" hint-placeholder-val="{{ true }}">
+<!-- ============ APP SHELL ============ -->
+<div style="display:flex; min-height:100vh;">
+
+  <!-- SIDEBAR -->
+  <aside style="width:236px; flex-shrink:0; background:var(--primary); color:#DDD8CB; display:flex; flex-direction:column; position:sticky; top:0; height:100vh;">
+    <div style="padding:22px 20px 18px 20px; display:flex; align-items:center; gap:10px; border-bottom:1px solid rgba(255,255,255,0.08);">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="7.5" cy="18" r="1.5" fill="currentColor"/><circle cx="16.5" cy="18" r="1.5" fill="currentColor"/><path d="M3 10h18M8 6V4h8v2"/></svg>
+      <div>
+        <div style="font-weight:600; font-size:14.5px; letter-spacing:0.01em;">GTPORTE</div>
+        <div class="mono" style="font-size:10px; opacity:0.55; letter-spacing:0.06em; text-transform:uppercase; margin-top:1px;">v1.0 · Araçatuba</div>
+      </div>
+    </div>
+
+    <nav style="flex:1; overflow-y:auto; padding:14px 10px;">
+      <sc-for list="{{ navSections }}" as="sec" hint-placeholder-count="3">
+        <div style="padding:12px 10px 6px 10px; font-size:10px; letter-spacing:0.14em; text-transform:uppercase; opacity:0.5; font-weight:500;">{{ sec.title }}</div>
+        <div style="display:flex; flex-direction:column; gap:1px;">
+          <sc-for list="{{ sec.items }}" as="item" hint-placeholder-count="4">
+            <button onClick="{{ item.go }}" style="display:flex; align-items:center; gap:11px; padding:8px 10px; border:none; background:{{ item.bg }}; color:{{ item.fg }}; border-radius:7px; text-align:left; cursor:pointer; font-size:13.5px; font-weight:{{ item.weight }};">
+              <span style="width:18px; height:18px; display:flex; align-items:center; justify-content:center;">{{ item.icon }}</span>
+              <span style="flex:1;">{{ item.label }}</span>
+              <sc-if value="{{ item.badge }}" hint-placeholder-val=""><span class="mono" style="background:var(--accent); color:#FFF; font-size:10.5px; font-weight:500; padding:1px 6px; border-radius:99px;">{{ item.badge }}</span></sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </sc-for>
+    </nav>
+
+    <div style="padding:14px 16px; border-top:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:10px;">
+      <div style="width:32px; height:32px; border-radius:50%; background:#C4633A; color:#FFF; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:12px;">AM</div>
+      <div style="min-width:0; flex:1;">
+        <div style="font-size:12.5px; font-weight:500;">Ana Meireles</div>
+        <div style="font-size:10.5px; opacity:0.6;">Administradora</div>
+      </div>
+      <button onClick="{{ goLogin }}" title="Sair" style="width:28px; height:28px; border-radius:6px; border:none; background:transparent; color:#DDD8CB; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main style="flex:1; min-width:0; display:flex; flex-direction:column;">
+
+    <header style="height:60px; background:var(--bg); border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 30px; gap:16px; position:sticky; top:0; z-index:10;">
+      <div style="font-size:14px; color:var(--ink); font-weight:600;">{{ crumb }}</div>
+      <div style="flex:1;"></div>
+      <div style="display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:6px 11px; width:280px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--soft)" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input placeholder="Buscar…" style="border:none; outline:none; background:transparent; flex:1; font-size:13px;">
+      </div>
+      <button style="width:34px; height:34px; border-radius:8px; border:1px solid var(--border); background:var(--surface); cursor:pointer; display:flex; align-items:center; justify-content:center; position:relative;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <span style="position:absolute; top:6px; right:6px; width:6px; height:6px; background:var(--accent); border-radius:50%;"></span>
+      </button>
+    </header>
+
+    <div style="flex:1; padding:26px 30px 60px 30px; overflow:auto;">
+
+    <!-- ============ DASHBOARD ============ -->
+    <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+      <div>
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:22px;">
+          <div>
+            <h1 style="font-size:22px; font-weight:600; margin:0; letter-spacing:-0.01em;">Visão geral</h1>
+            <div style="font-size:13px; color:var(--muted); margin-top:3px;">Terça-feira, 09 de agosto de 2026</div>
+          </div>
+          <button onClick="{{ goAlocacao }}" style="padding:9px 15px; border:none; background:var(--primary); color:var(--primary-fg); border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:8px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6M7 12H1m17.36-6.36-4.24 4.24M9.88 14.12l-4.24 4.24m0-12.72 4.24 4.24m4.24 4.24 4.24 4.24"/></svg>
+            Executar alocação
+          </button>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:22px;">
+          <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:16px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-size:12px; color:var(--muted);">{{ k.label }}</div>
+                <div style="color:{{ k.iconColor }}; display:flex;">{{ k.icon }}</div>
+              </div>
+              <div style="font-size:26px; font-weight:600; margin-top:8px; letter-spacing:-0.02em;">{{ k.value }}</div>
+              <div style="font-size:12px; color:var(--muted); margin-top:2px;"><span style="color:{{ k.trendColor }}; font-weight:500;">{{ k.trend }}</span> {{ k.trendLabel }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:14px; margin-bottom:14px;">
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:18px;">
+              <div style="font-size:14.5px; font-weight:600;">Ocupação de hoje</div>
+              <div style="font-size:12px; color:var(--muted);">passageiros / capacidade</div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:14px;">
+              <sc-for list="{{ occupancy }}" as="r" hint-placeholder-count="5">
+                <div>
+                  <div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:6px;">
+                    <div><span class="mono" style="color:var(--muted); margin-right:8px;">{{ r.code }}</span>{{ r.name }}</div>
+                    <div class="mono" style="color:var(--muted);">{{ r.used }} / {{ r.cap }}</div>
+                  </div>
+                  <div style="height:6px; background:var(--tint); border-radius:99px; overflow:hidden;">
+                    <div style="height:100%; width:{{ r.pct }}; background:{{ r.color }}; border-radius:99px;"></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:20px;">
+            <div style="font-size:14.5px; font-weight:600; margin-bottom:14px;">Alertas</div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <sc-for list="{{ alerts }}" as="a" hint-placeholder-count="3">
+                <div style="display:flex; gap:11px; padding:11px; background:{{ a.bg }}; border-radius:8px;">
+                  <div style="color:{{ a.color }}; flex-shrink:0; display:flex;">{{ a.icon }}</div>
+                  <div style="flex:1; min-width:0;">
+                    <div style="font-size:12.5px; font-weight:500;">{{ a.title }}</div>
+                    <div style="font-size:11.5px; color:var(--muted); line-height:1.45; margin-top:2px;">{{ a.desc }}</div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:20px;">
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px;">
+            <div style="font-size:14.5px; font-weight:600;">Rotas em operação</div>
+            <button onClick="{{ goRotas }}" style="border:none; background:transparent; color:var(--primary); font-size:12.5px; cursor:pointer; font-weight:500;">Ver todas →</button>
+          </div>
+          <sc-for list="{{ activeRoutes }}" as="r" hint-placeholder-count="4">
+            <div style="display:grid; grid-template-columns:52px 1fr 130px 100px 90px; align-items:center; gap:14px; padding:12px 0; border-top:1px solid var(--line);">
+              <div class="mono" style="font-size:13px; color:var(--primary); font-weight:600;">{{ r.code }}</div>
+              <div>
+                <div style="font-size:13px; font-weight:500;">{{ r.name }}</div>
+                <div style="font-size:11px; color:var(--soft); margin-top:1px;">{{ r.driver }}</div>
+              </div>
+              <div class="mono" style="font-size:12px; color:var(--muted);">{{ r.partida }} → {{ r.retorno }}</div>
+              <div>
+                <div class="mono" style="font-size:12px;">{{ r.used }} / {{ r.cap }}</div>
+                <div style="height:3px; background:var(--tint); border-radius:99px; margin-top:4px; overflow:hidden;"><div style="height:100%; width:{{ r.pct }}; background:{{ r.color }};"></div></div>
+              </div>
+              <span class="mono" style="font-size:10.5px; padding:3px 8px; border-radius:99px; letter-spacing:0.04em; background:{{ r.statusBg }}; color:{{ r.statusFg }}; justify-self:end;">{{ r.status }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ============ ESTUDANTES ============ -->
+    <sc-if value="{{ isEstudantes }}" hint-placeholder-val="">
+      <div>
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:20px;">
+          <div>
+            <h1 style="font-size:22px; font-weight:600; margin:0;">Estudantes</h1>
+            <div style="font-size:13px; color:var(--muted); margin-top:3px;">1.284 cadastrados</div>
+          </div>
+          <button style="padding:9px 15px; border:none; background:var(--primary); color:var(--primary-fg); border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:8px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            Novo estudante
+          </button>
+        </div>
+
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:12px 16px; margin-bottom:14px; display:flex; gap:10px; align-items:center;">
+          <div style="display:flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid var(--border); border-radius:7px; flex:1;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--soft)" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input placeholder="Nome, RA ou CPF" style="border:none; outline:none; background:transparent; flex:1; font-size:13px;">
+          </div>
+          <select style="padding:7px 10px; border:1px solid var(--border); border-radius:7px; background:var(--surface); font-size:12.5px;">
+            <option>Todas universidades</option><option>UNESP Araçatuba</option><option>UFSCar</option><option>FATEC</option>
+          </select>
+          <select style="padding:7px 10px; border:1px solid var(--border); border-radius:7px; background:var(--surface); font-size:12.5px;">
+            <option>Todos os status</option><option>Aprovado</option><option>Pendente</option><option>Rejeitado</option>
+          </select>
+        </div>
+
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; overflow:hidden;">
+          <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border);">
+                <th style="text-align:left; padding:12px 18px; font-size:11.5px; color:var(--muted); font-weight:500;">Estudante</th>
+                <th style="text-align:left; padding:12px 18px; font-size:11.5px; color:var(--muted); font-weight:500;">RA</th>
+                <th style="text-align:left; padding:12px 18px; font-size:11.5px; color:var(--muted); font-weight:500;">Universidade</th>
+                <th style="text-align:left; padding:12px 18px; font-size:11.5px; color:var(--muted); font-weight:500;">Rota</th>
+                <th style="text-align:left; padding:12px 18px; font-size:11.5px; color:var(--muted); font-weight:500;">Status</th>
+                <th style="width:40px;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ students }}" as="s" hint-placeholder-count="8">
+                <tr style="border-bottom:1px solid var(--line);">
+                  <td style="padding:12px 18px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                      <div style="width:30px; height:30px; border-radius:50%; background:{{ s.avatarBg }}; color:#FFF; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600;">{{ s.initials }}</div>
+                      <div style="font-weight:500;">{{ s.nome }}</div>
+                    </div>
+                  </td>
+                  <td class="mono" style="padding:12px 18px; color:var(--muted);">{{ s.ra }}</td>
+                  <td style="padding:12px 18px;">{{ s.univ }}</td>
+                  <td class="mono" style="padding:12px 18px; color:var(--primary); font-weight:500;">{{ s.rota }}</td>
+                  <td style="padding:12px 18px;"><span style="font-size:11.5px; padding:3px 9px; border-radius:99px; background:{{ s.docsBg }}; color:{{ s.docsFg }};">{{ s.docs }}</span></td>
+                  <td style="padding:12px 18px; color:var(--soft); text-align:center; cursor:pointer;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+                  </td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ============ FUNCIONARIOS (admin) ============ -->
+    <sc-if value="{{ isFuncionarios }}" hint-placeholder-val="">
+      <div>
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:6px;">
+          <div>
+            <h1 style="font-size:22px; font-weight:600; margin:0;">Funcionários & acessos</h1>
+            <div style="font-size:13px; color:var(--muted); margin-top:3px;">Cadastre usuários internos do sistema — perfil define o que cada um vê.</div>
+          </div>
+          <button onClick="{{ toggleNovoFunc }}" style="padding:9px 15px; border:none; background:var(--primary); color:var(--primary-fg); border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:8px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            Novo funcionário
+          </button>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:20px 0;">
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:16px; display:flex; gap:12px; align-items:center;">
+            <div style="width:38px; height:38px; border-radius:9px; background:var(--tint); color:var(--primary); display:flex; align-items:center; justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+            </div>
+            <div><div style="font-size:20px; font-weight:600;">2</div><div style="font-size:11.5px; color:var(--muted);">administradores</div></div>
+          </div>
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:16px; display:flex; gap:12px; align-items:center;">
+            <div style="width:38px; height:38px; border-radius:9px; background:#F4EAE1; color:var(--accent); display:flex; align-items:center; justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg>
+            </div>
+            <div><div style="font-size:20px; font-weight:600;">4</div><div style="font-size:11.5px; color:var(--muted);">operadores</div></div>
+          </div>
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:16px; display:flex; gap:12px; align-items:center;">
+            <div style="width:38px; height:38px; border-radius:9px; background:#EAF3EC; color:var(--success); display:flex; align-items:center; justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 9l6 6M20 3h-8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8"/><rect x="2" y="7" width="12" height="10" rx="2"/></svg>
+            </div>
+            <div><div style="font-size:20px; font-weight:600;">9</div><div style="font-size:11.5px; color:var(--muted);">motoristas</div></div>
+          </div>
+        </div>
+
+        <sc-if value="{{ novoFunc }}" hint-placeholder-val="">
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:20px; margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+              <div style="font-size:14.5px; font-weight:600;">Novo funcionário</div>
+              <button onClick="{{ toggleNovoFunc }}" style="border:none; background:transparent; color:var(--soft); cursor:pointer;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+              <label><div style="font-size:12px; font-weight:500; margin-bottom:6px;">Nome completo</div><input placeholder="Nome do funcionário" style="width:100%; padding:9px 11px; border:1px solid var(--border); border-radius:7px; font-size:13px; outline:none;"></label>
+              <label><div style="font-size:12px; font-weight:500; margin-bottom:6px;">CPF</div><input placeholder="000.000.000-00" style="width:100%; padding:9px 11px; border:1px solid var(--border); border-radius:7px; font-size:13px; outline:none;"></label>
+              <label><div style="font-size:12px; font-weight:500; margin-bottom:6px;">Telefone</div><input placeholder="(18) 9 0000-0000" style="width:100%; padding:9px 11px; border:1px solid var(--border); border-radius:7px; font-size:13px; outline:none;"></label>
+              <label style="grid-column:span 2;"><div style="font-size:12px; font-weight:500; margin-bottom:6px;">E-mail institucional</div><input placeholder="nome@aracatuba.sp.gov.br" style="width:100%; padding:9px 11px; border:1px solid var(--border); border-radius:7px; font-size:13px; outline:none;"></label>
+              <label><div style="font-size:12px; font-weight:500; margin-bottom:6px;">Perfil de acesso</div><select style="width:100%; padding:9px 11px; border:1px solid var(--border); border-radius:7px; font-size:13px; background:var(--surface);"><option>Administrador</option><option>Operador</option><option>Motorista</option></select></label>
+            </div>
+            <div style="margin-top:14px; padding:11px 13px; background:var(--tint); border-radius:8px; font-size:12px; color:var(--muted); display:flex; align-items:flex-start; gap:9px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.7" style="flex-shrink:0; margin-top:1px;"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+              Uma senha temporária é gerada e enviada por e-mail. O funcionário troca no primeiro acesso.
+            </div>
+            <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
+              <button onClick="{{ toggleNovoFunc }}" style="padding:9px 15px; border:1px solid var(--border); background:var(--surface); border-radius:8px; font-size:13px; cursor:pointer;">Cancelar</button>
+              <button style="padding:9px 15px; border:none; background:var(--primary); color:var(--primary-fg); border-radius:8px; font-size:13px; font-weight:500; cursor:pointer;">Criar acesso</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; overflow:hidden;">
+          <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border);">
+                <th style="text-align:left; padding:12px 18px; font-size:11.5px; color:var(--muted); font-weight:500;">Nome</th>
+                <th style="text-align:left; padding:12px 18px; font-size:11.5px; color:var(--muted); font-weight:500;">E-mail</th>
+                <th style="text-align:left; padding:12px 18px; font-size:11.5px; color:var(--muted); font-weight:500;">Perfil</th>
+                <th style="text-align:left; padding:12px 18px; font-size:11.5px; color:var(--muted); font-weight:500;">Último acesso</th>
+                <th style="text-align:left; padding:12px 18px; font-size:11.5px; color:var(--muted); font-weight:500;">Status</th>
+                <th style="width:70px;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ funcionarios }}" as="f" hint-placeholder-count="5">
+                <tr style="border-bottom:1px solid var(--line);">
+                  <td style="padding:12px 18px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                      <div style="width:30px; height:30px; border-radius:50%; background:{{ f.bg }}; color:#FFF; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600;">{{ f.initials }}</div>
+                      <div style="font-weight:500;">{{ f.nome }}</div>
+                    </div>
+                  </td>
+                  <td class="mono" style="padding:12px 18px; color:var(--muted); font-size:12px;">{{ f.email }}</td>
+                  <td style="padding:12px 18px;"><span style="font-size:11.5px; padding:3px 9px; border-radius:99px; background:{{ f.perfilBg }}; color:{{ f.perfilFg }};">{{ f.perfil }}</span></td>
+                  <td class="mono" style="padding:12px 18px; color:var(--muted); font-size:12px;">{{ f.acesso }}</td>
+                  <td style="padding:12px 18px;"><span style="display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:{{ f.stFg }};"><span style="width:6px; height:6px; border-radius:50%; background:{{ f.stFg }};"></span>{{ f.status }}</span></td>
+                  <td style="padding:12px 18px; text-align:right; color:var(--soft); cursor:pointer;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+                  </td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ============ DOCUMENTOS ============ -->
+    <sc-if value="{{ isDocumentos }}" hint-placeholder-val="">
+      <div>
+        <div style="margin-bottom:20px;">
+          <h1 style="font-size:22px; font-weight:600; margin:0;">Validação de documentos</h1>
+          <div style="font-size:13px; color:var(--muted); margin-top:3px;">Estudante só é alocado após aprovação.</div>
+        </div>
+        <div style="display:grid; grid-template-columns:320px 1fr; gap:14px; height:calc(100vh - 200px);">
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; overflow:hidden; display:flex; flex-direction:column;">
+            <div style="padding:12px 14px; border-bottom:1px solid var(--border); display:flex; gap:6px;">
+              <button style="padding:5px 11px; border:none; background:var(--primary); color:#FFF; border-radius:6px; font-size:11.5px; cursor:pointer; font-weight:500;">Pendentes · 88</button>
+              <button style="padding:5px 11px; border:none; background:transparent; color:var(--muted); border-radius:6px; font-size:11.5px; cursor:pointer;">Aprovados</button>
+              <button style="padding:5px 11px; border:none; background:transparent; color:var(--muted); border-radius:6px; font-size:11.5px; cursor:pointer;">Rejeitados</button>
+            </div>
+            <div style="flex:1; overflow-y:auto;">
+              <sc-for list="{{ docQueue }}" as="q" hint-placeholder-count="6">
+                <div style="padding:13px 14px; border-bottom:1px solid var(--line); cursor:pointer; background:{{ q.sel }}; border-left:3px solid {{ q.selBar }};">
+                  <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div style="min-width:0; flex:1;">
+                      <div style="font-size:13px; font-weight:500;">{{ q.nome }}</div>
+                      <div style="font-size:11.5px; color:var(--soft); margin-top:2px;">{{ q.univ }}</div>
+                    </div>
+                    <div class="mono" style="font-size:10.5px; color:var(--soft); white-space:nowrap;">{{ q.date }}</div>
+                  </div>
+                  <div style="display:flex; gap:4px; margin-top:8px;">
+                    <sc-for list="{{ q.docs }}" as="d" hint-placeholder-count="4">
+                      <span class="mono" style="font-size:9.5px; padding:2px 6px; border-radius:99px; background:{{ d.bg }}; color:{{ d.fg }}; letter-spacing:0.04em;">{{ d.name }}</span>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; overflow:hidden; display:flex; flex-direction:column;">
+            <div style="padding:18px 22px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:flex-start;">
+              <div>
+                <div style="font-size:17px; font-weight:600;">Marina Cavalcanti Rocha</div>
+                <div style="font-size:12.5px; color:var(--muted); margin-top:3px;">RA 20241834 · UNESP Araçatuba · Direito</div>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button style="padding:8px 14px; border:1px solid var(--danger); color:var(--danger); background:var(--surface); border-radius:8px; font-size:12.5px; cursor:pointer; font-weight:500;">Rejeitar tudo</button>
+                <button style="padding:8px 14px; border:none; background:var(--success); color:#FFF; border-radius:8px; font-size:12.5px; cursor:pointer; font-weight:500;">Aprovar tudo</button>
+              </div>
+            </div>
+            <div style="flex:1; overflow-y:auto; padding:20px;">
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+                <sc-for list="{{ docs }}" as="d" hint-placeholder-count="4">
+                  <div style="border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+                    <div style="aspect-ratio:1.5; background-image:repeating-linear-gradient(45deg, var(--bg) 0 6px, transparent 6px 12px); background-color:#FCFAF4; position:relative; display:flex; align-items:center; justify-content:center;">
+                      <div style="background:#FFFFFF; border:1px solid var(--border); border-radius:6px; padding:8px 12px; font-size:11px; color:var(--muted); display:flex; align-items:center; gap:7px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.7"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+                        <span class="mono">{{ d.filename }}</span>
+                      </div>
+                      <span style="position:absolute; top:10px; right:10px; font-size:10px; padding:2px 8px; border-radius:99px; background:{{ d.stBg }}; color:{{ d.stFg }};">{{ d.status }}</span>
+                    </div>
+                    <div style="padding:12px 14px;">
+                      <div style="font-size:12.5px; font-weight:500;">{{ d.title }}</div>
+                      <div style="font-size:11px; color:var(--soft); margin-top:2px;">Enviado {{ d.sent }}</div>
+                      <div style="display:flex; gap:6px; margin-top:10px;">
+                        <button style="flex:1; padding:6px; border:1px solid var(--danger); color:var(--danger); background:var(--surface); border-radius:6px; font-size:11.5px; cursor:pointer;">Rejeitar</button>
+                        <button style="flex:1; padding:6px; border:none; background:var(--success); color:#FFF; border-radius:6px; font-size:11.5px; cursor:pointer; font-weight:500;">Aprovar</button>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ============ ALOCAÇÃO ============ -->
+    <sc-if value="{{ isAlocacao }}" hint-placeholder-val="">
+      <div>
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:20px;">
+          <div>
+            <h1 style="font-size:22px; font-weight:600; margin:0;">Alocação</h1>
+            <div style="font-size:13px; color:var(--muted); margin-top:3px;">Distribui estudantes nas rotas compatíveis com sua grade.</div>
+          </div>
+          <button onClick="{{ runEngine }}" style="padding:10px 18px; border:none; background:var(--primary); color:var(--primary-fg); border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:9px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="transform:rotate({{ engineSpin }}); transition:transform 1.5s;"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+            {{ engineLabel }}
+          </button>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px;">
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:16px; display:flex; gap:12px; align-items:center;">
+            <div style="width:38px; height:38px; border-radius:9px; background:#EAF3EC; color:var(--success); display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 6 9 17l-5-5"/></svg></div>
+            <div><div style="font-size:22px; font-weight:600;">{{ resAloc }}</div><div style="font-size:11.5px; color:var(--muted);">alocados com sucesso</div></div>
+          </div>
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:16px; display:flex; gap:12px; align-items:center;">
+            <div style="width:38px; height:38px; border-radius:9px; background:#FBEEDA; color:var(--warn); display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+            <div><div style="font-size:22px; font-weight:600;">{{ resWait }}</div><div style="font-size:11.5px; color:var(--muted);">fila de espera</div></div>
+          </div>
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:16px; display:flex; gap:12px; align-items:center;">
+            <div style="width:38px; height:38px; border-radius:9px; background:#FBECEC; color:var(--danger); display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>
+            <div><div style="font-size:22px; font-weight:600;">{{ resFail }}</div><div style="font-size:11.5px; color:var(--muted);">sem rota compatível</div></div>
+          </div>
+        </div>
+
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:18px;">
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px;">
+            <div style="font-size:14.5px; font-weight:600;">Distribuição por rota</div>
+            <div style="font-size:12px; color:var(--muted);">Arraste estudantes para ajuste manual</div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+            <sc-for list="{{ kanban }}" as="c" hint-placeholder-count="3">
+              <div style="background:#FBF9F3; border:1px solid var(--line); border-radius:10px; padding:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                  <div>
+                    <div class="mono" style="font-size:12px; color:var(--primary); font-weight:600;">{{ c.code }}</div>
+                    <div style="font-size:12.5px; font-weight:600; margin-top:3px;">{{ c.name }}</div>
+                    <div class="mono" style="font-size:10.5px; color:var(--soft); margin-top:2px;">{{ c.partida }} → {{ c.retorno }}</div>
+                  </div>
+                  <div style="text-align:right;">
+                    <div class="mono" style="font-size:13px; font-weight:600;">{{ c.used }}/{{ c.cap }}</div>
+                    <div style="font-size:10px; color:{{ c.pctColor }};">{{ c.pctLabel }}</div>
+                  </div>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                  <sc-for list="{{ c.students }}" as="st" hint-placeholder-count="4">
+                    <div style="background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:9px 10px; display:flex; align-items:center; gap:9px; cursor:grab;">
+                      <div style="width:5px; height:26px; background:{{ st.bar }}; border-radius:99px;"></div>
+                      <div style="flex:1; min-width:0;">
+                        <div style="font-size:12px; font-weight:500;">{{ st.nome }}</div>
+                        <div style="font-size:10.5px; color:var(--soft);">{{ st.detail }}</div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ============ ROTAS ============ -->
+    <sc-if value="{{ isRotas }}" hint-placeholder-val="">
+      <div>
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:20px;">
+          <div><h1 style="font-size:22px; font-weight:600; margin:0;">Rotas</h1><div style="font-size:13px; color:var(--muted); margin-top:3px;">6 rotas cadastradas</div></div>
+          <button style="padding:9px 15px; border:none; background:var(--primary); color:var(--primary-fg); border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nova rota</button>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:12px;">
+          <sc-for list="{{ routes }}" as="r" hint-placeholder-count="6">
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:18px;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="mono" style="font-size:12.5px; color:var(--primary); font-weight:600;">{{ r.code }}</span>
+                    <span style="font-size:10.5px; padding:2px 8px; border-radius:99px; background:{{ r.statusBg }}; color:{{ r.statusFg }};">{{ r.status }}</span>
+                  </div>
+                  <div style="font-size:15px; font-weight:600; margin-top:4px;">{{ r.name }}</div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px; margin-top:14px; padding:11px; background:var(--tint); border-radius:8px;">
+                <div style="flex:1;">
+                  <div style="font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em;">Origem</div>
+                  <div style="font-size:13px; font-weight:500; margin-top:2px;">{{ r.origem }}</div>
+                  <div class="mono" style="font-size:11.5px; color:var(--primary); margin-top:2px;">{{ r.partida }}</div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+                <div style="flex:1; text-align:right;">
+                  <div style="font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em;">Destino</div>
+                  <div style="font-size:13px; font-weight:500; margin-top:2px;">{{ r.destino }}</div>
+                  <div class="mono" style="font-size:11.5px; color:var(--primary); margin-top:2px;">retorno {{ r.retorno }}</div>
+                </div>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; font-size:12.5px;">
+                <div><div style="font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em;">Motorista</div><div style="margin-top:2px;">{{ r.motorista }}</div></div>
+                <div><div style="font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em;">Veículo</div><div class="mono" style="margin-top:2px;">{{ r.veiculo }}</div></div>
+              </div>
+              <div style="margin-top:14px; padding-top:12px; border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <div style="font-size:11px; color:var(--muted);">Ocupação</div>
+                  <div style="display:flex; align-items:center; gap:8px; margin-top:2px;">
+                    <div class="mono" style="font-size:14px; font-weight:600;">{{ r.used }}<span style="color:var(--muted);">/{{ r.cap }}</span></div>
+                    <div style="width:70px; height:5px; background:var(--tint); border-radius:99px; overflow:hidden;"><div style="height:100%; width:{{ r.pct }}; background:{{ r.color }};"></div></div>
+                  </div>
+                </div>
+                <button style="padding:7px 12px; border:1px solid var(--border); background:var(--surface); border-radius:7px; font-size:12px; cursor:pointer;">Editar</button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ============ VEICULOS ============ -->
+    <sc-if value="{{ isVeiculos }}" hint-placeholder-val="">
+      <div>
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:20px;">
+          <div><h1 style="font-size:22px; font-weight:600; margin:0;">Veículos</h1><div style="font-size:13px; color:var(--muted); margin-top:3px;">Frota municipal</div></div>
+          <button style="padding:9px 15px; border:none; background:var(--primary); color:var(--primary-fg); border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Novo veículo</button>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+          <sc-for list="{{ vehicles }}" as="v" hint-placeholder-count="6">
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:16px; display:flex; gap:14px;">
+              <div style="width:56px; height:56px; border-radius:10px; background:var(--tint); color:var(--primary); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="7.5" cy="18" r="1.5" fill="currentColor"/><circle cx="16.5" cy="18" r="1.5" fill="currentColor"/><path d="M3 11h18M8 6V4h8v2"/></svg>
+              </div>
+              <div style="flex:1; min-width:0;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                  <div>
+                    <div class="mono" style="font-size:14px; font-weight:600; letter-spacing:0.04em;">{{ v.placa }}</div>
+                    <div style="font-size:12px; color:var(--muted); margin-top:2px;">{{ v.modelo }}</div>
+                  </div>
+                  <span style="font-size:10px; padding:2px 7px; border-radius:99px; background:{{ v.statusBg }}; color:{{ v.statusFg }};">{{ v.status }}</span>
+                </div>
+                <div style="display:flex; gap:14px; margin-top:10px; font-size:11.5px;">
+                  <div><div style="color:var(--soft);">Capacidade</div><div class="mono" style="font-weight:600; margin-top:1px;">{{ v.cap }} lugares</div></div>
+                  <div><div style="color:var(--soft);">Rota</div><div class="mono" style="font-weight:600; color:var(--primary); margin-top:1px;">{{ v.rota }}</div></div>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ============ MOTORISTAS ============ -->
+    <sc-if value="{{ isMotoristas }}" hint-placeholder-val="">
+      <div>
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:20px;">
+          <div><h1 style="font-size:22px; font-weight:600; margin:0;">Motoristas</h1><div style="font-size:13px; color:var(--muted); margin-top:3px;">Equipe operacional</div></div>
+          <button style="padding:9px 15px; border:none; background:var(--primary); color:var(--primary-fg); border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Novo motorista</button>
+        </div>
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; overflow:hidden;">
+          <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead><tr style="border-bottom:1px solid var(--border);">
+              <th style="text-align:left; padding:12px 18px; font-size:11.5px; color:var(--muted); font-weight:500;">Motorista</th>
+              <th style="text-align:left; padding:12px 18px; font-size:11.5px; color:var(--muted); font-weight:500;">CNH</th>
+              <th style="text-align:left; padding:12px 18px; font-size:11.5px; color:var(--muted); font-weight:500;">Cat.</th>
+              <th style="text-align:left; padding:12px 18px; font-size:11.5px; color:var(--muted); font-weight:500;">Rota</th>
+              <th style="text-align:left; padding:12px 18px; font-size:11.5px; color:var(--muted); font-weight:500;">Telefone</th>
+              <th style="text-align:left; padding:12px 18px; font-size:11.5px; color:var(--muted); font-weight:500;">Status</th>
+            </tr></thead>
+            <tbody>
+              <sc-for list="{{ drivers }}" as="d" hint-placeholder-count="6">
+                <tr style="border-bottom:1px solid var(--line);">
+                  <td style="padding:12px 18px;"><div style="display:flex; align-items:center; gap:10px;"><div style="width:30px; height:30px; border-radius:50%; background:{{ d.bg }}; color:#FFF; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600;">{{ d.initials }}</div><div style="font-weight:500;">{{ d.nome }}</div></div></td>
+                  <td class="mono" style="padding:12px 18px; color:var(--muted);">{{ d.cnh }}</td>
+                  <td style="padding:12px 18px;"><span class="mono" style="padding:2px 7px; background:var(--tint); border-radius:5px; font-size:11.5px;">{{ d.cat }}</span></td>
+                  <td class="mono" style="padding:12px 18px; color:var(--primary); font-weight:500;">{{ d.rota }}</td>
+                  <td class="mono" style="padding:12px 18px; color:var(--muted); font-size:12px;">{{ d.fone }}</td>
+                  <td style="padding:12px 18px;"><span style="font-size:11.5px; padding:3px 9px; border-radius:99px; background:{{ d.stBg }}; color:{{ d.stFg }};">{{ d.status }}</span></td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ============ UNIVERSIDADES ============ -->
+    <sc-if value="{{ isUniversidades }}" hint-placeholder-val="">
+      <div>
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:20px;">
+          <div><h1 style="font-size:22px; font-weight:600; margin:0;">Universidades</h1><div style="font-size:13px; color:var(--muted); margin-top:3px;">Instituições atendidas</div></div>
+          <button style="padding:9px 15px; border:none; background:var(--primary); color:var(--primary-fg); border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nova</button>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+          <sc-for list="{{ unis }}" as="u" hint-placeholder-count="6">
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:18px;">
+              <div style="width:44px; height:44px; border-radius:10px; background:{{ u.color }}; color:#FFF; display:flex; align-items:center; justify-content:center;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 10 12 4l10 6-10 6z"/><path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/></svg>
+              </div>
+              <div style="font-size:14.5px; font-weight:600; margin-top:12px;">{{ u.nome }}</div>
+              <div style="font-size:12px; color:var(--muted); margin-top:2px;">{{ u.cidade }}</div>
+              <div style="display:flex; gap:18px; margin-top:12px; padding-top:12px; border-top:1px solid var(--line);">
+                <div><div class="mono" style="font-size:16px; font-weight:600;">{{ u.est }}</div><div style="font-size:10.5px; color:var(--soft);">estudantes</div></div>
+                <div><div class="mono" style="font-size:16px; font-weight:600;">{{ u.rot }}</div><div style="font-size:10.5px; color:var(--soft);">rotas</div></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ============ PRESENÇA ============ -->
+    <sc-if value="{{ isPresenca }}" hint-placeholder-val="">
+      <div>
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:20px;">
+          <div><h1 style="font-size:22px; font-weight:600; margin:0;">Presença</h1><div style="font-size:13px; color:var(--muted); margin-top:3px;">Manifesto diário — 09/08/2026</div></div>
+          <select style="padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface); font-size:12.5px;"><option>R03 · Guararapes ↔ UNESP</option><option>R01 · Araçatuba → UFSCar</option></select>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:14px;">
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:14px;"><div style="font-size:11.5px; color:var(--muted);">Alocados</div><div class="mono" style="font-size:22px; font-weight:600; margin-top:3px;">38</div></div>
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:14px;"><div style="font-size:11.5px; color:var(--muted);">Confirmaram ida</div><div class="mono" style="font-size:22px; font-weight:600; margin-top:3px; color:var(--success);">34</div></div>
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:14px;"><div style="font-size:11.5px; color:var(--muted);">Confirmaram volta</div><div class="mono" style="font-size:22px; font-weight:600; margin-top:3px; color:var(--accent);">29</div></div>
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:14px;"><div style="font-size:11.5px; color:var(--muted);">Vagas remanescentes</div><div class="mono" style="font-size:22px; font-weight:600; margin-top:3px;">7</div></div>
+        </div>
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; overflow:hidden;">
+          <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead><tr style="border-bottom:1px solid var(--border);">
+              <th style="text-align:left; padding:12px 18px; font-size:11.5px; color:var(--muted); font-weight:500;">#</th>
+              <th style="text-align:left; padding:12px 18px; font-size:11.5px; color:var(--muted); font-weight:500;">Estudante</th>
+              <th style="text-align:center; padding:12px 18px; font-size:11.5px; color:var(--muted); font-weight:500;">Ida</th>
+              <th style="text-align:center; padding:12px 18px; font-size:11.5px; color:var(--muted); font-weight:500;">Volta</th>
+              <th style="text-align:left; padding:12px 18px; font-size:11.5px; color:var(--muted); font-weight:500;">Confirmada</th>
+            </tr></thead>
+            <tbody>
+              <sc-for list="{{ manifest }}" as="m" hint-placeholder-count="8">
+                <tr style="border-bottom:1px solid var(--line);">
+                  <td class="mono" style="padding:12px 18px; color:var(--soft);">{{ m.n }}</td>
+                  <td style="padding:12px 18px;"><div style="font-weight:500;">{{ m.nome }}</div><div class="mono" style="font-size:11px; color:var(--soft);">RA {{ m.ra }}</div></td>
+                  <td style="padding:12px 18px; text-align:center;"><span style="color:{{ m.idaColor }}; font-weight:600; font-size:15px;">{{ m.idaGlyph }}</span></td>
+                  <td style="padding:12px 18px; text-align:center;"><span style="color:{{ m.voltaColor }}; font-weight:600; font-size:15px;">{{ m.voltaGlyph }}</span></td>
+                  <td class="mono" style="padding:12px 18px; color:var(--muted); font-size:12px;">{{ m.time }}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ============ RELATÓRIOS ============ -->
+    <sc-if value="{{ isRelatorios }}" hint-placeholder-val="">
+      <div>
+        <div style="margin-bottom:20px;">
+          <h1 style="font-size:22px; font-weight:600; margin:0;">Relatórios</h1>
+          <div style="font-size:13px; color:var(--muted); margin-top:3px;">Exporte dados para análise e prestação de contas.</div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+          <sc-for list="{{ reports }}" as="rp" hint-placeholder-count="6">
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:18px;">
+              <div style="width:36px; height:36px; border-radius:9px; background:{{ rp.iconBg }}; color:{{ rp.iconFg }}; display:flex; align-items:center; justify-content:center;">{{ rp.icon }}</div>
+              <div style="font-size:14px; font-weight:600; margin-top:12px;">{{ rp.title }}</div>
+              <div style="font-size:12px; color:var(--muted); margin-top:4px; line-height:1.5;">{{ rp.desc }}</div>
+              <div style="display:flex; gap:6px; margin-top:14px;">
+                <button style="flex:1; padding:7px; border:1px solid var(--border); background:var(--surface); border-radius:7px; font-size:12px; cursor:pointer;">PDF</button>
+                <button style="flex:1; padding:7px; border:1px solid var(--border); background:var(--surface); border-radius:7px; font-size:12px; cursor:pointer;">Excel</button>
+                <button style="flex:1.6; padding:7px; border:none; background:var(--primary); color:var(--primary-fg); border-radius:7px; font-size:12px; cursor:pointer; font-weight:500;">Gerar</button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    </div>
+  </main>
+</div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { screen: 'login', novoFunc: false, engineLoading: false, engineRuns: 0 };
+
+  go(s) { this.setState({ screen: s, novoFunc: false }); window.scrollTo(0, 0); }
+
+  runEngine() {
+    this.setState({ engineLoading: true });
+    setTimeout(() => this.setState({ engineLoading: false, engineRuns: this.state.engineRuns + 1 }), 1400);
+  }
+
+  ic(name, size) {
+    size = size || 17;
+    const parts = {
+      dashboard: [['rect',{x:3,y:3,width:7,height:9,rx:1}],['rect',{x:14,y:3,width:7,height:5,rx:1}],['rect',{x:14,y:12,width:7,height:9,rx:1}],['rect',{x:3,y:16,width:7,height:5,rx:1}]],
+      allocate: [['path',{d:'M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z'}]],
+      attendance: [['path',{d:'M9 11l3 3L22 4'}],['path',{d:'M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'}]],
+      route: [['circle',{cx:6,cy:19,r:3}],['circle',{cx:18,cy:5,r:3}],['path',{d:'M6.7 17.3 17.3 6.7'}]],
+      student: [['path',{d:'M22 10v6M2 10l10-5 10 5-10 5z'}],['path',{d:'M6 12v5c3 3 9 3 12 0v-5'}]],
+      vehicle: [['rect',{x:3,y:6,width:18,height:12,rx:2}],['circle',{cx:7.5,cy:18,r:1.5,fill:'currentColor'}],['circle',{cx:16.5,cy:18,r:1.5,fill:'currentColor'}],['path',{d:'M3 11h18M8 6V4h8v2'}]],
+      driver: [['circle',{cx:12,cy:8,r:4}],['path',{d:'M4 21a8 8 0 0 1 16 0'}]],
+      uni: [['path',{d:'M2 10 12 4l10 6-10 6z'}],['path',{d:'M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5'}]],
+      doc: [['path',{d:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'}],['path',{d:'M14 2v6h6'}],['path',{d:'M9 15l2 2 4-4'}]],
+      report: [['path',{d:'M3 3v18h18'}],['path',{d:'M7 15l4-4 4 4 5-5'}]],
+      team: [['circle',{cx:9,cy:8,r:4}],['path',{d:'M3 21a6 6 0 0 1 12 0'}],['path',{d:'M16 3.5a4 4 0 0 1 0 8'}],['path',{d:'M22 21c0-2-1.5-4-4-5'}]],
+    }[name] || [];
+    const children = parts.map((pt, i) => React.createElement(pt[0], { key: i, ...pt[1] }));
+    return React.createElement('svg', { width:size, height:size, viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', strokeWidth:1.7, strokeLinecap:'round', strokeLinejoin:'round' }, ...children);
+  }
+
+  bigIcon(paths, size, sw) {
+    const children = paths.map((pt, i) => React.createElement(pt[0], { key: i, ...pt[1] }));
+    return React.createElement('svg', { width:size||16, height:size||16, viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', strokeWidth:sw||1.8, strokeLinecap:'round', strokeLinejoin:'round' }, ...children);
+  }
+
+  navItem(iconKey, label, key, badge) {
+    const active = this.state.screen === key;
+    return {
+      icon: this.ic(iconKey), label, badge,
+      go: () => this.go(key),
+      bg: active ? 'rgba(196,99,58,0.15)' : 'transparent',
+      fg: active ? '#F5F3EE' : '#DDD8CB',
+      weight: active ? 600 : 400,
+    };
+  }
+
+  renderVals() {
+    const s = this.state.screen;
+    const crumbs = { dashboard:'Visão geral', estudantes:'Estudantes', documentos:'Documentos', alocacao:'Alocação', rotas:'Rotas', veiculos:'Veículos', motoristas:'Motoristas', universidades:'Universidades', presenca:'Presença', relatorios:'Relatórios', funcionarios:'Funcionários' };
+
+    // manifest glyphs as text — simple and reliable
+    const G = { check: '✓', clock: '◔', x: '✕', dash: '—' };
+
+    return {
+      isAuth: s === 'login' || s === 'cadastro',
+      isLogin: s === 'login',
+      isCadastro: s === 'cadastro',
+      isApp: !(s === 'login' || s === 'cadastro'),
+      crumb: crumbs[s] || '',
+      isDashboard: s === 'dashboard',
+      isEstudantes: s === 'estudantes',
+      isDocumentos: s === 'documentos',
+      isAlocacao: s === 'alocacao',
+      isRotas: s === 'rotas',
+      isVeiculos: s === 'veiculos',
+      isMotoristas: s === 'motoristas',
+      isUniversidades: s === 'universidades',
+      isPresenca: s === 'presenca',
+      isRelatorios: s === 'relatorios',
+      isFuncionarios: s === 'funcionarios',
+      novoFunc: this.state.novoFunc,
+      toggleNovoFunc: () => this.setState({ novoFunc: !this.state.novoFunc }),
+
+      goLogin: () => this.go('login'),
+      goCadastro: () => this.go('cadastro'),
+      goDashboard: () => this.go('dashboard'),
+      goAlocacao: () => this.go('alocacao'),
+      goRotas: () => this.go('rotas'),
+      runEngine: () => this.runEngine(),
+      engineSpin: this.state.engineLoading ? '360deg' : '0deg',
+      engineLabel: this.state.engineLoading ? 'Processando…' : 'Executar alocação',
+
+      navSections: [
+        { title:'Operação', items:[
+          this.navItem('dashboard','Visão geral','dashboard'),
+          this.navItem('allocate','Alocação','alocacao','3'),
+          this.navItem('attendance','Presença','presenca'),
+          this.navItem('route','Rotas','rotas'),
+        ]},
+        { title:'Cadastros', items:[
+          this.navItem('student','Estudantes','estudantes'),
+          this.navItem('vehicle','Veículos','veiculos'),
+          this.navItem('driver','Motoristas','motoristas'),
+          this.navItem('uni','Universidades','universidades'),
+        ]},
+        { title:'Administração', items:[
+          this.navItem('doc','Documentos','documentos','88'),
+          this.navItem('report','Relatórios','relatorios'),
+          this.navItem('team','Funcionários','funcionarios'),
+        ]},
+      ],
+
+      kpis: [
+        { label:'Estudantes ativos', value:'1.196', icon:this.ic('student'), iconColor:'var(--primary)', trend:'+42', trendLabel:'no mês', trendColor:'var(--success)' },
+        { label:'Rotas em operação', value:'6', icon:this.ic('route'), iconColor:'var(--primary)', trend:'2', trendLabel:'em revisão', trendColor:'var(--warn)' },
+        { label:'Ocupação média', value:'87%', icon:this.ic('vehicle'), iconColor:'var(--primary)', trend:'+3,1%', trendLabel:'vs. semana', trendColor:'var(--success)' },
+        { label:'Docs. pendentes', value:'88', icon:this.ic('doc'), iconColor:'var(--primary)', trend:'−12', trendLabel:'em 24h', trendColor:'var(--success)' },
+      ],
+
+      occupancy: [
+        { code:'R01', name:'Araçatuba → UFSCar São Carlos', used:42, cap:45, pct:'93%', color:'var(--danger)' },
+        { code:'R02', name:'Araçatuba → UNESP Ilha Solteira', used:38, cap:44, pct:'86%', color:'var(--warn)' },
+        { code:'R03', name:'Guararapes → UNESP Araçatuba', used:34, cap:38, pct:'89%', color:'var(--warn)' },
+        { code:'R04', name:'Birigui → Unicamp Limeira', used:27, cap:44, pct:'61%', color:'var(--success)' },
+        { code:'R05', name:'Penápolis → FATEC', used:40, cap:40, pct:'100%', color:'var(--danger)' },
+      ],
+
+      alerts: [
+        { title:'R05 lotada — 4 na fila', desc:'Considere realocar estudantes para R02.', color:'var(--danger)', bg:'#FCEEEC', icon: this.bigIcon([['path',{d:'M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z'}],['path',{d:'M12 9v4M12 17h.01'}]]) },
+        { title:'3 documentos vencendo', desc:'Comprovantes expiram nesta semana.', color:'var(--warn)', bg:'#FBEEDA', icon: this.bigIcon([['circle',{cx:12,cy:12,r:10}],['path',{d:'M12 6v6l4 2'}]]) },
+        { title:'OPE-1234 em manutenção', desc:'Rota R01 realocada para OXY-5521.', color:'var(--muted)', bg:'var(--tint)', icon: this.bigIcon([['path',{d:'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z'}]]) },
+      ],
+
+      activeRoutes: [
+        { code:'R01', name:'Araçatuba → UFSCar SC', driver:'Juvenal Ribas', partida:'05:40', retorno:'22:30', used:42, cap:45, pct:'93%', color:'var(--danger)', status:'EM ROTA', statusBg:'#EAF3EC', statusFg:'var(--success)' },
+        { code:'R02', name:'Araçatuba → UNESP Ilha', driver:'Marcos Antônio Lima', partida:'06:00', retorno:'22:45', used:38, cap:44, pct:'86%', color:'var(--warn)', status:'EM ROTA', statusBg:'#EAF3EC', statusFg:'var(--success)' },
+        { code:'R03', name:'Guararapes → UNESP Araç.', driver:'Elton José da Silva', partida:'17:30', retorno:'23:15', used:34, cap:38, pct:'89%', color:'var(--warn)', status:'AGUARDANDO', statusBg:'#FBEEDA', statusFg:'#8A5A15' },
+        { code:'R04', name:'Birigui → Unicamp Limeira', driver:'Rosana Padilha', partida:'05:10', retorno:'22:00', used:27, cap:44, pct:'61%', color:'var(--success)', status:'EM ROTA', statusBg:'#EAF3EC', statusFg:'var(--success)' },
+      ],
+
+      students: [
+        { nome:'Marina Cavalcanti Rocha', ra:'20241834', univ:'UNESP Araçatuba', rota:'R03', docs:'Aprovado', initials:'MR', avatarBg:'#1F3A2E', docsBg:'#EAF3EC', docsFg:'var(--success)' },
+        { nome:'Igor Bastos Nakamura', ra:'20240087', univ:'FATEC Araçatuba', rota:'R05', docs:'Aprovado', initials:'IN', avatarBg:'#8A5A15', docsBg:'#EAF3EC', docsFg:'var(--success)' },
+        { nome:'Beatriz Pinheiro Santos', ra:'20238812', univ:'UFSCar São Carlos', rota:'R01', docs:'Pendente', initials:'BS', avatarBg:'#9E3E3E', docsBg:'#FBEEDA', docsFg:'#8A5A15' },
+        { nome:'Rafael Toledo Ferraz', ra:'20241102', univ:'UNESP Ilha Solteira', rota:'R02', docs:'Aprovado', initials:'RF', avatarBg:'#1F3A2E', docsBg:'#EAF3EC', docsFg:'var(--success)' },
+        { nome:'Sabrina Almeida Prado', ra:'20241205', univ:'Unicamp Limeira', rota:'R04', docs:'Aprovado', initials:'SP', avatarBg:'#2E7D5A', docsBg:'#EAF3EC', docsFg:'var(--success)' },
+        { nome:'Diego Ferrari Montenegro', ra:'20250334', univ:'UNESP Araçatuba', rota:'—', docs:'Rejeitado', initials:'DM', avatarBg:'#9E3E3E', docsBg:'#FBECEC', docsFg:'var(--danger)' },
+        { nome:'Ana Luísa Barreto Xavier', ra:'20239914', univ:'UFSCar São Carlos', rota:'R01', docs:'Aprovado', initials:'AX', avatarBg:'#8A5A15', docsBg:'#EAF3EC', docsFg:'var(--success)' },
+        { nome:'Vinicius Camargo Peixoto', ra:'20240552', univ:'FATEC Araçatuba', rota:'Fila espera', docs:'Aprovado', initials:'VP', avatarBg:'#C4633A', docsBg:'#EAF3EC', docsFg:'var(--success)' },
+      ],
+
+      funcionarios: [
+        { nome:'Ana Meireles Cordeiro', initials:'AM', bg:'#C4633A', email:'ana.meireles@aracatuba.sp.gov.br', perfil:'Administrador', perfilBg:'#EEF1EF', perfilFg:'#1F3A2E', acesso:'há 3 min', status:'Ativo', stFg:'var(--success)' },
+        { nome:'Roberto Sales Vieira', initials:'RV', bg:'#1F3A2E', email:'roberto.sales@aracatuba.sp.gov.br', perfil:'Administrador', perfilBg:'#EEF1EF', perfilFg:'#1F3A2E', acesso:'ontem, 17:22', status:'Ativo', stFg:'var(--success)' },
+        { nome:'Patrícia Nogueira Alves', initials:'PA', bg:'#8A5A15', email:'patricia.nogueira@aracatuba.sp.gov.br', perfil:'Operador', perfilBg:'#F4EAE1', perfilFg:'#8A5A15', acesso:'hoje, 09:14', status:'Ativo', stFg:'var(--success)' },
+        { nome:'Marcos Duarte Lopes', initials:'MD', bg:'#2E7D5A', email:'marcos.duarte@aracatuba.sp.gov.br', perfil:'Operador', perfilBg:'#F4EAE1', perfilFg:'#8A5A15', acesso:'hoje, 08:47', status:'Ativo', stFg:'var(--success)' },
+        { nome:'Juvenal Ribas de Oliveira', initials:'JR', bg:'#1F3A2E', email:'juvenal.ribas@transporte.aracatuba.sp.gov.br', perfil:'Motorista', perfilBg:'#EAF3EC', perfilFg:'var(--success)', acesso:'há 12 min', status:'Ativo', stFg:'var(--success)' },
+        { nome:'Sônia Aparecida Motta', initials:'SM', bg:'#9E3E3E', email:'sonia.motta@aracatuba.sp.gov.br', perfil:'Operador', perfilBg:'#F4EAE1', perfilFg:'#8A5A15', acesso:'há 14 dias', status:'Inativo', stFg:'var(--muted)' },
+      ],
+
+      docQueue: (() => {
+        const items = [
+          { nome:'Marina Cavalcanti Rocha', univ:'UNESP Araçatuba', date:'09 ago', sel:'#FBF9F3', selBar:'var(--primary)' },
+          { nome:'Beatriz Pinheiro Santos', univ:'UFSCar São Carlos', date:'09 ago', sel:'transparent', selBar:'transparent' },
+          { nome:'Diego Ferrari Montenegro', univ:'UNESP Araçatuba', date:'08 ago', sel:'transparent', selBar:'transparent' },
+          { nome:'Camila Reis Bonfim', univ:'FATEC Araçatuba', date:'08 ago', sel:'transparent', selBar:'transparent' },
+          { nome:'Henrique Vasconcelos', univ:'Unicamp Limeira', date:'07 ago', sel:'transparent', selBar:'transparent' },
+          { nome:'Larissa Meira Fontes', univ:'UNESP Ilha Solteira', date:'07 ago', sel:'transparent', selBar:'transparent' },
+        ];
+        const b = (name, st) => { const c = { ok:{bg:'#EAF3EC',fg:'#2E7D5A'}, pend:{bg:'#FBEEDA',fg:'#8A5A15'}, rej:{bg:'#FBECEC',fg:'#9E3E3E'} }[st]; return { name, bg:c.bg, fg:c.fg }; };
+        const cfg = [
+          [b('RG','ok'),b('CPF','ok'),b('MATR','pend'),b('RES','pend')],
+          [b('RG','pend'),b('CPF','ok'),b('MATR','pend'),b('RES','pend')],
+          [b('RG','ok'),b('CPF','ok'),b('MATR','rej'),b('RES','ok')],
+          [b('RG','pend'),b('CPF','pend'),b('MATR','pend'),b('RES','pend')],
+          [b('RG','ok'),b('CPF','ok'),b('MATR','ok'),b('RES','pend')],
+          [b('RG','ok'),b('CPF','pend'),b('MATR','pend'),b('RES','ok')],
+        ];
+        return items.map((it,i) => ({ ...it, docs: cfg[i] }));
+      })(),
+
+      docs: [
+        { title:'RG', filename:'rg_marina.pdf', sent:'09/08 · 08:12', status:'PENDENTE', stBg:'#FBEEDA', stFg:'#8A5A15' },
+        { title:'CPF', filename:'cpf_marina.pdf', sent:'09/08 · 08:12', status:'PENDENTE', stBg:'#FBEEDA', stFg:'#8A5A15' },
+        { title:'Comprovante de matrícula', filename:'matricula_2026.pdf', sent:'09/08 · 08:13', status:'ENVIADO', stBg:'#EAF3EC', stFg:'#2E7D5A' },
+        { title:'Comprovante de residência', filename:'conta_luz_ago.pdf', sent:'09/08 · 08:13', status:'ENVIADO', stBg:'#EAF3EC', stFg:'#2E7D5A' },
+      ],
+
+      resAloc: this.state.engineLoading ? '…' : '1.174',
+      resWait: this.state.engineLoading ? '…' : '18',
+      resFail: this.state.engineLoading ? '…' : '4',
+
+      kanban: [
+        { code:'R01', name:'UFSCar São Carlos', partida:'05:40', retorno:'22:30', used:42, cap:45, pctColor:'var(--danger)', pctLabel:'restam 3', students:[
+          { nome:'Beatriz Pinheiro S.', detail:'Direito · 07:30–17:00', bar:'#9E3E3E' },
+          { nome:'Ana Luísa B. Xavier', detail:'Eng. Civil · 08:00–18:00', bar:'#1F3A2E' },
+          { nome:'Otávio Cerqueira L.', detail:'Medicina · 07:00–19:00', bar:'#1F3A2E' },
+          { nome:'Priscila Naves C.', detail:'Química · 08:00–17:00', bar:'#1F3A2E' },
+        ]},
+        { code:'R02', name:'UNESP Ilha Solteira', partida:'06:00', retorno:'22:45', used:38, cap:44, pctColor:'var(--warn)', pctLabel:'restam 6', students:[
+          { nome:'Rafael Toledo F.', detail:'Eng. Elétrica · 07:30–18:00', bar:'#1F3A2E' },
+          { nome:'Mateus Braga Cortez', detail:'Eng. Mecânica · 07:30–18:00', bar:'#1F3A2E' },
+          { nome:'Fernanda Salles V.', detail:'Física · 08:00–17:00', bar:'#1F3A2E' },
+          { nome:'Kauê Melo Antunes', detail:'Eng. Civil · 07:00–17:30', bar:'#1F3A2E' },
+        ]},
+        { code:'R05', name:'FATEC Araçatuba', partida:'05:20', retorno:'22:15', used:40, cap:40, pctColor:'var(--danger)', pctLabel:'sem vaga', students:[
+          { nome:'Igor Bastos N.', detail:'ADS · 07:30–17:00', bar:'#1F3A2E' },
+          { nome:'Vinicius Camargo P.', detail:'GTI · ESPERA', bar:'#B8862B' },
+          { nome:'Bruno Wagner I.', detail:'ADS · 08:00–17:00', bar:'#1F3A2E' },
+          { nome:'Camila Reis B.', detail:'GTI · ESPERA', bar:'#B8862B' },
+        ]},
+      ],
+
+      routes: [
+        { code:'R01', name:'Araçatuba → UFSCar São Carlos', origem:'Araçatuba', destino:'São Carlos', partida:'05:40', retorno:'22:30', motorista:'Juvenal Ribas', veiculo:'OPE-1234', used:42, cap:45, pct:'93%', color:'var(--danger)', status:'ATIVA', statusBg:'#EAF3EC', statusFg:'var(--success)' },
+        { code:'R02', name:'Araçatuba → UNESP Ilha Solteira', origem:'Araçatuba', destino:'Ilha Solteira', partida:'06:00', retorno:'22:45', motorista:'Marcos A. Lima', veiculo:'OXY-9876', used:38, cap:44, pct:'86%', color:'var(--warn)', status:'ATIVA', statusBg:'#EAF3EC', statusFg:'var(--success)' },
+        { code:'R03', name:'Guararapes ↔ UNESP Araçatuba', origem:'Guararapes', destino:'Araçatuba', partida:'17:30', retorno:'23:15', motorista:'Elton José da Silva', veiculo:'OSC-4410', used:34, cap:38, pct:'89%', color:'var(--warn)', status:'ATIVA', statusBg:'#EAF3EC', statusFg:'var(--success)' },
+        { code:'R04', name:'Birigui → Unicamp Limeira', origem:'Birigui', destino:'Limeira', partida:'05:10', retorno:'22:00', motorista:'Rosana Padilha', veiculo:'PRT-2201', used:27, cap:44, pct:'61%', color:'var(--success)', status:'ATIVA', statusBg:'#EAF3EC', statusFg:'var(--success)' },
+        { code:'R05', name:'Penápolis → FATEC Araçatuba', origem:'Penápolis', destino:'Araçatuba', partida:'05:20', retorno:'22:15', motorista:'Waldir Ambrósio', veiculo:'OWL-3345', used:40, cap:40, pct:'100%', color:'var(--danger)', status:'LOTADA', statusBg:'#FBECEC', statusFg:'var(--danger)' },
+        { code:'R06', name:'Coroados → UNESP Araçatuba', origem:'Coroados', destino:'Araçatuba', partida:'06:30', retorno:'22:30', motorista:'Zilda Rodrigues', veiculo:'QAT-8876', used:18, cap:32, pct:'56%', color:'var(--success)', status:'REVISÃO', statusBg:'#FBEEDA', statusFg:'#8A5A15' },
+      ],
+
+      vehicles: [
+        { placa:'OPE-1234', modelo:'Mercedes O-500 · 2019', cap:45, rota:'R01', status:'EM ROTA', statusBg:'#EAF3EC', statusFg:'var(--success)' },
+        { placa:'OXY-9876', modelo:'Volare W9 · 2020', cap:44, rota:'R02', status:'EM ROTA', statusBg:'#EAF3EC', statusFg:'var(--success)' },
+        { placa:'OSC-4410', modelo:'Marcopolo Senior · 2018', cap:38, rota:'R03', status:'EM ROTA', statusBg:'#EAF3EC', statusFg:'var(--success)' },
+        { placa:'PRT-2201', modelo:'Iveco Neobus · 2021', cap:44, rota:'R04', status:'EM ROTA', statusBg:'#EAF3EC', statusFg:'var(--success)' },
+        { placa:'OWL-3345', modelo:'Comil Versatile · 2017', cap:40, rota:'R05', status:'EM ROTA', statusBg:'#EAF3EC', statusFg:'var(--success)' },
+        { placa:'OXY-5521', modelo:'Volare V8 · 2016 · reserva', cap:39, rota:'—', status:'MANUTENÇÃO', statusBg:'#FBEEDA', statusFg:'#8A5A15' },
+      ],
+
+      drivers: [
+        { nome:'Juvenal Ribas de Oliveira', initials:'JR', bg:'#1F3A2E', cnh:'02887411231', cat:'D', rota:'R01', fone:'(18) 99711-4402', status:'EM ROTA', stBg:'#EAF3EC', stFg:'var(--success)' },
+        { nome:'Marcos Antônio Lima', initials:'ML', bg:'#8A5A15', cnh:'03442015876', cat:'D', rota:'R02', fone:'(18) 99623-2170', status:'EM ROTA', stBg:'#EAF3EC', stFg:'var(--success)' },
+        { nome:'Elton José da Silva', initials:'ES', bg:'#9E3E3E', cnh:'04127788901', cat:'D', rota:'R03', fone:'(18) 99204-8875', status:'AGUARDANDO', stBg:'#FBEEDA', stFg:'#8A5A15' },
+        { nome:'Rosana Padilha Fontes', initials:'RF', bg:'#2E7D5A', cnh:'02771442339', cat:'D', rota:'R04', fone:'(18) 99515-1220', status:'EM ROTA', stBg:'#EAF3EC', stFg:'var(--success)' },
+        { nome:'Waldir Ambrósio de Souza', initials:'WS', bg:'#1F3A2E', cnh:'01998812234', cat:'E', rota:'R05', fone:'(18) 99127-6633', status:'EM ROTA', stBg:'#EAF3EC', stFg:'var(--success)' },
+        { nome:'Zilda Rodrigues Prates', initials:'ZP', bg:'#C4633A', cnh:'03556677021', cat:'D', rota:'R06', fone:'(18) 99310-4488', status:'FOLGA', stBg:'var(--tint)', stFg:'var(--muted)' },
+      ],
+
+      unis: [
+        { nome:'UNESP Araçatuba', cidade:'Araçatuba, SP', est:298, rot:2, color:'#1F3A2E' },
+        { nome:'UNESP Ilha Solteira', cidade:'Ilha Solteira, SP', est:212, rot:1, color:'#1F3A2E' },
+        { nome:'UFSCar São Carlos', cidade:'São Carlos, SP', est:174, rot:1, color:'#8A5A15' },
+        { nome:'FATEC Araçatuba', cidade:'Araçatuba, SP', est:245, rot:1, color:'#C4633A' },
+        { nome:'Unicamp Limeira', cidade:'Limeira, SP', est:98, rot:1, color:'#2E7D5A' },
+        { nome:'UNIP Araçatuba', cidade:'Araçatuba, SP', est:169, rot:1, color:'#9E3E3E' },
+      ],
+
+      manifest: [
+        { n:'01', nome:'Marina Cavalcanti Rocha', ra:'20241834', idaGlyph:G.check, idaColor:'var(--success)', voltaGlyph:G.check, voltaColor:'var(--success)', time:'17:24 · 22:52' },
+        { n:'02', nome:'Túlio Machado Prado', ra:'20241902', idaGlyph:G.check, idaColor:'var(--success)', voltaGlyph:G.check, voltaColor:'var(--success)', time:'17:28 · 22:51' },
+        { n:'03', nome:'Yasmin Cabral Lima', ra:'20240712', idaGlyph:G.dash, idaColor:'var(--soft)', voltaGlyph:G.check, voltaColor:'var(--success)', time:'— · 22:53' },
+        { n:'04', nome:'Renato Furtado Braga', ra:'20241456', idaGlyph:G.check, idaColor:'var(--success)', voltaGlyph:G.check, voltaColor:'var(--success)', time:'17:26 · 22:55' },
+        { n:'05', nome:'Camilla Osório de Freitas', ra:'20241119', idaGlyph:G.check, idaColor:'var(--success)', voltaGlyph:G.clock, voltaColor:'var(--warn)', time:'17:31 · aguardando' },
+        { n:'06', nome:'Fábio Kuroda Nishimoto', ra:'20240824', idaGlyph:G.check, idaColor:'var(--success)', voltaGlyph:G.check, voltaColor:'var(--success)', time:'17:30 · 22:54' },
+        { n:'07', nome:'Priscila Naves Costa', ra:'20240995', idaGlyph:G.check, idaColor:'var(--success)', voltaGlyph:G.dash, voltaColor:'var(--soft)', time:'17:27 · —' },
+        { n:'08', nome:'Lucas Emiliano Bertazzo', ra:'20250114', idaGlyph:G.x, idaColor:'var(--danger)', voltaGlyph:G.dash, voltaColor:'var(--soft)', time:'faltou' },
+      ],
+
+      reports: [
+        { title:'Frequência por estudante', desc:'Embarques confirmados por aluno e período.', icon:this.ic('attendance'), iconBg:'#EAF3EC', iconFg:'var(--success)' },
+        { title:'Ocupação por veículo', desc:'Média de assentos ocupados por rota.', icon:this.ic('vehicle'), iconBg:'#FBEEDA', iconFg:'#8A5A15' },
+        { title:'Alunos por rota', desc:'Distribuição atual por rota e universidade.', icon:this.ic('route'), iconBg:'var(--tint)', iconFg:'var(--primary)' },
+        { title:'Histórico de utilização', desc:'Cronologia individual de rotas e presenças.', icon:this.ic('dashboard'), iconBg:'#F4EAE1', iconFg:'var(--accent)' },
+        { title:'Feedbacks recebidos', desc:'Avaliações registradas após cada viagem.', icon:this.ic('doc'), iconBg:'var(--tint)', iconFg:'var(--muted)' },
+        { title:'Log administrativo', desc:'Alterações e ajustes manuais de alocação.', icon:this.ic('team'), iconBg:'var(--tint)', iconFg:'var(--primary)' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>
