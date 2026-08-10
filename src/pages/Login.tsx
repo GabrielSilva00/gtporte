@@ -8,13 +8,7 @@ import { useToast } from '../components/ui/Toast'
 /** Público declarado no formulário. Não concede acesso: serve para orientar a
  *  interface e barrar quem escolheu a opção errada. Quem manda é o tipo gravado
  *  em public.perfil, respaldado pelas policies de RLS. */
-type Publico = 'estudante' | 'servidor' | 'motorista'
-
-const PUBLICOS: { valor: Publico; rotulo: string; descricao: string }[] = [
-  { valor: 'estudante', rotulo: 'Estudante', descricao: 'Sua rota, presença e documentos.' },
-  { valor: 'servidor', rotulo: 'Servidor', descricao: 'Painel de Controle do Setor de Transporte.' },
-  { valor: 'motorista', rotulo: 'Motorista', descricao: 'Passageiros e situação das suas viagens.' },
-]
+type Publico = 'estudante' | 'servidor'
 
 const NOME_TIPO: Record<string, string> = {
   admin: 'servidor (administrador)',
@@ -23,10 +17,11 @@ const NOME_TIPO: Record<string, string> = {
   estudante: 'estudante',
 }
 
-/** O tipo do perfil corresponde ao público escolhido? */
+/** O tipo do perfil corresponde ao público escolhido?
+ *  Motorista entra pelo acesso de servidor, que é como ele consta na prefeitura. */
 function corresponde(publico: Publico, tipo: string): boolean {
-  if (publico === 'servidor') return tipo === 'admin' || tipo === 'operador'
-  return publico === tipo
+  if (publico === 'servidor') return tipo === 'admin' || tipo === 'operador' || tipo === 'motorista'
+  return tipo === 'estudante'
 }
 
 export default function Login() {
@@ -63,10 +58,10 @@ export default function Login() {
 
       if (!corresponde(publico, tipo)) {
         await sair()
-        const escolhido = PUBLICOS.find((p) => p.valor === publico)?.rotulo ?? publico
         setErro(
-          `Esta conta é de ${NOME_TIPO[tipo] ?? tipo}, e você escolheu entrar como ${escolhido}. ` +
-            'Selecione a opção correta acima — a senha está certa.',
+          `Esta conta é de ${NOME_TIPO[tipo] ?? tipo}, e você escolheu entrar como ` +
+            `${publico === 'servidor' ? 'servidor' : 'estudante'}. ` +
+            'A senha está certa; use a outra opção de acesso.',
         )
         return
       }
@@ -108,11 +103,11 @@ export default function Login() {
             Setor de Transporte · Araçatuba
           </div>
           <h1 className="mb-[18px] text-[36px] font-medium leading-[1.15] tracking-[-0.015em]">
-            Gestão do transporte acadêmico municipal, sem papel.
+            Gestão do transporte acadêmico
           </h1>
           <p className="text-[14.5px] leading-[1.55] opacity-75">
             Cadastro digital, validação de documentos, distribuição automática por horário de aulas
-            e confirmação diária de presença — em um só lugar.
+            e confirmação diária de presença, em um só lugar.
           </p>
         </div>
 
@@ -133,38 +128,30 @@ export default function Login() {
 
           <div className="eyebrow mb-2">Entrar</div>
           <h2 className="mb-1.5 text-[26px] font-semibold tracking-[-0.01em]">Acesse sua conta</h2>
-          <p className="mb-4 text-[13.5px] text-muted">
-            {PUBLICOS.find((p) => p.valor === publico)?.descricao}
+          <p className="mb-5 text-[13.5px] text-muted">
+            {publico === 'estudante'
+              ? 'Sua rota, presença e documentos.'
+              : 'Acesso restrito ao Setor de Transporte.'}
           </p>
 
-          {/* Público declarado — define para onde a pessoa vai e o que aparece na tela */}
-          <div
-            role="radiogroup"
-            aria-label="Entrar como"
-            className="mb-5 grid grid-cols-3 gap-1 rounded-btn border border-edge bg-panel p-1"
-          >
-            {PUBLICOS.map((p) => {
-              const ativo = p.valor === publico
-              return (
-                <button
-                  key={p.valor}
-                  type="button"
-                  role="radio"
-                  aria-checked={ativo}
-                  onClick={() => {
-                    setPublico(p.valor)
-                    setErro(null)
-                  }}
-                  className={
-                    'rounded-[6px] px-2 py-2 text-[12.5px] font-medium transition-colors ' +
-                    (ativo ? 'bg-primary text-primary-fg' : 'text-muted hover:bg-tint hover:text-ink')
-                  }
-                >
-                  {p.rotulo}
-                </button>
-              )
-            })}
-          </div>
+          {/* O acesso de servidor é a exceção: fica indicado, não em destaque. */}
+          {publico === 'servidor' && (
+            <div className="mb-4 flex items-center justify-between rounded-btn border border-edge bg-panel px-3 py-2">
+              <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted">
+                Acesso de servidor
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setPublico('estudante')
+                  setErro(null)
+                }}
+                className="text-[12px] text-primary hover:text-primary-hover"
+              >
+                Sou estudante
+              </button>
+            </div>
+          )}
 
           <div className="flex flex-col gap-3.5">
             <label className="block">
@@ -213,15 +200,29 @@ export default function Login() {
             </button>
 
             {publico === 'estudante' ? (
-              <div className="mt-3 text-center text-[12.5px] text-muted">
-                Ainda não tem cadastro?{' '}
-                <Link to="/cadastro" className="font-medium text-primary hover:text-primary-hover">
-                  Cadastre-se como estudante
-                </Link>
-              </div>
+              <>
+                <div className="mt-3 text-center text-[12.5px] text-muted">
+                  Ainda não tem cadastro?{' '}
+                  <Link to="/cadastro" className="font-medium text-primary hover:text-primary-hover">
+                    Cadastre-se como estudante
+                  </Link>
+                </div>
+                <div className="mt-5 border-t border-line pt-3 text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPublico('servidor')
+                      setErro(null)
+                    }}
+                    className="text-[11.5px] text-soft hover:text-muted"
+                  >
+                    Acesso de servidor
+                  </button>
+                </div>
+              </>
             ) : (
               <div className="mt-3 text-center text-[12.5px] text-muted">
-                Acesso de servidor é criado pelo Setor de Transporte.
+                A conta de servidor é criada pelo Setor de Transporte.
               </div>
             )}
           </div>

@@ -41,10 +41,10 @@ export default function Historico() {
         presencas = p as Presenca[]
       }
 
-      const rotaPorAlocacao = new Map(lista.map((a) => [a.id, a.rota?.codigo ?? '—']))
+      const rotaPorAlocacao = new Map(lista.map((a) => [a.id, a.rota?.codigo ?? '-']))
       const viagens: LinhaHistorico[] = presencas.map((p) => ({
         presenca: p,
-        rota: rotaPorAlocacao.get(p.alocacao_id) ?? '—',
+        rota: rotaPorAlocacao.get(p.alocacao_id) ?? '-',
       }))
 
       const totalIda = presencas.filter((p) => p.confirmou_ida).length
@@ -112,7 +112,7 @@ export default function Historico() {
                         ✓ {horaCurta(presenca.hora_ida)}
                       </span>
                     ) : (
-                      <span className="text-soft">—</span>
+                      <span className="text-soft">-</span>
                     )}
                   </td>
                   <td className="td text-center">
@@ -121,7 +121,7 @@ export default function Historico() {
                         ✓ {horaCurta(presenca.hora_volta)}
                       </span>
                     ) : (
-                      <span className="text-soft">—</span>
+                      <span className="text-soft">-</span>
                     )}
                   </td>
                 </tr>
@@ -147,7 +147,7 @@ export default function Historico() {
               <tr key={a.id} className="border-b border-line last:border-0">
                 <td className="td">
                   <span className="font-mono font-medium text-primary">
-                    {a.rota?.codigo ?? '—'}
+                    {a.rota?.codigo ?? '-'}
                   </span>
                   {a.rota?.nome && (
                     <span className="ml-2 text-[12px] text-muted">{a.rota.nome}</span>

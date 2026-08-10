@@ -96,7 +96,7 @@ export default function MeusDocumentos() {
       <div className="mb-5">
         <h1 className="text-[22px] font-semibold">Meus documentos</h1>
         <div className="mt-1 text-[13px] text-muted">
-          {aprovados} de 4 aprovados — a alocação exige os quatro (RN01).
+          {aprovados} de 4 aprovados, a alocação exige os quatro.
         </div>
       </div>
 
@@ -139,7 +139,7 @@ export default function MeusDocumentos() {
 
               {bloqueado ? (
                 <div className="mt-3 text-[11.5px] text-muted">
-                  Documento aprovado — não é necessário reenviar.
+                  Documento aprovado, não é necessário reenviar.
                 </div>
               ) : (
                 <label className="btn-ghost mt-3 w-full cursor-pointer">
@@ -169,7 +169,7 @@ export default function MeusDocumentos() {
         <span className="mt-px shrink-0 text-primary">
           <IconeInfo size={15} />
         </span>
-        Seus arquivos ficam em um bucket privado — apenas você e o setor de transporte têm acesso.
+        Seus arquivos ficam em um bucket privado, apenas você e o setor de transporte têm acesso.
         Todo reenvio volta ao status <b>pendente</b> e precisa de nova aprovação.
       </div>
     </div>

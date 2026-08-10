@@ -151,7 +151,7 @@ declare
   v_status    status_documental;
 begin
   if not public.eh_admin() then
-    raise exception 'RN07: apenas administradores podem aprovar documentos';
+    raise exception 'Apenas administradores podem aprovar documentos';
   end if;
 
   update public.documento
@@ -182,7 +182,7 @@ declare
   v_status    status_documental;
 begin
   if not public.eh_admin() then
-    raise exception 'RN07: apenas administradores podem rejeitar documentos';
+    raise exception 'Apenas administradores podem rejeitar documentos';
   end if;
 
   if coalesce(trim(p_observacao), '') = '' then
@@ -221,7 +221,7 @@ declare
   v_status status_documental;
 begin
   if not public.eh_admin() then
-    raise exception 'RN07: apenas administradores podem revisar documentos';
+    raise exception 'Apenas administradores podem revisar documentos';
   end if;
 
   update public.documento
@@ -465,7 +465,7 @@ begin
 
     -- RN03: nenhum veiculo pode exceder sua capacidade maxima
     if v_ocupacao >= v_capacidade then
-      raise exception 'RN03: veiculo excedeu capacidade (rota % com %/% assentos)',
+      raise exception 'Veiculo excedeu capacidade (rota % com %/% assentos)',
         v_codigo, v_ocupacao, v_capacidade;
     end if;
   end if;
@@ -591,7 +591,8 @@ $$;
 -- =====================================================================
 
 -- RF19 - ocupacao por veiculo / rota
-create or replace view public.vw_ocupacao_rota
+drop view if exists public.vw_ocupacao_rota;
+create view public.vw_ocupacao_rota
 with (security_invoker = true) as
 select r.id            as rota_id,
        r.codigo,
@@ -616,11 +617,12 @@ group by r.id, r.codigo, r.nome, r.status, r.horario_partida, r.horario_retorno,
          v.placa, v.modelo, v.capacidade_maxima, m.nome;
 
 -- RF18 - frequencia por estudante
-create or replace view public.vw_frequencia_estudante
+drop view if exists public.vw_frequencia_estudante;
+create view public.vw_frequencia_estudante
 with (security_invoker = true) as
 select e.id           as estudante_id,
        e.nome,
-       e.ra,
+       e.prontuario,
        u.nome         as universidade,
        r.codigo       as rota,
        count(p.id)::int                                         as dias_registrados,
@@ -632,10 +634,11 @@ left join public.alocacao_estudante a on a.estudante_id = e.id
 left join public.rota r  on r.id = a.rota_id
 left join public.universidade u on u.id = e.universidade_id
 left join public.presenca p on p.alocacao_id = a.id
-group by e.id, e.nome, e.ra, u.nome, r.codigo, p.data;
+group by e.id, e.nome, e.prontuario, u.nome, r.codigo, p.data;
 
 -- RF17 - quantidade de alunos por rota e universidade
-create or replace view public.vw_alunos_por_rota
+drop view if exists public.vw_alunos_por_rota;
+create view public.vw_alunos_por_rota
 with (security_invoker = true) as
 select r.codigo    as rota,
        r.nome      as rota_nome,
@@ -648,11 +651,12 @@ left join public.universidade u on u.id = e.universidade_id
 group by r.codigo, r.nome, u.nome;
 
 -- RF24 - historico de utilizacao por estudante
-create or replace view public.vw_historico_utilizacao
+drop view if exists public.vw_historico_utilizacao;
+create view public.vw_historico_utilizacao
 with (security_invoker = true) as
 select e.id      as estudante_id,
        e.nome,
-       e.ra,
+       e.prontuario,
        r.codigo  as rota,
        a.situacao,
        a.origem,

@@ -125,7 +125,7 @@ export default function Universidades() {
         {universidades && universidades.length === 0 && (
           <Vazio
             titulo="Nenhuma universidade cadastrada"
-            descricao="O estudante precisa estar vinculado a uma instituição válida (RN13)."
+            descricao="O estudante precisa estar vinculado a uma instituição válida."
           />
         )}
 
@@ -147,7 +147,7 @@ export default function Universidades() {
                   </div>
                   <div className="mt-3 text-[14.5px] font-semibold">{u.nome}</div>
                   <div className="mt-0.5 text-[12px] text-muted">
-                    {u.cidade?.nome ?? '—'}, {u.cidade?.uf ?? ''}
+                    {u.cidade?.nome ?? '-'}, {u.cidade?.uf ?? ''}
                   </div>
                   <div className="mt-3 flex gap-[18px] border-t border-line pt-3">
                     <div>

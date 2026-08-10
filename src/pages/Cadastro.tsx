@@ -117,7 +117,7 @@ export default function Cadastro() {
             Solicitar transporte
           </h2>
           <p className="mb-5 text-[13.5px] text-muted">
-            Etapa 1 de 2 — crie sua conta de acesso.
+            Etapa 1 de 2, crie sua conta de acesso.
           </p>
 
           <div className="mb-5 flex gap-2">

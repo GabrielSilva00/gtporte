@@ -6,6 +6,7 @@ import { useCidades, useUniversidades } from '../../hooks/useCadastros'
 import { BUCKET_DOCUMENTOS, mensagemErro, supabase } from '../../lib/supabase'
 import { useToast } from '../../components/ui/Toast'
 import { IconeCheck, IconeInfo, IconeUpload } from '../../components/icons'
+import { DIAS_SEMANA, type DiaGrade } from '../../lib/format'
 import {
   ROTULO_DOCUMENTO,
   TIPOS_DOCUMENTO,
@@ -27,7 +28,6 @@ export default function CompletarCadastro() {
 
   const [form, setForm] = useState({
     nome: perfil?.nome ?? '',
-    ra: '',
     cpf: '',
     data_nascimento: '',
     telefone: perfil?.telefone ?? '',
@@ -36,9 +36,12 @@ export default function CompletarCadastro() {
     universidade_id: '',
     cidade_id: '',
     perfil_uso: 'ida_volta' as PerfilUso,
-    hora_inicio: '',
-    hora_fim: '',
   })
+
+  // Um horario por dia: nem todo curso tem a mesma carga de segunda a sabado.
+  const [grade, setGrade] = useState<Record<number, DiaGrade>>(() =>
+    Object.fromEntries(DIAS_SEMANA.map((d) => [d.numero, { ativo: false, inicio: '', fim: '' }])),
+  )
   const [arquivos, setArquivos] = useState<Partial<Record<TipoDocumento, File>>>({})
 
   const enviar = useMutation({
@@ -50,7 +53,6 @@ export default function CompletarCadastro() {
         .insert({
           perfil_id: perfil.id,
           nome: form.nome.trim(),
-          ra: form.ra.trim(),
           cpf: form.cpf.trim(),
           data_nascimento: form.data_nascimento || null,
           telefone: form.telefone.trim() || null,
@@ -65,14 +67,17 @@ export default function CompletarCadastro() {
         .single()
       if (erroEstudante) throw erroEstudante
 
-      // Grade horária de segunda a sexta — insumo da distribuição (RN02)
-      if (form.hora_inicio && form.hora_fim) {
-        const linhas = [1, 2, 3, 4, 5].map((dia) => ({
-          estudante_id: estudante.id,
-          dia_semana: dia,
-          hora_inicio: form.hora_inicio,
-          hora_fim: form.hora_fim,
-        }))
+      // Grade horária — insumo da distribuição (RN02), um registro por dia com aula
+      const linhas = DIAS_SEMANA.filter((d) => {
+        const g = grade[d.numero]
+        return g.ativo && g.inicio && g.fim
+      }).map((d) => ({
+        estudante_id: estudante.id,
+        dia_semana: d.numero,
+        hora_inicio: grade[d.numero].inicio,
+        hora_fim: grade[d.numero].fim,
+      }))
+      if (linhas.length > 0) {
         const { error } = await supabase.from('grade_horaria').insert(linhas)
         if (error) throw error
       }
@@ -109,21 +114,25 @@ export default function CompletarCadastro() {
   })
 
   const documentosEnviados = TIPOS_DOCUMENTO.filter((t) => arquivos[t]).length
+  const diasMarcados = DIAS_SEMANA.filter((d) => grade[d.numero].ativo)
+  const diasPreenchidos = diasMarcados.filter(
+    (d) => grade[d.numero].inicio && grade[d.numero].fim,
+  ).length
+  const diasIncompletos = diasMarcados.length - diasPreenchidos
   const valido =
     form.nome.trim().length > 2 &&
-    form.ra.trim() !== '' &&
     form.cpf.trim() !== '' &&
     form.universidade_id !== '' &&
     form.cidade_id !== '' &&
-    form.hora_inicio !== '' &&
-    form.hora_fim !== ''
+    diasPreenchidos > 0 &&
+    diasIncompletos === 0
 
   return (
     <div className="mx-auto w-full max-w-3xl px-5 py-10">
       <div className="eyebrow mb-2">Cadastro de estudante</div>
       <h1 className="text-[24px] font-semibold tracking-[-0.01em]">Complete seu cadastro</h1>
       <p className="mt-1.5 text-[13.5px] text-muted">
-        Etapa 2 de 2 — dados acadêmicos e documentos.
+        Etapa 2 de 2, dados acadêmicos e documentos.
       </p>
 
       <div className="my-5 flex gap-2">
@@ -199,16 +208,7 @@ export default function CompletarCadastro() {
       <section className="card mb-4 p-5">
         <div className="eyebrow mb-3.5">Dados acadêmicos</div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label>
-            <span className="field-label">RA (registro acadêmico)</span>
-            <input
-              value={form.ra}
-              onChange={(e) => setForm({ ...form, ra: e.target.value })}
-              placeholder="20241834"
-              className="field font-mono"
-            />
-          </label>
-          <label>
+          <label className="sm:col-span-2">
             <span className="field-label">Curso</span>
             <input
               value={form.curso}
@@ -247,30 +247,63 @@ export default function CompletarCadastro() {
         </div>
 
         <div className="mt-4 border-t border-line pt-4">
-          <div className="field-label">Horário das aulas (segunda a sexta)</div>
+          <div className="field-label">Horário das aulas</div>
           <p className="mb-3 text-[12px] text-muted">
-            É por aqui que o sistema encontra um ônibus compatível com a sua grade.
+            Marque os dias em que você tem aula e informe o horário de cada um. É por aqui que o
+            sistema encontra um ônibus compatível com a sua grade.
           </p>
-          <div className="grid grid-cols-2 gap-3">
-            <label>
-              <span className="field-label">Início</span>
-              <input
-                type="time"
-                value={form.hora_inicio}
-                onChange={(e) => setForm({ ...form, hora_inicio: e.target.value })}
-                className="field"
-              />
-            </label>
-            <label>
-              <span className="field-label">Término</span>
-              <input
-                type="time"
-                value={form.hora_fim}
-                onChange={(e) => setForm({ ...form, hora_fim: e.target.value })}
-                className="field"
-              />
-            </label>
+
+          <div className="flex flex-col gap-2">
+            {DIAS_SEMANA.map((d) => {
+              const g = grade[d.numero]
+              return (
+                <div
+                  key={d.numero}
+                  className={`grid grid-cols-[104px_1fr_1fr] items-center gap-2 rounded-field border px-3 py-2 transition-colors ${
+                    g.ativo ? 'border-primary/30 bg-panel' : 'border-edge'
+                  }`}
+                >
+                  <label className="flex cursor-pointer items-center gap-2 text-[12.5px] font-medium">
+                    <input
+                      type="checkbox"
+                      checked={g.ativo}
+                      onChange={(e) =>
+                        setGrade({ ...grade, [d.numero]: { ...g, ativo: e.target.checked } })
+                      }
+                      className="h-3.5 w-3.5 accent-[#1F3A2E]"
+                    />
+                    {d.rotulo}
+                  </label>
+                  <input
+                    type="time"
+                    aria-label={`Início das aulas de ${d.rotulo}`}
+                    value={g.inicio}
+                    disabled={!g.ativo}
+                    onChange={(e) =>
+                      setGrade({ ...grade, [d.numero]: { ...g, inicio: e.target.value } })
+                    }
+                    className="field py-1.5 text-[12.5px] disabled:opacity-40"
+                  />
+                  <input
+                    type="time"
+                    aria-label={`Término das aulas de ${d.rotulo}`}
+                    value={g.fim}
+                    disabled={!g.ativo}
+                    onChange={(e) =>
+                      setGrade({ ...grade, [d.numero]: { ...g, fim: e.target.value } })
+                    }
+                    className="field py-1.5 text-[12.5px] disabled:opacity-40"
+                  />
+                </div>
+              )
+            })}
           </div>
+
+          {diasIncompletos > 0 && (
+            <p className="mt-2 text-[12px] text-warn">
+              Informe início e término dos dias marcados.
+            </p>
+          )}
         </div>
       </section>
 
@@ -319,7 +352,7 @@ export default function CompletarCadastro() {
               <IconeInfo size={15} />
             </span>
             Faltam {4 - documentosEnviados} documento(s). Você pode enviar os restantes depois, na
-            aba <b>Documentos</b> — mas a alocação só acontece com todos aprovados.
+            aba <b>Documentos</b>, mas a alocação só acontece com todos aprovados.
           </div>
         )}
       </section>

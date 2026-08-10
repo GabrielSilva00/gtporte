@@ -131,7 +131,7 @@ begin
   end if;
 
   if not (public.eh_staff() or v_motorista = public.meu_motorista_id()) then
-    raise exception 'RN08: apenas o motorista responsavel pela rota pode atualizar a situacao';
+    raise exception 'Apenas o motorista responsavel pela rota pode atualizar a situacao';
   end if;
 
   update public.rota
@@ -280,7 +280,7 @@ begin
 
   select jsonb_build_object(
     'estudante', jsonb_build_object(
-      'id', e.id, 'nome', e.nome, 'ra', e.ra, 'curso', e.curso,
+      'id', e.id, 'nome', e.nome, 'prontuario', e.prontuario, 'curso', e.curso,
       'perfil_uso', e.perfil_uso, 'status_documental', e.status_documental,
       'universidade', u.nome
     ),
@@ -320,7 +320,8 @@ $$;
 -- ---------------------------------------------------------------------
 -- RF12 - rota(s) sob responsabilidade do motorista logado
 -- ---------------------------------------------------------------------
-create or replace view public.vw_minhas_rotas_motorista
+drop view if exists public.vw_minhas_rotas_motorista;
+create view public.vw_minhas_rotas_motorista
 with (security_invoker = true) as
 select r.id            as rota_id,
        r.codigo,
@@ -348,7 +349,8 @@ left join public.cidade cd on cd.id = r.cidade_destino_id;
 -- administrativo mostre "EM ROTA / AGUARDANDO" com dado real.
 -- (colunas novas sao anexadas ao final, o que create or replace permite)
 -- ---------------------------------------------------------------------
-create or replace view public.vw_ocupacao_rota
+drop view if exists public.vw_ocupacao_rota;
+create view public.vw_ocupacao_rota
 with (security_invoker = true) as
 select r.id            as rota_id,
        r.codigo,

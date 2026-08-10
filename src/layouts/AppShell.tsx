@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../auth/AuthProvider'
 import { supabase } from '../lib/supabase'
 import { Avatar } from '../components/ui/Avatar'
+import { Notificacoes } from '../components/Notificacoes'
 import { ROTULO_TIPO_PERFIL } from '../lib/types'
 import {
   IconeAlocacao,
@@ -18,7 +19,6 @@ import {
   IconeRelatorio,
   IconeRota,
   IconeSair,
-  IconeSino,
   IconeUniversidade,
   IconeVeiculo,
 } from '../components/icons'
@@ -165,7 +165,7 @@ export default function AppShell() {
         <div className="flex items-center gap-2.5 border-t border-white/10 px-4 py-3.5">
           <Avatar nome={perfil?.nome ?? '?'} tamanho={32} cor="#C4633A" />
           <div className="min-w-0 flex-1">
-            <div className="truncate text-[12.5px] font-medium">{perfil?.nome ?? '—'}</div>
+            <div className="truncate text-[12.5px] font-medium">{perfil?.nome ?? '-'}</div>
             <div className="text-[10.5px] opacity-60">
               {perfil ? ROTULO_TIPO_PERFIL[perfil.tipo] : ''}
             </div>
@@ -202,17 +202,7 @@ export default function AppShell() {
             />
           </form>
 
-          <button
-            className="relative flex h-[34px] w-[34px] items-center justify-center rounded-btn border border-edge bg-surface"
-            title="Notificações"
-            aria-label="Notificações"
-            onClick={() => navegar('/documentos')}
-          >
-            <IconeSino size={15} />
-            {!!contadores?.documentos && (
-              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-accent" />
-            )}
-          </button>
+          <Notificacoes />
         </header>
 
         <div className="flex-1 overflow-auto px-5 pb-16 pt-6 md:px-[30px]">

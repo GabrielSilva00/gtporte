@@ -108,7 +108,7 @@ const RELATORIOS: {
 const COLUNAS: Record<ChaveRelatorio, Coluna[]> = {
   frequencia: [
     { chave: 'nome', titulo: 'Estudante' },
-    { chave: 'ra', titulo: 'RA' },
+    { chave: 'prontuario', titulo: 'Prontuário' },
     { chave: 'universidade', titulo: 'Universidade' },
     { chave: 'rota', titulo: 'Rota' },
     { chave: 'data', titulo: 'Data' },
@@ -133,7 +133,7 @@ const COLUNAS: Record<ChaveRelatorio, Coluna[]> = {
   ],
   historico: [
     { chave: 'nome', titulo: 'Estudante' },
-    { chave: 'ra', titulo: 'RA' },
+    { chave: 'prontuario', titulo: 'Prontuário' },
     { chave: 'rota', titulo: 'Rota' },
     { chave: 'situacao', titulo: 'Situação' },
     { chave: 'origem', titulo: 'Origem' },
@@ -251,10 +251,10 @@ export default function Relatorios() {
           estudante: { nome: string } | null
           rota: { codigo: string } | null
         }[]).map((f) => ({
-          estudante: f.estudante?.nome ?? '—',
-          rota: f.rota?.codigo ?? '—',
+          estudante: f.estudante?.nome ?? '-',
+          rota: f.rota?.codigo ?? '-',
           nota: f.nota,
-          comentario: f.comentario ?? '—',
+          comentario: f.comentario ?? '-',
           criado_em: dataBR(f.criado_em),
         }))
       }
@@ -402,9 +402,12 @@ export default function Relatorios() {
               >
                 <Icone size={17} />
               </div>
-              <span className="font-mono text-[10px] uppercase tracking-wide text-soft">
-                {requisito}
-              </span>
+              {/* Os codigos de regra de negocio ficam so na documentacao */}
+              {!requisito.startsWith('RN') && (
+                <span className="font-mono text-[10px] uppercase tracking-wide text-soft">
+                  {requisito}
+                </span>
+              )}
             </div>
             <div className="mt-3 text-[14px] font-semibold">{titulo}</div>
             <div className="mt-1 text-[12px] leading-[1.5] text-muted">{descricao}</div>
@@ -483,7 +486,7 @@ export default function Relatorios() {
                   <tr key={i} className="border-b border-line last:border-0">
                     {COLUNAS[previa.chave].map((c) => (
                       <td key={c.chave} className="td whitespace-nowrap">
-                        {String(l[c.chave] ?? '—')}
+                        {String(l[c.chave] ?? '-')}
                       </td>
                     ))}
                   </tr>
@@ -492,7 +495,7 @@ export default function Relatorios() {
             </table>
             {previa.linhas.length > 200 && (
               <div className="border-t border-line px-4 py-2.5 text-center text-[11.5px] text-muted">
-                Mostrando 200 de {previa.linhas.length} registros — a exportação inclui todos.
+                Mostrando 200 de {previa.linhas.length} registros, a exportação inclui todos.
               </div>
             )}
           </div>

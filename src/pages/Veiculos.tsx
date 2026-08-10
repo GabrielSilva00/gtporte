@@ -158,7 +158,7 @@ export default function Veiculos() {
       <Modal
         aberto={aberto}
         titulo={editando ? `Editar ${editando.placa}` : 'Novo veículo'}
-        descricao="A capacidade máxima é o limite usado pela distribuição automática (RN03)."
+        descricao="A capacidade máxima é o limite usado pela distribuição automática."
         onFechar={fechar}
         rodape={
           <>

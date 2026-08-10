@@ -112,11 +112,14 @@ create index if not exists idx_universidade_cidade on public.universidade(cidade
 -- estudante  (RF01)
 -- RN13: vinculo obrigatorio a uma universidade valida
 -- ---------------------------------------------------------------------
+-- Prontuario: identificador academico gerado pelo sistema, a partir de 218926.
+create sequence if not exists public.seq_prontuario start with 218926;
+
 create table if not exists public.estudante (
   id                uuid primary key default gen_random_uuid(),
   perfil_id         uuid unique references public.perfil(id) on delete set null,
   nome              text not null,
-  ra                text not null unique,
+  prontuario        text not null unique default nextval('public.seq_prontuario')::text,
   cpf               text not null unique,
   data_nascimento   date,
   telefone          text,
@@ -135,7 +138,7 @@ create table if not exists public.estudante (
 create index if not exists idx_estudante_universidade on public.estudante(universidade_id);
 create index if not exists idx_estudante_cidade on public.estudante(cidade_id);
 create index if not exists idx_estudante_status on public.estudante(status_documental);
-create index if not exists idx_estudante_ra on public.estudante(ra);
+create index if not exists idx_estudante_prontuario on public.estudante(prontuario);
 
 drop trigger if exists trg_estudante_atualizado on public.estudante;
 create trigger trg_estudante_atualizado before update on public.estudante

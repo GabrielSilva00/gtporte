@@ -41,7 +41,7 @@ export default function PortalShell({
           </div>
           <div className="hidden text-right sm:block">
             <div className="max-w-[180px] truncate text-[12.5px] font-medium">
-              {perfil?.nome ?? '—'}
+              {perfil?.nome ?? '-'}
             </div>
             <div className="text-[10.5px] opacity-60">{perfil?.email}</div>
           </div>

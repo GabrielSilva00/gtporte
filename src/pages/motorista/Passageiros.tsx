@@ -42,7 +42,7 @@ export default function Passageiros() {
       const { data: alocacoes, error: err } = await supabase
         .from('alocacao_estudante')
         .select(
-          '*, estudante:estudante_id (id, nome, ra, curso, perfil_uso, universidade:universidade_id (nome))',
+          '*, estudante:estudante_id (id, nome, prontuario, curso, perfil_uso, universidade:universidade_id (nome))',
         )
         .eq('rota_id', rotaId)
         .eq('ativa', true)
@@ -106,7 +106,7 @@ export default function Passageiros() {
       })
       if (err) throw err
     },
-    onSuccess: () => toast.sucesso('Posição registrada — os passageiros já conseguem ver.'),
+    onSuccess: () => toast.sucesso('Posição registrada, os passageiros já conseguem ver.'),
     onError: (e) => {
       const msg = e instanceof GeolocationPositionError
         ? 'Permissão de localização negada pelo navegador.'
@@ -181,7 +181,7 @@ export default function Passageiros() {
           <div className="mt-4 flex items-center gap-3 rounded-btn bg-tint p-3.5">
             <div className="flex-1">
               <div className="text-[10.5px] uppercase tracking-[0.06em] text-muted">Partida</div>
-              <div className="mt-0.5 text-[13px] font-medium">{rota.origem ?? '—'}</div>
+              <div className="mt-0.5 text-[13px] font-medium">{rota.origem ?? '-'}</div>
               <div className="mt-0.5 font-mono text-[15px] font-semibold text-primary">
                 {hora(rota.horario_partida)}
               </div>
@@ -191,7 +191,7 @@ export default function Passageiros() {
             </span>
             <div className="flex-1 text-right">
               <div className="text-[10.5px] uppercase tracking-[0.06em] text-muted">Retorno</div>
-              <div className="mt-0.5 text-[13px] font-medium">{rota.destino ?? '—'}</div>
+              <div className="mt-0.5 text-[13px] font-medium">{rota.destino ?? '-'}</div>
               <div className="mt-0.5 font-mono text-[15px] font-semibold text-primary">
                 {hora(rota.horario_retorno)}
               </div>
@@ -282,16 +282,16 @@ export default function Passageiros() {
                       <div className="flex items-center gap-2.5">
                         <Avatar nome={est?.nome ?? '?'} />
                         <div className="min-w-0">
-                          <div className="truncate font-medium">{est?.nome ?? '—'}</div>
+                          <div className="truncate font-medium">{est?.nome ?? '-'}</div>
                           <div className="font-mono text-[11px] text-soft">
-                            RA {est?.ra ?? '—'} ·{' '}
+                            Prontuário {est?.prontuario ?? '-'} ·{' '}
                             {est ? ROTULO_PERFIL_USO[est.perfil_uso] : ''}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="td hidden text-[12.5px] sm:table-cell">
-                      {est?.universidade?.nome ?? '—'}
+                      {est?.universidade?.nome ?? '-'}
                     </td>
                     <td className="td text-center">
                       <Marca confirmado={!!presenca?.confirmou_ida} hora={presenca?.hora_ida} />

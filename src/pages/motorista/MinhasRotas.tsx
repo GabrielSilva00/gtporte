@@ -66,7 +66,7 @@ export default function MinhasRotas() {
           </div>
           <div>
             <div className="text-[11.5px] text-muted">Telefone</div>
-            <div className="mt-1 font-mono text-[13px]">{motorista.telefone ?? '—'}</div>
+            <div className="mt-1 font-mono text-[13px]">{motorista.telefone ?? '-'}</div>
           </div>
         </div>
       )}
@@ -115,7 +115,7 @@ export default function MinhasRotas() {
               <div className="mt-4 flex items-center gap-3 rounded-btn bg-tint p-3.5">
                 <div className="flex-1">
                   <div className="text-[10.5px] uppercase tracking-[0.06em] text-muted">Partida</div>
-                  <div className="mt-0.5 text-[13px] font-medium">{r.origem ?? '—'}</div>
+                  <div className="mt-0.5 text-[13px] font-medium">{r.origem ?? '-'}</div>
                   <div className="mt-0.5 font-mono text-[14px] font-semibold text-primary">
                     {hora(r.horario_partida)}
                   </div>
@@ -125,7 +125,7 @@ export default function MinhasRotas() {
                 </span>
                 <div className="flex-1 text-right">
                   <div className="text-[10.5px] uppercase tracking-[0.06em] text-muted">Retorno</div>
-                  <div className="mt-0.5 text-[13px] font-medium">{r.destino ?? '—'}</div>
+                  <div className="mt-0.5 text-[13px] font-medium">{r.destino ?? '-'}</div>
                   <div className="mt-0.5 font-mono text-[14px] font-semibold text-primary">
                     {hora(r.horario_retorno)}
                   </div>

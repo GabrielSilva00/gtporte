@@ -9,7 +9,7 @@ const SELECT_ROTA = `
   destino:cidade_destino_id (id, nome),
   veiculo:veiculo_id (id, placa, modelo, capacidade_maxima),
   motorista:motorista_id (id, nome),
-  universidade:universidade_id (id, nome)
+  universidades:rota_universidade (universidade:universidade_id (id, nome))
 `
 
 export function useCidades() {

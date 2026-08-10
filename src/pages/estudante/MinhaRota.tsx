@@ -117,12 +117,12 @@ export default function MinhaRota() {
           </div>
         </div>
         <div>
-          <div className="text-[11.5px] text-muted">RA</div>
-          <div className="mt-1 font-mono text-[13px]">{estudante.ra}</div>
+          <div className="text-[11.5px] text-muted">Prontuário</div>
+          <div className="mt-1 font-mono text-[13px]">{estudante.prontuario}</div>
         </div>
         <div>
           <div className="text-[11.5px] text-muted">Universidade</div>
-          <div className="mt-1 text-[13px]">{estudante.universidade ?? '—'}</div>
+          <div className="mt-1 text-[13px]">{estudante.universidade ?? '-'}</div>
         </div>
         <div>
           <div className="text-[11.5px] text-muted">Perfil de uso</div>
@@ -201,7 +201,7 @@ export default function MinhaRota() {
             <div className="mt-4 flex items-center gap-3 rounded-btn bg-tint p-3.5">
               <div className="flex-1">
                 <div className="text-[10.5px] uppercase tracking-[0.06em] text-muted">Ida</div>
-                <div className="mt-0.5 text-[13px] font-medium">{rota.origem ?? '—'}</div>
+                <div className="mt-0.5 text-[13px] font-medium">{rota.origem ?? '-'}</div>
                 <div className="mt-0.5 font-mono text-[15px] font-semibold text-primary">
                   {hora(rota.horario_partida)}
                 </div>
@@ -211,7 +211,7 @@ export default function MinhaRota() {
               </span>
               <div className="flex-1 text-right">
                 <div className="text-[10.5px] uppercase tracking-[0.06em] text-muted">Volta</div>
-                <div className="mt-0.5 text-[13px] font-medium">{rota.destino ?? '—'}</div>
+                <div className="mt-0.5 text-[13px] font-medium">{rota.destino ?? '-'}</div>
                 <div className="mt-0.5 font-mono text-[15px] font-semibold text-primary">
                   {hora(rota.horario_retorno)}
                 </div>
@@ -227,7 +227,7 @@ export default function MinhaRota() {
                   <div className="text-[10.5px] uppercase tracking-[0.06em] text-muted">
                     Motorista
                   </div>
-                  <div className="truncate text-[13px] font-medium">{rota.motorista ?? '—'}</div>
+                  <div className="truncate text-[13px] font-medium">{rota.motorista ?? '-'}</div>
                   {rota.motorista_telefone && (
                     <a
                       href={`tel:${rota.motorista_telefone.replace(/\D/g, '')}`}
@@ -244,7 +244,7 @@ export default function MinhaRota() {
                 </span>
                 <div className="min-w-0">
                   <div className="text-[10.5px] uppercase tracking-[0.06em] text-muted">Veículo</div>
-                  <div className="font-mono text-[13px] font-medium">{rota.veiculo ?? '—'}</div>
+                  <div className="font-mono text-[13px] font-medium">{rota.veiculo ?? '-'}</div>
                   <div className="truncate text-[11.5px] text-soft">{rota.veiculo_modelo}</div>
                 </div>
               </div>
@@ -270,7 +270,7 @@ export default function MinhaRota() {
           <div className="card mb-3.5 p-5">
             <div className="mb-1 text-[14.5px] font-semibold">Confirmar presença de hoje</div>
             <p className="mb-4 text-[12px] text-muted">
-              A confirmação de ida e a de volta são independentes (RN04).
+              A confirmação de ida e a de volta são independentes.
             </p>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -302,7 +302,7 @@ export default function MinhaRota() {
                   <IconeInfo size={15} />
                 </span>
                 Se você não confirmar a ida, a volta só é liberada com antecedência mínima e se
-                houver assento remanescente (RN05 e RN17).
+                houver assento remanescente.
               </div>
             )}
           </div>

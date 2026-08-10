@@ -149,3 +149,21 @@ export function badgeAlocacao(situacao: SituacaoAlocacao): EstiloBadge {
       return { rotulo: 'Sem rota', ...VERMELHO }
   }
 }
+
+/** Dias letivos aceitos na grade horária: segunda a sábado.
+ *  O número segue a convenção de grade_horaria.dia_semana (0 = domingo). */
+export const DIAS_SEMANA: { numero: number; rotulo: string; curto: string }[] = [
+  { numero: 1, rotulo: 'Segunda', curto: 'Seg' },
+  { numero: 2, rotulo: 'Terça', curto: 'Ter' },
+  { numero: 3, rotulo: 'Quarta', curto: 'Qua' },
+  { numero: 4, rotulo: 'Quinta', curto: 'Qui' },
+  { numero: 5, rotulo: 'Sexta', curto: 'Sex' },
+  { numero: 6, rotulo: 'Sábado', curto: 'Sáb' },
+]
+
+/** Uma linha da grade horária enquanto está sendo preenchida no formulário. */
+export interface DiaGrade {
+  ativo: boolean
+  inicio: string
+  fim: string
+}

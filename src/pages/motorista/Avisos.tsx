@@ -11,7 +11,7 @@ import type { AvisoRota } from '../../lib/types'
 const MODELOS = [
   'Saída atrasada em 10 minutos.',
   'Estamos a caminho do ponto de embarque.',
-  'Ponto de embarque alterado hoje — confiram o aviso no grupo.',
+  'Ponto de embarque alterado hoje, confiram o aviso no grupo.',
   'Viagem de volta sairá no horário previsto.',
 ]
 

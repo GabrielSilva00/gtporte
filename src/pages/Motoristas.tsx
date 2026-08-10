@@ -136,7 +136,7 @@ export default function Motoristas() {
       {motoristas && motoristas.length === 0 && (
         <Vazio
           titulo="Nenhum motorista cadastrado"
-          descricao="Toda rota exige um motorista responsável (RN14)."
+          descricao="Toda rota exige um motorista responsável."
         />
       )}
 
@@ -175,9 +175,9 @@ export default function Motoristas() {
                   </td>
                   <td className="td font-mono text-[12px] text-muted">{dataBR(m.validade_cnh)}</td>
                   <td className="td font-mono font-medium text-primary">
-                    {rotaPorMotorista.get(m.id) ?? '—'}
+                    {rotaPorMotorista.get(m.id) ?? '-'}
                   </td>
-                  <td className="td font-mono text-[12px] text-muted">{m.telefone ?? '—'}</td>
+                  <td className="td font-mono text-[12px] text-muted">{m.telefone ?? '-'}</td>
                   <td className="td">
                     <Badge estilo={badgeMotorista(m.status)} />
                   </td>

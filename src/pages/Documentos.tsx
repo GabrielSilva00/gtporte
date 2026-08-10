@@ -137,6 +137,17 @@ export default function Documentos() {
     onError: (e) => toast.erro(mensagemErro(e)),
   })
 
+  const cancelarAprovacao = useMutation({
+    mutationFn: async (documentoId: string) => {
+      const { error: err } = await supabase.rpc('cancelar_aprovacao_documento', {
+        p_documento_id: documentoId,
+      })
+      if (err) throw err
+    },
+    onSuccess: () => aoConcluir('Aprovação cancelada. O documento voltou para pendente.'),
+    onError: (e) => toast.erro(mensagemErro(e)),
+  })
+
   const revisarTudo = useMutation({
     mutationFn: async ({ status, motivo }: { status: StatusDocumental; motivo?: string }) => {
       if (!selecionado) return
@@ -160,7 +171,7 @@ export default function Documentos() {
       <div className="mb-5">
         <h1 className="text-[22px] font-semibold">Validação de documentos</h1>
         <div className="mt-1 text-[13px] text-muted">
-          Estudante só é alocado após aprovação documental (RN01).
+          Estudante só é alocado após aprovação documental.
         </div>
       </div>
 
@@ -169,7 +180,7 @@ export default function Documentos() {
           <span className="mt-px shrink-0 text-primary">
             <IconeInfo size={15} />
           </span>
-          RN07: apenas administradores podem aprovar ou rejeitar documentos. Você está em modo
+          apenas administradores podem aprovar ou rejeitar documentos. Você está em modo
           leitura.
         </div>
       )}
@@ -269,18 +280,20 @@ export default function Documentos() {
                   <div>
                     <div className="text-[17px] font-semibold">{selecionado.nome}</div>
                     <div className="mt-0.5 text-[12.5px] text-muted">
-                      RA {selecionado.ra} · {selecionado.universidade?.nome}
+                      Prontuário {selecionado.prontuario} · {selecionado.universidade?.nome}
                       {selecionado.curso ? ` · ${selecionado.curso}` : ''}
                     </div>
                   </div>
                   {ehAdmin && (
                     <div className="flex shrink-0 gap-2">
-                      <button
-                        onClick={() => setModalRejeicao({ todos: true })}
-                        className="btn-danger px-3.5 py-2 text-[12.5px]"
-                      >
-                        Rejeitar tudo
-                      </button>
+                      {selecionado.documentos.some((d) => d.status !== 'aprovado') && (
+                        <button
+                          onClick={() => setModalRejeicao({ todos: true })}
+                          className="btn-danger px-3.5 py-2 text-[12.5px]"
+                        >
+                          Rejeitar tudo
+                        </button>
+                      )}
                       <button
                         onClick={() => revisarTudo.mutate({ status: 'aprovado' })}
                         disabled={revisarTudo.isPending}
@@ -343,19 +356,31 @@ export default function Documentos() {
 
                             {ehAdmin && (
                               <div className="mt-2.5 flex gap-1.5">
-                                <button
-                                  onClick={() => setModalRejeicao({ doc: d })}
-                                  className="flex-1 rounded-md border border-danger py-1.5 text-[11.5px] text-danger hover:bg-bg-danger"
-                                >
-                                  Rejeitar
-                                </button>
-                                <button
-                                  onClick={() => aprovar.mutate(d.id)}
-                                  disabled={aprovar.isPending}
-                                  className="flex-1 rounded-md bg-success py-1.5 text-[11.5px] font-medium text-white hover:brightness-95"
-                                >
-                                  Aprovar
-                                </button>
+                                {d.status === 'aprovado' ? (
+                                  <button
+                                    onClick={() => cancelarAprovacao.mutate(d.id)}
+                                    disabled={cancelarAprovacao.isPending}
+                                    className="flex-1 rounded-md border border-edge py-1.5 text-[11.5px] text-muted hover:border-warn hover:text-warn"
+                                  >
+                                    Cancelar aprovação
+                                  </button>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() => setModalRejeicao({ doc: d })}
+                                      className="flex-1 rounded-md border border-danger py-1.5 text-[11.5px] text-danger hover:bg-bg-danger"
+                                    >
+                                      Rejeitar
+                                    </button>
+                                    <button
+                                      onClick={() => aprovar.mutate(d.id)}
+                                      disabled={aprovar.isPending}
+                                      className="flex-1 rounded-md bg-success py-1.5 text-[11.5px] font-medium text-white hover:brightness-95"
+                                    >
+                                      Aprovar
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             )}
                           </div>
@@ -374,7 +399,7 @@ export default function Documentos() {
       <Modal
         aberto={modalRejeicao !== null}
         titulo={modalRejeicao?.todos ? 'Rejeitar todos os documentos' : 'Rejeitar documento'}
-        descricao="Informe o motivo — ele fica visível para o estudante."
+        descricao="Informe o motivo, ele fica visível para o estudante."
         largura={480}
         onFechar={() => {
           setModalRejeicao(null)

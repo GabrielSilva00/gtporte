@@ -304,8 +304,8 @@ export default function Funcionarios() {
         </div>
 
         <div className="mt-4 rounded-btn bg-tint px-3.5 py-3 text-[12px] leading-relaxed text-muted">
-          <b>Administrador</b> tem acesso total, incluindo cadastro de rotas (RN06) e aprovação de
-          documentos (RN07). <b>Operador</b> opera o dia a dia sem essas duas permissões.{' '}
+          <b>Administrador</b> tem acesso total, incluindo cadastro de rotas e aprovação de
+          documentos. <b>Operador</b> opera o dia a dia sem essas duas permissões.{' '}
           <b>Motorista</b> não acessa este painel.
         </div>
       </Modal>

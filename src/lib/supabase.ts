@@ -25,7 +25,7 @@ export function mensagemErro(erro: unknown): string {
   const e = erro as { message?: string; details?: string; code?: string }
   const msg = e.message ?? String(erro)
 
-  if (e.code === '23505') return 'Já existe um registro com esse valor único (placa, CNH, RA ou código).'
+  if (e.code === '23505') return 'Já existe um registro com esse valor único (placa, CNH, CPF ou código).'
   if (e.code === '23503') return 'Registro vinculado a outros dados — remova os vínculos antes de excluir.'
   if (e.code === '42501' || msg.includes('row-level security')) {
     return 'Seu perfil não tem permissão para esta ação.'

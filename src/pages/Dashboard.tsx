@@ -138,7 +138,7 @@ export default function Dashboard() {
     if (totais?.docsPendentes) {
       itens.push({
         titulo: `${totais.docsPendentes} documento(s) pendentes`,
-        descricao: 'Estudante só entra na distribuição após aprovação documental (RN01).',
+        descricao: 'Estudante só entra na distribuição após aprovação documental.',
         cor: '#B8862B',
         bg: '#FBEEDA',
         Icone: IconeRelogio,

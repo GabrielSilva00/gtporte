@@ -36,7 +36,7 @@ export default function Alocacao() {
       const { data, error: err } = await supabase
         .from('alocacao_estudante')
         .select(
-          '*, estudante:estudante_id (id, nome, ra, curso, perfil_uso), rota:rota_id (id, codigo, nome)',
+          '*, estudante:estudante_id (id, nome, prontuario, curso, perfil_uso), rota:rota_id (id, codigo, nome)',
         )
         .eq('ativa', true)
       if (err) throw err
@@ -160,8 +160,8 @@ export default function Alocacao() {
         <div>
           <h1 className="text-[22px] font-semibold">Alocação</h1>
           <div className="mt-1 text-[13px] text-muted">
-            Distribui estudantes nas rotas compatíveis com sua grade (RN02) respeitando a capacidade
-            dos veículos (RN03).
+            Distribui estudantes nas rotas compatíveis com sua grade respeitando a capacidade
+            dos veículos.
           </div>
         </div>
         <button
@@ -240,7 +240,7 @@ export default function Alocacao() {
                         <Cartao
                           key={a.id}
                           alocacao={a}
-                          detalhe={`${a.estudante?.curso ?? '—'} · ${
+                          detalhe={`${a.estudante?.curso ?? '-'} · ${
                             grades?.get(a.estudante_id) ?? 'sem grade'
                           }`}
                         />
@@ -252,10 +252,10 @@ export default function Alocacao() {
               {/* Coluna de pendências */}
               <Coluna
                 id="fila"
-                codigo="—"
+                codigo="-"
                 nome="Fila de espera / sem rota"
-                partida="—"
-                retorno="—"
+                partida="-"
+                retorno="-"
                 usados={colunas.semRota.length}
                 capacidade={0}
                 etiqueta="pendente"
@@ -367,11 +367,11 @@ function Cartao({
         opacity: isDragging ? 0.5 : 1,
       }}
       className="flex cursor-grab items-center gap-2.5 rounded-field border border-edge bg-surface px-2.5 py-2 active:cursor-grabbing"
-      title={manual ? 'Alocação manual — preservada na próxima execução (RN10)' : undefined}
+      title={manual ? 'Alocação manual, preservada na próxima execução' : undefined}
     >
       <span className="h-[26px] w-[5px] shrink-0 rounded-full" style={{ background: cor }} />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[12px] font-medium">{alocacao.estudante?.nome ?? '—'}</div>
+        <div className="truncate text-[12px] font-medium">{alocacao.estudante?.nome ?? '-'}</div>
         <div className="truncate text-[10.5px] text-soft">{detalhe}</div>
       </div>
       {manual && (

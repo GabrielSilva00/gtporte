@@ -32,7 +32,7 @@ export default function Presenca() {
     queryFn: async () => {
       const { data: alocacoes, error: err } = await supabase
         .from('alocacao_estudante')
-        .select('*, estudante:estudante_id (id, nome, ra, curso, perfil_uso)')
+        .select('*, estudante:estudante_id (id, nome, prontuario, curso, perfil_uso)')
         .eq('rota_id', rotaId)
         .eq('ativa', true)
         .eq('situacao', 'alocado')
@@ -93,7 +93,7 @@ export default function Presenca() {
         <div>
           <h1 className="text-[22px] font-semibold">Presença</h1>
           <div className="mt-1 text-[13px] text-muted">
-            Manifesto diário — confirmações de ida e volta são independentes (RN04).
+            Manifesto diário, confirmações de ida e volta são independentes.
           </div>
         </div>
         <div className="flex gap-2">
@@ -161,9 +161,9 @@ export default function Presenca() {
                       {String(i + 1).padStart(2, '0')}
                     </td>
                     <td className="td">
-                      <div className="font-medium">{est?.nome ?? '—'}</div>
+                      <div className="font-medium">{est?.nome ?? '-'}</div>
                       <div className="font-mono text-[11px] text-soft">
-                        RA {est?.ra ?? '—'} · {ROTULO_PERFIL_USO[perfilUso]}
+                        Prontuário {est?.prontuario ?? '-'} · {ROTULO_PERFIL_USO[perfilUso]}
                       </div>
                     </td>
                     <td className="td text-center">
@@ -181,7 +181,7 @@ export default function Presenca() {
                     <td className="td font-mono text-[12px] text-muted">
                       {presenca?.hora_ida || presenca?.hora_volta
                         ? `${horaCurta(presenca.hora_ida)} · ${horaCurta(presenca.hora_volta)}`
-                        : '—'}
+                        : '-'}
                     </td>
                     <td className="td">
                       <div className="flex justify-end gap-1.5">
@@ -226,7 +226,7 @@ export default function Presenca() {
 
 /** Glifos do protótipo: ✓ confirmado, ◔ aguardando, — não se aplica. */
 function Glifo({ confirmado, naoSeAplica }: { confirmado?: boolean; naoSeAplica?: boolean }) {
-  if (naoSeAplica) return <span className="text-[15px] font-semibold text-soft">—</span>
+  if (naoSeAplica) return <span className="text-[15px] font-semibold text-soft">-</span>
   if (confirmado) return <span className="text-[15px] font-semibold text-success">✓</span>
   return <span className="text-[15px] font-semibold text-warn">◔</span>
 }

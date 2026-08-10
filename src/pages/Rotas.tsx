@@ -24,7 +24,7 @@ interface Formulario {
   nome: string
   cidade_origem_id: string
   cidade_destino_id: string
-  universidade_id: string
+  universidade_ids: string[]
   veiculo_id: string
   motorista_id: string
   horario_partida: string
@@ -38,7 +38,7 @@ const VAZIO: Formulario = {
   nome: '',
   cidade_origem_id: '',
   cidade_destino_id: '',
-  universidade_id: '',
+  universidade_ids: [],
   veiculo_id: '',
   motorista_id: '',
   horario_partida: '',
@@ -76,7 +76,6 @@ export default function Rotas() {
         nome: form.nome.trim(),
         cidade_origem_id: form.cidade_origem_id,
         cidade_destino_id: form.cidade_destino_id,
-        universidade_id: form.universidade_id || null,
         veiculo_id: form.veiculo_id,
         motorista_id: form.motorista_id,
         horario_partida: form.horario_partida,
@@ -84,10 +83,36 @@ export default function Rotas() {
         descricao: form.descricao.trim() || null,
         status: form.status,
       }
-      const resposta = editando
-        ? await supabase.from('rota').update(payload).eq('id', editando.id)
-        : await supabase.from('rota').insert(payload)
-      if (resposta.error) throw resposta.error
+      let rotaId = editando?.id
+      if (editando) {
+        const { error: err } = await supabase.from('rota').update(payload).eq('id', editando.id)
+        if (err) throw err
+      } else {
+        const { data, error: err } = await supabase
+          .from('rota')
+          .insert(payload)
+          .select('id')
+          .single()
+        if (err) throw err
+        rotaId = data.id
+      }
+
+      // Universidades atendidas: a lista e reescrita por inteiro a cada gravacao.
+      const { error: erroLimpeza } = await supabase
+        .from('rota_universidade')
+        .delete()
+        .eq('rota_id', rotaId!)
+      if (erroLimpeza) throw erroLimpeza
+
+      if (form.universidade_ids.length > 0) {
+        const { error: erroVinculo } = await supabase.from('rota_universidade').insert(
+          form.universidade_ids.map((universidade_id) => ({
+            rota_id: rotaId!,
+            universidade_id,
+          })),
+        )
+        if (erroVinculo) throw erroVinculo
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['rotas'] })
@@ -128,7 +153,9 @@ export default function Rotas() {
       nome: r.nome,
       cidade_origem_id: r.cidade_origem_id,
       cidade_destino_id: r.cidade_destino_id,
-      universidade_id: r.universidade_id ?? '',
+      universidade_ids: (r.universidades ?? [])
+        .map((v) => v.universidade?.id)
+        .filter((id): id is string => !!id),
       veiculo_id: r.veiculo_id,
       motorista_id: r.motorista_id,
       horario_partida: hora(r.horario_partida),
@@ -176,7 +203,7 @@ export default function Rotas() {
           <span className="mt-px shrink-0 text-primary">
             <IconeInfo size={15} />
           </span>
-          RN06: apenas administradores podem alterar rotas cadastradas. Você está em modo leitura.
+          apenas administradores podem alterar rotas cadastradas. Você está em modo leitura.
         </div>
       )}
 
@@ -213,7 +240,7 @@ export default function Rotas() {
                 <div className="mt-3.5 flex items-center gap-2.5 rounded-btn bg-tint p-3">
                   <div className="flex-1">
                     <div className="text-[10.5px] uppercase tracking-[0.06em] text-muted">Origem</div>
-                    <div className="mt-0.5 text-[13px] font-medium">{r.origem?.nome ?? '—'}</div>
+                    <div className="mt-0.5 text-[13px] font-medium">{r.origem?.nome ?? '-'}</div>
                     <div className="mt-0.5 font-mono text-[11.5px] text-primary">
                       {hora(r.horario_partida)}
                     </div>
@@ -223,7 +250,7 @@ export default function Rotas() {
                   </span>
                   <div className="flex-1 text-right">
                     <div className="text-[10.5px] uppercase tracking-[0.06em] text-muted">Destino</div>
-                    <div className="mt-0.5 text-[13px] font-medium">{r.destino?.nome ?? '—'}</div>
+                    <div className="mt-0.5 text-[13px] font-medium">{r.destino?.nome ?? '-'}</div>
                     <div className="mt-0.5 font-mono text-[11.5px] text-primary">
                       retorno {hora(r.horario_retorno)}
                     </div>
@@ -233,11 +260,31 @@ export default function Rotas() {
                 <div className="mt-3 grid grid-cols-2 gap-3 text-[12.5px]">
                   <div>
                     <div className="text-[10.5px] uppercase tracking-[0.06em] text-muted">Motorista</div>
-                    <div className="mt-0.5">{r.motorista?.nome ?? '—'}</div>
+                    <div className="mt-0.5">{r.motorista?.nome ?? '-'}</div>
                   </div>
                   <div>
                     <div className="text-[10.5px] uppercase tracking-[0.06em] text-muted">Veículo</div>
-                    <div className="mt-0.5 font-mono">{r.veiculo?.placa ?? '—'}</div>
+                    <div className="mt-0.5 font-mono">{r.veiculo?.placa ?? '-'}</div>
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <div className="text-[10.5px] uppercase tracking-[0.06em] text-muted">
+                    Universidades atendidas
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {(r.universidades ?? []).length === 0 ? (
+                      <span className="text-[12px] text-muted">Todas</span>
+                    ) : (
+                      (r.universidades ?? []).map((v) => (
+                        <span
+                          key={v.universidade?.id}
+                          className="rounded-full bg-tint px-2 py-0.5 text-[11.5px]"
+                        >
+                          {v.universidade?.nome}
+                        </span>
+                      ))
+                    )}
                   </div>
                 </div>
 
@@ -267,7 +314,7 @@ export default function Rotas() {
       <Modal
         aberto={aberto}
         titulo={editando ? `Editar rota ${editando.codigo}` : 'Nova rota'}
-        descricao="A grade de horários define a compatibilidade com os estudantes na distribuição automática (RN02)."
+        descricao="A grade de horários define a compatibilidade com os estudantes na distribuição automática."
         largura={720}
         onFechar={fechar}
         rodape={
@@ -345,24 +392,40 @@ export default function Rotas() {
             </select>
           </label>
 
-          <label className="col-span-2">
-            <span className="field-label">Universidade atendida</span>
-            <select
-              value={form.universidade_id}
-              onChange={(e) => setForm({ ...form, universidade_id: e.target.value })}
-              className="field"
-            >
-              <option value="">Todas as universidades do destino</option>
-              {universidades?.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.nome}
-                </option>
-              ))}
-            </select>
+          <div className="col-span-2">
+            <span className="field-label">Universidades atendidas</span>
+            <div className="mt-1 grid grid-cols-1 gap-1.5 rounded-field border border-edge p-2.5 sm:grid-cols-2">
+              {universidades?.map((u) => {
+                const marcada = form.universidade_ids.includes(u.id)
+                return (
+                  <label
+                    key={u.id}
+                    className="flex cursor-pointer items-center gap-2 rounded-[6px] px-1.5 py-1 text-[12.5px] hover:bg-tint"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={marcada}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          universidade_ids: e.target.checked
+                            ? [...form.universidade_ids, u.id]
+                            : form.universidade_ids.filter((id) => id !== u.id),
+                        })
+                      }
+                      className="h-3.5 w-3.5 accent-[#1F3A2E]"
+                    />
+                    <span className="truncate">{u.nome}</span>
+                  </label>
+                )
+              })}
+            </div>
             <span className="mt-1 block text-[11.5px] text-muted">
-              Restringe a distribuição automática aos estudantes desta instituição.
+              {form.universidade_ids.length === 0
+                ? 'Nenhuma marcada: a rota atende estudantes de qualquer instituição.'
+                : `Restringe a distribuição automática a ${form.universidade_ids.length} instituição(ões).`}
             </span>
-          </label>
+          </div>
 
           <label>
             <span className="field-label">Veículo</span>

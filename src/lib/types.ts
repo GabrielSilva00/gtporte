@@ -41,7 +41,7 @@ export interface Estudante {
   id: string
   perfil_id: string | null
   nome: string
-  ra: string
+  prontuario: string
   cpf: string
   data_nascimento: string | null
   telefone: string | null
@@ -86,7 +86,6 @@ export interface Rota {
   nome: string
   cidade_origem_id: string
   cidade_destino_id: string
-  universidade_id: string | null
   veiculo_id: string
   motorista_id: string
   horario_partida: string
@@ -99,7 +98,8 @@ export interface Rota {
   destino?: Pick<Cidade, 'id' | 'nome'> | null
   veiculo?: Pick<Veiculo, 'id' | 'placa' | 'modelo' | 'capacidade_maxima'> | null
   motorista?: Pick<Motorista, 'id' | 'nome'> | null
-  universidade?: Pick<Universidade, 'id' | 'nome'> | null
+  /** Universidades atendidas. Lista vazia significa que a rota atende todas. */
+  universidades?: { universidade: Pick<Universidade, 'id' | 'nome'> | null }[]
 }
 
 export interface Documento {
@@ -133,7 +133,7 @@ export interface Alocacao {
   motivo: string | null
   criado_em: string
   encerrado_em: string | null
-  estudante?: Pick<Estudante, 'id' | 'nome' | 'ra' | 'curso' | 'perfil_uso'> | null
+  estudante?: Pick<Estudante, 'id' | 'nome' | 'prontuario' | 'curso' | 'perfil_uso'> | null
   rota?: Pick<Rota, 'id' | 'codigo' | 'nome'> | null
 }
 
@@ -213,7 +213,7 @@ export interface MinhaRota {
   estudante: {
     id: string
     nome: string
-    ra: string
+    prontuario: string
     curso: string | null
     perfil_uso: PerfilUso
     status_documental: StatusDocumental
