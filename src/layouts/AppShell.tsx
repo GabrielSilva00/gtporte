@@ -121,7 +121,7 @@ export default function AppShell() {
           <div>
             <div className="text-[14.5px] font-semibold tracking-[0.01em]">GTPORTE</div>
             <div className="mt-px font-mono text-[10px] uppercase tracking-[0.06em] opacity-55">
-              v1.0 · Araçatuba
+              Painel de Controle
             </div>
           </div>
         </div>

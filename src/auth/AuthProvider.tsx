@@ -15,7 +15,9 @@ interface AuthContexto {
   estudanteId: string | null
   /** id em public.motorista quando o perfil é motorista */
   motoristaId: string | null
-  entrar: (email: string, senha: string) => Promise<void>
+  /** Autentica e devolve o tipo gravado em public.perfil, para a tela de login conferir
+   *  se corresponde ao público escolhido no formulário. */
+  entrar: (email: string, senha: string) => Promise<Perfil['tipo'] | null>
   sair: () => Promise<void>
   /** Recarrega perfil e vínculos — usado após completar o cadastro de estudante */
   recarregar: () => Promise<void>
@@ -97,10 +99,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const entrar = useCallback(async (email: string, senha: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha })
     if (error) throw error
-    if (data.user) {
-      // Registra o último acesso (coluna usada na tela Funcionários)
-      await supabase.from('perfil').update({ ultimo_acesso: new Date().toISOString() }).eq('id', data.user.id)
-    }
+    if (!data.user) return null
+
+    // Registra o último acesso (coluna usada na tela Funcionários)
+    await supabase.from('perfil').update({ ultimo_acesso: new Date().toISOString() }).eq('id', data.user.id)
+
+    const { data: p } = await supabase.from('perfil').select('tipo').eq('id', data.user.id).maybeSingle()
+    return (p?.tipo as Perfil['tipo']) ?? null
   }, [])
 
   const sair = useCallback(async () => {

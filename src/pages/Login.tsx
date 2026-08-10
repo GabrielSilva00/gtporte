@@ -5,19 +5,46 @@ import { IconeOnibus } from '../components/icons'
 import { mensagemErro, supabase } from '../lib/supabase'
 import { useToast } from '../components/ui/Toast'
 
+/** Público declarado no formulário. Não concede acesso: serve para orientar a
+ *  interface e barrar quem escolheu a opção errada. Quem manda é o tipo gravado
+ *  em public.perfil, respaldado pelas policies de RLS. */
+type Publico = 'estudante' | 'servidor' | 'motorista'
+
+const PUBLICOS: { valor: Publico; rotulo: string; descricao: string }[] = [
+  { valor: 'estudante', rotulo: 'Estudante', descricao: 'Sua rota, presença e documentos.' },
+  { valor: 'servidor', rotulo: 'Servidor', descricao: 'Painel de Controle do Setor de Transporte.' },
+  { valor: 'motorista', rotulo: 'Motorista', descricao: 'Passageiros e situação das suas viagens.' },
+]
+
+const NOME_TIPO: Record<string, string> = {
+  admin: 'servidor (administrador)',
+  operador: 'servidor (operador)',
+  motorista: 'motorista',
+  estudante: 'estudante',
+}
+
+/** O tipo do perfil corresponde ao público escolhido? */
+function corresponde(publico: Publico, tipo: string): boolean {
+  if (publico === 'servidor') return tipo === 'admin' || tipo === 'operador'
+  return publico === tipo
+}
+
 export default function Login() {
-  const { sessao, perfil, entrar, carregando } = useAuth()
+  const { sessao, perfil, entrar, sair, carregando } = useAuth()
   const navegar = useNavigate()
   const local = useLocation() as { state?: { de?: string } }
   const toast = useToast()
 
+  const [publico, setPublico] = useState<Publico>('estudante')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 
-  // Já autenticado: vai para o painel do próprio perfil (RF21)
-  if (!carregando && sessao && perfil) {
+  // Já autenticado: vai para o painel do próprio perfil (RF21). Durante o envio a
+  // sessão já existe mas o público ainda não foi conferido — por isso o !enviando,
+  // que evita um redirecionamento antes da validação terminar.
+  if (!carregando && !enviando && sessao && perfil) {
     return <Navigate to={local.state?.de ?? rotaInicial(perfil.tipo)} replace />
   }
 
@@ -26,10 +53,25 @@ export default function Login() {
     setErro(null)
     setEnviando(true)
     try {
-      await entrar(email.trim(), senha)
-      // O redirecionamento definitivo ocorre no <Navigate> acima, assim que o
-      // perfil termina de carregar e o tipo é conhecido.
-      navegar(local.state?.de ?? '/login', { replace: true })
+      const tipo = await entrar(email.trim(), senha)
+
+      if (!tipo) {
+        await sair()
+        setErro('Sua conta não tem perfil configurado. Procure o Setor de Transporte.')
+        return
+      }
+
+      if (!corresponde(publico, tipo)) {
+        await sair()
+        const escolhido = PUBLICOS.find((p) => p.valor === publico)?.rotulo ?? publico
+        setErro(
+          `Esta conta é de ${NOME_TIPO[tipo] ?? tipo}, e você escolheu entrar como ${escolhido}. ` +
+            'Selecione a opção correta acima — a senha está certa.',
+        )
+        return
+      }
+
+      navegar(local.state?.de ?? rotaInicial(tipo), { replace: true })
     } catch (err) {
       const msg = mensagemErro(err)
       setErro(
@@ -91,7 +133,38 @@ export default function Login() {
 
           <div className="eyebrow mb-2">Entrar</div>
           <h2 className="mb-1.5 text-[26px] font-semibold tracking-[-0.01em]">Acesse sua conta</h2>
-          <p className="mb-6 text-[13.5px] text-muted">Estudante, motorista ou administrador.</p>
+          <p className="mb-4 text-[13.5px] text-muted">
+            {PUBLICOS.find((p) => p.valor === publico)?.descricao}
+          </p>
+
+          {/* Público declarado — define para onde a pessoa vai e o que aparece na tela */}
+          <div
+            role="radiogroup"
+            aria-label="Entrar como"
+            className="mb-5 grid grid-cols-3 gap-1 rounded-btn border border-edge bg-panel p-1"
+          >
+            {PUBLICOS.map((p) => {
+              const ativo = p.valor === publico
+              return (
+                <button
+                  key={p.valor}
+                  type="button"
+                  role="radio"
+                  aria-checked={ativo}
+                  onClick={() => {
+                    setPublico(p.valor)
+                    setErro(null)
+                  }}
+                  className={
+                    'rounded-[6px] px-2 py-2 text-[12.5px] font-medium transition-colors ' +
+                    (ativo ? 'bg-primary text-primary-fg' : 'text-muted hover:bg-tint hover:text-ink')
+                  }
+                >
+                  {p.rotulo}
+                </button>
+              )
+            })}
+          </div>
 
           <div className="flex flex-col gap-3.5">
             <label className="block">
@@ -139,12 +212,18 @@ export default function Login() {
               {enviando ? 'Entrando…' : 'Entrar'}
             </button>
 
-            <div className="mt-3 text-center text-[12.5px] text-muted">
-              Ainda não tem cadastro?{' '}
-              <Link to="/cadastro" className="font-medium text-primary hover:text-primary-hover">
-                Cadastre-se como estudante
-              </Link>
-            </div>
+            {publico === 'estudante' ? (
+              <div className="mt-3 text-center text-[12.5px] text-muted">
+                Ainda não tem cadastro?{' '}
+                <Link to="/cadastro" className="font-medium text-primary hover:text-primary-hover">
+                  Cadastre-se como estudante
+                </Link>
+              </div>
+            ) : (
+              <div className="mt-3 text-center text-[12.5px] text-muted">
+                Acesso de servidor é criado pelo Setor de Transporte.
+              </div>
+            )}
           </div>
         </form>
       </div>
