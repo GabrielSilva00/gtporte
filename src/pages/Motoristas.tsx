@@ -63,6 +63,12 @@ export default function Motoristas() {
     (motoristas ?? []).map((m) => m.perfil_id).filter((id): id is string => !!id),
   )
 
+  // Perfis de motorista ainda livres, mais o que já está selecionado no formulário
+  const disponiveis = (perfisMotorista ?? []).filter(
+    (p) => p.id === form.perfil_id || !vinculados.has(p.id),
+  )
+  const acessoSelecionado = perfisMotorista?.find((p) => p.id === form.perfil_id) ?? null
+
   const salvar = useMutation({
     mutationFn: async () => {
       const payload = {
@@ -281,24 +287,51 @@ export default function Motoristas() {
               className="field"
             >
               <option value="">Sem acesso ao painel</option>
-              {perfisMotorista
-                ?.filter((p) => p.id === form.perfil_id || !vinculados.has(p.id))
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nome} · {p.email}
-                  </option>
-                ))}
+              {disponiveis.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.login ?? p.email} · {p.nome}
+                  {p.ativo ? '' : ' (bloqueado)'}
+                </option>
+              ))}
             </select>
           </label>
         </div>
 
+        {/* Estado real do acesso — evita salvar um vínculo que não vai funcionar */}
         <div className="mt-4 flex items-start gap-2.5 rounded-btn bg-tint px-3.5 py-3 text-[12px] text-muted">
           <span className="mt-px shrink-0 text-primary">
             <IconeInfo size={15} />
           </span>
-          Para o motorista acessar o painel dele, crie o usuário em <b>Funcionários</b> com perfil
-          Motorista e selecione-o acima. Sem esse vínculo ele consegue entrar, mas não enxerga
-          nenhuma rota.
+          {acessoSelecionado ? (
+            <div>
+              <div>
+                Acesso vinculado: <b>{acessoSelecionado.nome}</b> · login{' '}
+                <code className="font-mono">{acessoSelecionado.login ?? '—'}</code>
+                {acessoSelecionado.email &&
+                  !acessoSelecionado.email.endsWith('@gtporte.local') && (
+                    <> · {acessoSelecionado.email}</>
+                  )}
+              </div>
+              <div className="mt-1">
+                Situação:{' '}
+                <b style={{ color: acessoSelecionado.ativo ? '#2E7D5A' : '#9E3E3E' }}>
+                  {acessoSelecionado.ativo ? 'ativo' : 'bloqueado'}
+                </b>
+                {!acessoSelecionado.ativo && ' — libere o acesso em Funcionários para ele entrar.'}
+              </div>
+            </div>
+          ) : disponiveis.length === 0 ? (
+            <div>
+              Nenhum usuário com perfil <b>Motorista</b> disponível. Crie o acesso em{' '}
+              <b>Funcionários → Novo funcionário</b>, definindo login, senha e o perfil
+              Motorista; ele passa a aparecer nesta lista.
+            </div>
+          ) : (
+            <div>
+              Sem usuário vinculado o motorista não enxerga nenhuma rota no painel dele. O
+              acesso (login e senha) é criado em <b>Funcionários</b> e selecionado aqui.
+            </div>
+          )}
         </div>
       </Modal>
     </div>

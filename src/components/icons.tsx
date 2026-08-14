@@ -228,6 +228,40 @@ export const IconeUpload = (p: IconProps) => (
   </Svg>
 )
 
+export const IconeMensagem = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </Svg>
+)
+
+export const IconeSolicitacao = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <path d="M14 2v6h6" />
+    <path d="M12 11v6M9 14h6" />
+  </Svg>
+)
+
+/** Barras horizontais — botão de recolher/expandir o menu lateral. */
+export const IconeBarras = (p: IconProps) => (
+  <Svg {...p} strokeWidth={p.strokeWidth ?? 2}>
+    <path d="M3 6h18M3 12h18M3 18h18" />
+  </Svg>
+)
+
+/** Cabeça de seta para baixo — usada nas categorias sanfonadas do menu. */
+export const IconeChevron = (p: IconProps) => (
+  <Svg {...p} strokeWidth={p.strokeWidth ?? 2}>
+    <path d="m6 9 6 6 6-6" />
+  </Svg>
+)
+
+export const IconeEnviar = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M22 2 11 13M22 2l-7 20-4-9-9-4z" />
+  </Svg>
+)
+
 export const IconeMenu = (p: IconProps) => (
   <svg width={p.size ?? 16} height={p.size ?? 16} viewBox="0 0 24 24" fill="currentColor" className={p.className}>
     <circle cx="12" cy="5" r="1.5" />

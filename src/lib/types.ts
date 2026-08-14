@@ -15,6 +15,8 @@ export interface Perfil {
   id: string
   nome: string
   email: string
+  /** Identificador de acesso definido pelo administrador (RF20). */
+  login: string | null
   telefone: string | null
   tipo: TipoPerfil
   ativo: boolean
@@ -145,6 +147,46 @@ export interface Presenca {
   hora_ida: string | null
   confirmou_volta: boolean
   hora_volta: string | null
+  cancelou_ida: boolean
+  motivo_cancelamento_ida: string | null
+  cancelado_ida_em: string | null
+  cancelou_volta: boolean
+  motivo_cancelamento_volta: string | null
+  cancelado_volta_em: string | null
+}
+
+export type TipoMensagem = 'mensagem' | 'solicitacao'
+export type StatusMensagem = 'aberta' | 'respondida' | 'encerrada'
+
+export interface Mensagem {
+  id: string
+  remetente_id: string | null
+  /** Nulo significa que a mensagem foi endereçada ao setor de transporte. */
+  destinatario_id: string | null
+  responde_a: string | null
+  tipo: TipoMensagem
+  status: StatusMensagem
+  assunto: string
+  corpo: string
+  lida_em: string | null
+  criado_em: string
+  remetente?: Pick<Perfil, 'id' | 'nome' | 'tipo'> | null
+  destinatario?: Pick<Perfil, 'id' | 'nome' | 'tipo'> | null
+}
+
+export interface MensagemModelo {
+  id: string
+  titulo: string
+  assunto: string
+  corpo: string
+  automatica: boolean
+  evento: string | null
+}
+
+export interface ConfiguracaoSistema {
+  chave: string
+  valor: string
+  descricao: string | null
 }
 
 export interface AvisoRota {
@@ -200,12 +242,17 @@ export interface LogAdministrativo {
   criado_em: string
 }
 
+/** Mensagem devolvida por executar_distribuicao().
+ *  0003_funcoes.sql retornava objetos; 0006_ajustes.sql passou a retornar
+ *  strings puras — as duas formas continuam sendo aceitas pela tela. */
+export type MensagemDistribuicao = string | { tipo: 'sucesso' | 'alerta' | 'erro'; texto: string }
+
 export interface ResultadoDistribuicao {
   alocados: number
   fila_espera: number
   sem_rota: number
   duracao_ms: number
-  mensagens: { tipo: 'sucesso' | 'alerta' | 'erro'; texto: string }[]
+  mensagens: MensagemDistribuicao[]
 }
 
 /** Retorno da função minha_rota() — tela "Minha Rota" do estudante (RF11). */

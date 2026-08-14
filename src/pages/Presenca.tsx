@@ -3,14 +3,24 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useOcupacaoRotas } from '../hooks/useCadastros'
 import { mensagemErro, supabase } from '../lib/supabase'
 import { hoje, horaCurta } from '../lib/format'
+import { Modal } from '../components/ui/Modal'
 import { useToast } from '../components/ui/Toast'
 import { CarregandoTabela, ErroCarregamento, Vazio } from '../components/ui/Estados'
 import { ROTULO_PERFIL_USO, type Alocacao, type Presenca as PresencaTipo } from '../lib/types'
 
+type Trecho = 'ida' | 'volta'
+
+interface AlvoCancelamento {
+  estudanteId: string
+  nome: string
+  trecho: Trecho
+}
+
 /**
  * RF13 / RF14 — manifesto diário de embarque.
  * RN04: ida e volta são independentes.
- * RN05/RN16/RN17 são validadas pela função confirmar_presenca() no banco.
+ * RN05/RN16/RN17 são validadas pela função confirmar_presenca() no banco;
+ * o cancelamento exige motivo e é gravado por cancelar_presenca().
  */
 export default function Presenca() {
   const { data: rotas } = useOcupacaoRotas()
@@ -19,6 +29,8 @@ export default function Presenca() {
 
   const [rotaId, setRotaId] = useState('')
   const [data, setData] = useState(hoje())
+  const [alvo, setAlvo] = useState<AlvoCancelamento | null>(null)
+  const [motivo, setMotivo] = useState('')
 
   useEffect(() => {
     if (!rotaId && rotas && rotas.length > 0) setRotaId(rotas[0].rota_id)
@@ -58,7 +70,7 @@ export default function Presenca() {
   })
 
   const confirmar = useMutation({
-    mutationFn: async ({ estudanteId, trecho }: { estudanteId: string; trecho: 'ida' | 'volta' }) => {
+    mutationFn: async ({ estudanteId, trecho }: { estudanteId: string; trecho: Trecho }) => {
       const { data: r, error: err } = await supabase.rpc('confirmar_presenca', {
         p_estudante_id: estudanteId,
         p_trecho: trecho,
@@ -74,15 +86,49 @@ export default function Presenca() {
     onError: (e) => toast.erro(mensagemErro(e)),
   })
 
+  const cancelar = useMutation({
+    mutationFn: async () => {
+      if (!alvo) throw new Error('Nenhum trecho selecionado.')
+      const { data: r, error: err } = await supabase.rpc('cancelar_presenca', {
+        p_estudante_id: alvo.estudanteId,
+        p_trecho: alvo.trecho,
+        p_motivo: motivo.trim(),
+        p_data: data,
+      })
+      if (err) throw err
+      return r as { mensagem: string }
+    },
+    onSuccess: (r) => {
+      toast.sucesso(r.mensagem)
+      qc.invalidateQueries({ queryKey: ['manifesto'] })
+      fecharCancelamento()
+    },
+    onError: (e) => toast.erro(mensagemErro(e)),
+  })
+
+  function abrirCancelamento(estudanteId: string, nome: string, trecho: Trecho) {
+    setAlvo({ estudanteId, nome, trecho })
+    setMotivo('')
+  }
+
+  function fecharCancelamento() {
+    setAlvo(null)
+    setMotivo('')
+  }
+
   const kpis = useMemo(() => {
     const linhas = manifesto ?? []
     const ida = linhas.filter((l) => l.presenca?.confirmou_ida).length
     const volta = linhas.filter((l) => l.presenca?.confirmou_volta).length
+    const cancelados = linhas.filter(
+      (l) => l.presenca?.cancelou_ida || l.presenca?.cancelou_volta,
+    ).length
     const capacidade = rotaSelecionada?.capacidade_maxima ?? 0
     return [
       { rotulo: 'Alocados', valor: linhas.length, cor: undefined },
       { rotulo: 'Confirmaram ida', valor: ida, cor: '#2E7D5A' },
       { rotulo: 'Confirmaram volta', valor: volta, cor: '#C4633A' },
+      { rotulo: 'Cancelamentos', valor: cancelados, cor: '#9E3E3E' },
       { rotulo: 'Vagas remanescentes', valor: Math.max(0, capacidade - volta), cor: undefined },
     ]
   }, [manifesto, rotaSelecionada])
@@ -117,7 +163,7 @@ export default function Presenca() {
         </div>
       </div>
 
-      <div className="mb-3.5 grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <div className="mb-3.5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
         {kpis.map(({ rotulo, valor, cor }) => (
           <div key={rotulo} className="card p-3.5">
             <div className="text-[11.5px] text-muted">{rotulo}</div>
@@ -139,7 +185,7 @@ export default function Presenca() {
       )}
 
       {manifesto && manifesto.length > 0 && (
-        <div className="card overflow-hidden">
+        <div className="card overflow-x-auto">
           <table className="w-full border-collapse text-[13px]">
             <thead>
               <tr className="border-b border-edge">
@@ -147,44 +193,59 @@ export default function Presenca() {
                 <th className="th">Estudante</th>
                 <th className="th text-center">Ida</th>
                 <th className="th text-center">Volta</th>
-                <th className="th">Confirmada</th>
-                <th className="th text-right">Registrar</th>
+                <th className="th">Registro</th>
+                <th className="th text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
               {manifesto.map(({ alocacao, presenca }, i) => {
                 const est = alocacao.estudante
+                const nome = est?.nome ?? '—'
                 const perfilUso = est?.perfil_uso ?? 'ida_volta'
+                const cancelamento =
+                  presenca?.motivo_cancelamento_ida ?? presenca?.motivo_cancelamento_volta ?? null
+
                 return (
                   <tr key={alocacao.id} className="border-b border-line last:border-0">
                     <td className="td font-mono text-soft">
                       {String(i + 1).padStart(2, '0')}
                     </td>
                     <td className="td">
-                      <div className="font-medium">{est?.nome ?? '-'}</div>
+                      <div className="font-medium">{nome}</div>
                       <div className="font-mono text-[11px] text-soft">
-                        Prontuário {est?.prontuario ?? '-'} · {ROTULO_PERFIL_USO[perfilUso]}
+                        Prontuário {est?.prontuario ?? '—'} · {ROTULO_PERFIL_USO[perfilUso]}
                       </div>
                     </td>
                     <td className="td text-center">
                       <Glifo
                         confirmado={presenca?.confirmou_ida}
+                        cancelado={presenca?.cancelou_ida}
+                        motivo={presenca?.motivo_cancelamento_ida}
                         naoSeAplica={perfilUso === 'somente_volta'}
                       />
                     </td>
                     <td className="td text-center">
                       <Glifo
                         confirmado={presenca?.confirmou_volta}
+                        cancelado={presenca?.cancelou_volta}
+                        motivo={presenca?.motivo_cancelamento_volta}
                         naoSeAplica={perfilUso === 'somente_ida'}
                       />
                     </td>
-                    <td className="td font-mono text-[12px] text-muted">
-                      {presenca?.hora_ida || presenca?.hora_volta
-                        ? `${horaCurta(presenca.hora_ida)} · ${horaCurta(presenca.hora_volta)}`
-                        : '-'}
+                    <td className="td text-[12px] text-muted">
+                      <span className="font-mono">
+                        {presenca?.hora_ida || presenca?.hora_volta
+                          ? `${horaCurta(presenca.hora_ida)} · ${horaCurta(presenca.hora_volta)}`
+                          : '—'}
+                      </span>
+                      {cancelamento && (
+                        <div className="mt-0.5 text-[11px] text-danger">
+                          Cancelado: {cancelamento}
+                        </div>
+                      )}
                     </td>
                     <td className="td">
-                      <div className="flex justify-end gap-1.5">
+                      <div className="flex flex-wrap justify-end gap-1.5">
                         <button
                           onClick={() =>
                             confirmar.mutate({ estudanteId: alocacao.estudante_id, trecho: 'ida' })
@@ -211,6 +272,26 @@ export default function Presenca() {
                         >
                           Volta
                         </button>
+                        <button
+                          onClick={() =>
+                            abrirCancelamento(alocacao.estudante_id, nome, 'ida')
+                          }
+                          disabled={!presenca?.confirmou_ida}
+                          title="Cancelar a presença de ida"
+                          className="rounded-md border border-edge px-2.5 py-1 text-[11.5px] text-danger hover:bg-bg-danger disabled:opacity-40"
+                        >
+                          Cancelar ida
+                        </button>
+                        <button
+                          onClick={() =>
+                            abrirCancelamento(alocacao.estudante_id, nome, 'volta')
+                          }
+                          disabled={!presenca?.confirmou_volta}
+                          title="Cancelar a presença de volta"
+                          className="rounded-md border border-edge px-2.5 py-1 text-[11.5px] text-danger hover:bg-bg-danger disabled:opacity-40"
+                        >
+                          Cancelar volta
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -220,13 +301,67 @@ export default function Presenca() {
           </table>
         </div>
       )}
+
+      <Modal
+        aberto={!!alvo}
+        titulo={`Cancelar presença de ${alvo?.trecho ?? ''}`}
+        descricao={alvo ? `${alvo.nome} · ${data}` : undefined}
+        largura={480}
+        onFechar={fecharCancelamento}
+        rodape={
+          <>
+            <button onClick={fecharCancelamento} className="btn-ghost">
+              Voltar
+            </button>
+            <button
+              onClick={() => cancelar.mutate()}
+              disabled={!motivo.trim() || cancelar.isPending}
+              className="btn-danger"
+            >
+              {cancelar.isPending ? 'Cancelando…' : 'Confirmar cancelamento'}
+            </button>
+          </>
+        }
+      >
+        <label>
+          <span className="field-label">Motivo do cancelamento</span>
+          <textarea
+            rows={3}
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            placeholder="Ex.: estudante avisou que não vai embarcar hoje"
+            className="field resize-none"
+          />
+          <span className="mt-1 block text-[11.5px] text-muted">
+            O motivo é obrigatório e fica registrado no log administrativo (RN12). O assento
+            volta a ficar disponível para a rota.
+          </span>
+        </label>
+      </Modal>
     </div>
   )
 }
 
-/** Glifos do protótipo: ✓ confirmado, ◔ aguardando, — não se aplica. */
-function Glifo({ confirmado, naoSeAplica }: { confirmado?: boolean; naoSeAplica?: boolean }) {
-  if (naoSeAplica) return <span className="text-[15px] font-semibold text-soft">-</span>
+/** Glifos do protótipo: ✓ confirmado, ✕ cancelado, ◔ aguardando, — não se aplica. */
+function Glifo({
+  confirmado,
+  cancelado,
+  motivo,
+  naoSeAplica,
+}: {
+  confirmado?: boolean
+  cancelado?: boolean
+  motivo?: string | null
+  naoSeAplica?: boolean
+}) {
+  if (naoSeAplica) return <span className="text-[15px] font-semibold text-soft">—</span>
   if (confirmado) return <span className="text-[15px] font-semibold text-success">✓</span>
+  if (cancelado) {
+    return (
+      <span className="text-[15px] font-semibold text-danger" title={motivo ?? 'Cancelado'}>
+        ✕
+      </span>
+    )
+  }
   return <span className="text-[15px] font-semibold text-warn">◔</span>
 }

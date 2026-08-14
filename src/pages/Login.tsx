@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { rotaInicial, useAuth } from '../auth/AuthProvider'
 import { IconeOnibus } from '../components/icons'
-import { mensagemErro, supabase } from '../lib/supabase'
+import { DOMINIO_LOGIN, mensagemErro, supabase } from '../lib/supabase'
 import { useToast } from '../components/ui/Toast'
 
 /** Público declarado no formulário. Não concede acesso: serve para orientar a
@@ -22,6 +22,22 @@ const NOME_TIPO: Record<string, string> = {
 function corresponde(publico: Publico, tipo: string): boolean {
   if (publico === 'servidor') return tipo === 'admin' || tipo === 'operador' || tipo === 'motorista'
   return tipo === 'estudante'
+}
+
+/**
+ * O acesso de servidor é criado com login e senha (RF20), e o Supabase Auth
+ * autentica por e-mail. Sem "@" no campo, traduzimos login → e-mail com a
+ * função email_do_login(), liberada para o papel anon justamente por rodar
+ * antes da autenticação.
+ */
+async function resolverEmail(identificador: string): Promise<string> {
+  const valor = identificador.trim()
+  if (valor.includes('@')) return valor
+
+  const { data, error } = await supabase.rpc('email_do_login', { p_login: valor.toLowerCase() })
+  if (error) throw error
+  if (!data) throw new Error('Login não encontrado.')
+  return data as string
 }
 
 export default function Login() {
@@ -48,7 +64,7 @@ export default function Login() {
     setErro(null)
     setEnviando(true)
     try {
-      const tipo = await entrar(email.trim(), senha)
+      const tipo = await entrar(await resolverEmail(email), senha)
 
       if (!tipo) {
         await sair()
@@ -70,7 +86,9 @@ export default function Login() {
     } catch (err) {
       const msg = mensagemErro(err)
       setErro(
-        msg.includes('Invalid login credentials') ? 'E-mail ou senha incorretos.' : msg,
+        msg.includes('Invalid login credentials') || msg.includes('Login não encontrado')
+          ? `${publico === 'servidor' ? 'Login' : 'E-mail'} ou senha incorretos.`
+          : msg,
       )
     } finally {
       setEnviando(false)
@@ -79,14 +97,28 @@ export default function Login() {
 
   async function recuperarSenha() {
     if (!email.trim()) {
-      toast.alerta('Informe seu e-mail para receber o link de redefinição.')
+      toast.alerta('Informe seu login ou e-mail para receber o link de redefinição.')
       return
     }
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/login`,
-    })
-    if (error) toast.erro(mensagemErro(error))
-    else toast.sucesso('Link de redefinição enviado para o seu e-mail.')
+    try {
+      const destino = await resolverEmail(email)
+
+      // Acesso criado sem e-mail real não tem caixa postal para receber o link.
+      if (destino.endsWith(`@${DOMINIO_LOGIN}`)) {
+        toast.alerta(
+          'Este acesso foi criado sem e-mail. Peça ao administrador para redefinir sua senha.',
+        )
+        return
+      }
+
+      const { error } = await supabase.auth.resetPasswordForEmail(destino, {
+        redirectTo: `${window.location.origin}/login`,
+      })
+      if (error) toast.erro(mensagemErro(error))
+      else toast.sucesso('Link de redefinição enviado para o seu e-mail.')
+    } catch (err) {
+      toast.erro(mensagemErro(err))
+    }
   }
 
   return (
@@ -155,14 +187,18 @@ export default function Login() {
 
           <div className="flex flex-col gap-3.5">
             <label className="block">
-              <span className="field-label">E-mail institucional</span>
+              <span className="field-label">
+                {publico === 'servidor' ? 'Login ou e-mail' : 'E-mail institucional'}
+              </span>
               <input
-                type="email"
+                type={publico === 'servidor' ? 'text' : 'email'}
                 required
-                autoComplete="email"
+                autoComplete={publico === 'servidor' ? 'username' : 'email'}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="voce@aracatuba.sp.gov.br"
+                placeholder={
+                  publico === 'servidor' ? 'marina.rocha' : 'voce@aracatuba.sp.gov.br'
+                }
                 className="field"
               />
             </label>

@@ -20,7 +20,6 @@ import { IconeInfo, IconeMais, IconeSeta } from '../components/icons'
 import type { Rota, StatusRota } from '../lib/types'
 
 interface Formulario {
-  codigo: string
   nome: string
   cidade_origem_id: string
   cidade_destino_id: string
@@ -34,7 +33,6 @@ interface Formulario {
 }
 
 const VAZIO: Formulario = {
-  codigo: '',
   nome: '',
   cidade_origem_id: '',
   cidade_destino_id: '',
@@ -71,8 +69,9 @@ export default function Rotas() {
 
   const salvar = useMutation({
     mutationFn: async () => {
+      // codigo fica de fora de proposito: quem numera a rota e a sequence
+      // seq_rota_codigo no Postgres (0007_ajustes_ui.sql), e o valor e imutavel.
       const payload = {
-        codigo: form.codigo.trim().toUpperCase(),
         nome: form.nome.trim(),
         cidade_origem_id: form.cidade_origem_id,
         cidade_destino_id: form.cidade_destino_id,
@@ -123,33 +122,15 @@ export default function Rotas() {
     onError: (e) => toast.erro(mensagemErro(e)),
   })
 
-  const inativar = useMutation({
-    mutationFn: async (rota: Rota) => {
-      const { error: err } = await supabase
-        .from('rota')
-        .update({ status: rota.status === 'inativa' ? 'ativa' : 'inativa' })
-        .eq('id', rota.id)
-      if (err) throw err
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['rotas'] })
-      qc.invalidateQueries({ queryKey: ['ocupacao-rotas'] })
-      toast.sucesso('Status da rota atualizado.')
-      fechar()
-    },
-    onError: (e) => toast.erro(mensagemErro(e)),
-  })
-
   function abrirNovo() {
     setEditando(null)
-    setForm({ ...VAZIO, codigo: proximoCodigo(rotas ?? []) })
+    setForm(VAZIO)
     setAberto(true)
   }
 
   function abrirEdicao(r: Rota) {
     setEditando(r)
     setForm({
-      codigo: r.codigo,
       nome: r.nome,
       cidade_origem_id: r.cidade_origem_id,
       cidade_destino_id: r.cidade_destino_id,
@@ -172,7 +153,6 @@ export default function Rotas() {
   }
 
   const valido =
-    form.codigo.trim() !== '' &&
     form.nome.trim() !== '' &&
     form.cidade_origem_id !== '' &&
     form.cidade_destino_id !== '' &&
@@ -314,20 +294,11 @@ export default function Rotas() {
       <Modal
         aberto={aberto}
         titulo={editando ? `Editar rota ${editando.codigo}` : 'Nova rota'}
-        descricao="A grade de horários define a compatibilidade com os estudantes na distribuição automática."
+        descricao="O código é gerado pelo sistema. A grade de horários define a compatibilidade com os estudantes na distribuição automática."
         largura={720}
         onFechar={fechar}
         rodape={
           <>
-            {editando && (
-              <button
-                onClick={() => inativar.mutate(editando)}
-                disabled={inativar.isPending}
-                className="btn-danger mr-auto"
-              >
-                {editando.status === 'inativa' ? 'Reativar rota' : 'Inativar rota'}
-              </button>
-            )}
             <button onClick={fechar} className="btn-ghost">
               Cancelar
             </button>
@@ -345,10 +316,11 @@ export default function Rotas() {
           <label>
             <span className="field-label">Código</span>
             <input
-              value={form.codigo}
-              onChange={(e) => setForm({ ...form, codigo: e.target.value.toUpperCase() })}
-              placeholder="R07"
-              className="field font-mono"
+              value={editando?.codigo ?? 'Gerado ao salvar'}
+              readOnly
+              disabled
+              title="Código gerado pelo sistema"
+              className="field font-mono text-muted"
             />
           </label>
           <label>
@@ -505,13 +477,4 @@ export default function Rotas() {
       </Modal>
     </div>
   )
-}
-
-/** Sugere o próximo código sequencial (R01, R02, …). */
-function proximoCodigo(rotas: Rota[]): string {
-  const numeros = rotas
-    .map((r) => Number(r.codigo.replace(/\D/g, '')))
-    .filter((n) => !Number.isNaN(n))
-  const proximo = (numeros.length ? Math.max(...numeros) : 0) + 1
-  return `R${String(proximo).padStart(2, '0')}`
 }

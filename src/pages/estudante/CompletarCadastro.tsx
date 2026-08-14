@@ -6,7 +6,13 @@ import { useCidades, useUniversidades } from '../../hooks/useCadastros'
 import { BUCKET_DOCUMENTOS, mensagemErro, supabase } from '../../lib/supabase'
 import { useToast } from '../../components/ui/Toast'
 import { IconeCheck, IconeInfo, IconeUpload } from '../../components/icons'
-import { DIAS_SEMANA, type DiaGrade } from '../../lib/format'
+import { DIAS_SEMANA } from '../../lib/format'
+import {
+  GradeSemanal,
+  gradeVazia,
+  linhasDaGrade,
+  type MapaGrade,
+} from '../../components/GradeSemanal'
 import {
   ROTULO_DOCUMENTO,
   TIPOS_DOCUMENTO,
@@ -39,9 +45,7 @@ export default function CompletarCadastro() {
   })
 
   // Um horario por dia: nem todo curso tem a mesma carga de segunda a sabado.
-  const [grade, setGrade] = useState<Record<number, DiaGrade>>(() =>
-    Object.fromEntries(DIAS_SEMANA.map((d) => [d.numero, { ativo: false, inicio: '', fim: '' }])),
-  )
+  const [grade, setGrade] = useState<MapaGrade>(gradeVazia)
   const [arquivos, setArquivos] = useState<Partial<Record<TipoDocumento, File>>>({})
 
   const enviar = useMutation({
@@ -68,15 +72,7 @@ export default function CompletarCadastro() {
       if (erroEstudante) throw erroEstudante
 
       // Grade horária — insumo da distribuição (RN02), um registro por dia com aula
-      const linhas = DIAS_SEMANA.filter((d) => {
-        const g = grade[d.numero]
-        return g.ativo && g.inicio && g.fim
-      }).map((d) => ({
-        estudante_id: estudante.id,
-        dia_semana: d.numero,
-        hora_inicio: grade[d.numero].inicio,
-        hora_fim: grade[d.numero].fim,
-      }))
+      const linhas = linhasDaGrade(grade, estudante.id)
       if (linhas.length > 0) {
         const { error } = await supabase.from('grade_horaria').insert(linhas)
         if (error) throw error
@@ -253,51 +249,7 @@ export default function CompletarCadastro() {
             sistema encontra um ônibus compatível com a sua grade.
           </p>
 
-          <div className="flex flex-col gap-2">
-            {DIAS_SEMANA.map((d) => {
-              const g = grade[d.numero]
-              return (
-                <div
-                  key={d.numero}
-                  className={`grid grid-cols-[104px_1fr_1fr] items-center gap-2 rounded-field border px-3 py-2 transition-colors ${
-                    g.ativo ? 'border-primary/30 bg-panel' : 'border-edge'
-                  }`}
-                >
-                  <label className="flex cursor-pointer items-center gap-2 text-[12.5px] font-medium">
-                    <input
-                      type="checkbox"
-                      checked={g.ativo}
-                      onChange={(e) =>
-                        setGrade({ ...grade, [d.numero]: { ...g, ativo: e.target.checked } })
-                      }
-                      className="h-3.5 w-3.5 accent-[#1F3A2E]"
-                    />
-                    {d.rotulo}
-                  </label>
-                  <input
-                    type="time"
-                    aria-label={`Início das aulas de ${d.rotulo}`}
-                    value={g.inicio}
-                    disabled={!g.ativo}
-                    onChange={(e) =>
-                      setGrade({ ...grade, [d.numero]: { ...g, inicio: e.target.value } })
-                    }
-                    className="field py-1.5 text-[12.5px] disabled:opacity-40"
-                  />
-                  <input
-                    type="time"
-                    aria-label={`Término das aulas de ${d.rotulo}`}
-                    value={g.fim}
-                    disabled={!g.ativo}
-                    onChange={(e) =>
-                      setGrade({ ...grade, [d.numero]: { ...g, fim: e.target.value } })
-                    }
-                    className="field py-1.5 text-[12.5px] disabled:opacity-40"
-                  />
-                </div>
-              )
-            })}
-          </div>
+          <GradeSemanal grade={grade} onChange={setGrade} />
 
           {diasIncompletos > 0 && (
             <p className="mt-2 text-[12px] text-warn">

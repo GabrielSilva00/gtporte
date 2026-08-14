@@ -24,32 +24,44 @@ export default function Universidades() {
   const [formUni, setFormUni] = useState({ nome: '', cidade_id: '', cor: CORES[0] })
   const [formCidade, setFormCidade] = useState({ nome: '', uf: 'SP' })
 
-  // Contadores reais por universidade (substituem os números fixos do protótipo)
+  // Contadores reais por universidade (substituem os números fixos do protótipo).
+  // O vínculo rota→universidade vive em rota_universidade desde 0006_ajustes.sql;
+  // rota sem nenhum vínculo atende todas as instituições (rota_atende_universidade()).
   const { data: contadores } = useQuery({
     queryKey: ['contadores-universidade'],
     queryFn: async () => {
-      const [estudantes, rotas] = await Promise.all([
+      const [estudantes, rotas, vinculos] = await Promise.all([
         supabase.from('estudante').select('universidade_id').eq('ativo', true),
-        supabase.from('rota').select('universidade_id').neq('status', 'inativa'),
+        supabase.from('rota').select('id').neq('status', 'inativa'),
+        supabase.from('rota_universidade').select('rota_id, universidade_id'),
       ])
       if (estudantes.error) throw estudantes.error
       if (rotas.error) throw rotas.error
+      if (vinculos.error) throw vinculos.error
+
+      const rotasAtivas = new Set(rotas.data.map((r) => r.id))
+      const comVinculo = new Set(vinculos.data.map((v) => v.rota_id))
+      // Rotas ativas sem nenhuma universidade marcada valem para todas
+      const irrestritas = [...rotasAtivas].filter((id) => !comVinculo.has(id)).length
 
       const porUni = new Map<string, { estudantes: number; rotas: number }>()
       const garantir = (id: string | null) => {
         if (!id) return null
-        if (!porUni.has(id)) porUni.set(id, { estudantes: 0, rotas: 0 })
+        if (!porUni.has(id)) porUni.set(id, { estudantes: 0, rotas: irrestritas })
         return porUni.get(id)!
       }
+
       estudantes.data.forEach((e) => {
         const alvo = garantir(e.universidade_id)
         if (alvo) alvo.estudantes++
       })
-      rotas.data.forEach((r) => {
-        const alvo = garantir(r.universidade_id)
+      vinculos.data.forEach((v) => {
+        if (!rotasAtivas.has(v.rota_id)) return
+        const alvo = garantir(v.universidade_id)
         if (alvo) alvo.rotas++
       })
-      return porUni
+
+      return { porUni, irrestritas }
     },
   })
 
@@ -111,6 +123,12 @@ export default function Universidades() {
             <h1 className="text-[22px] font-semibold">Universidades</h1>
             <div className="mt-1 text-[13px] text-muted">
               Instituições atendidas pelo transporte
+              {!!contadores?.irrestritas && (
+                <>
+                  {' · '}
+                  {contadores.irrestritas} rota(s) sem restrição contam para todas
+                </>
+              )}
             </div>
           </div>
           <button onClick={abrirNovaUni} className="btn-primary">
@@ -132,7 +150,8 @@ export default function Universidades() {
         {universidades && universidades.length > 0 && (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
             {universidades.map((u) => {
-              const c = contadores?.get(u.id)
+              const c = contadores?.porUni.get(u.id)
+              const rotas = c?.rotas ?? contadores?.irrestritas ?? 0
               return (
                 <button
                   key={u.id}
@@ -155,7 +174,7 @@ export default function Universidades() {
                       <div className="text-[10.5px] text-soft">estudantes</div>
                     </div>
                     <div>
-                      <div className="font-mono text-[16px] font-semibold">{c?.rotas ?? 0}</div>
+                      <div className="font-mono text-[16px] font-semibold">{rotas}</div>
                       <div className="text-[10.5px] text-soft">rotas</div>
                     </div>
                   </div>

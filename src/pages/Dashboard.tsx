@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useOcupacaoRotas } from '../hooks/useCadastros'
 import { supabase, mensagemErro } from '../lib/supabase'
-import { corOcupacao, dataExtenso, hora, numero, percentual } from '../lib/format'
+import { corOcupacao, dataExtenso, dataHoraBR, hora, numero, percentual } from '../lib/format'
+import { Avatar } from '../components/ui/Avatar'
 import { Badge } from '../components/ui/Badge'
 import { ProgressBar } from '../components/ui/ProgressBar'
 import { CarregandoCards, ErroCarregamento } from '../components/ui/Estados'
@@ -17,7 +18,11 @@ import {
   IconeRota,
   IconeVeiculo,
 } from '../components/icons'
-import { ROTULO_SITUACAO_OPERACIONAL, type SituacaoOperacional } from '../lib/types'
+import {
+  ROTULO_SITUACAO_OPERACIONAL,
+  type Mensagem,
+  type SituacaoOperacional,
+} from '../lib/types'
 
 /** Cores da situação operacional — mesma convenção do painel do motorista. */
 const COR_SITUACAO: Record<SituacaoOperacional, { bg: string; fg: string }> = {
@@ -65,6 +70,22 @@ export default function Dashboard() {
         pendenciasAlocacao: pendencias.count ?? 0,
       }
     },
+  })
+
+  // Últimas mensagens recebidas pelo setor (item do canal de comunicação)
+  const { data: mensagens } = useQuery({
+    queryKey: ['mensagens-recentes'],
+    queryFn: async () => {
+      const { data, error: err } = await supabase
+        .from('mensagem')
+        .select('*, remetente:remetente_id (id, nome, tipo)')
+        .is('responde_a', null)
+        .order('criado_em', { ascending: false })
+        .limit(5)
+      if (err) throw err
+      return data as unknown as Mensagem[]
+    },
+    refetchInterval: 60_000,
   })
 
   const kpis = useMemo(() => {
@@ -260,6 +281,57 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Mensagens recebidas recentemente */}
+      <div className="card mb-3.5 p-5">
+        <div className="mb-3 flex items-baseline justify-between">
+          <div className="text-[14.5px] font-semibold">Mensagens recentes</div>
+          <button
+            onClick={() => navegar('/mensagens')}
+            className="text-[12.5px] font-medium text-primary hover:text-primary-hover"
+          >
+            Ver todas →
+          </button>
+        </div>
+
+        <div className="flex flex-col">
+          {(mensagens ?? []).map((m) => (
+            <button
+              key={m.id}
+              onClick={() => navegar(m.tipo === 'solicitacao' ? '/solicitacoes' : '/mensagens')}
+              className="flex items-start gap-3 border-t border-line py-3 text-left transition-colors hover:bg-bg"
+            >
+              <Avatar nome={m.remetente?.nome ?? '?'} tamanho={30} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="truncate text-[12.5px] font-medium">
+                    {m.remetente?.nome ?? 'Remetente removido'}
+                  </span>
+                  <span className="shrink-0 font-mono text-[10.5px] text-soft">
+                    {dataHoraBR(m.criado_em)}
+                  </span>
+                </div>
+                <div className="mt-0.5 flex items-center gap-1.5">
+                  {!m.lida_em && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />}
+                  <span className="truncate text-[12.5px]">{m.assunto}</span>
+                  {m.tipo === 'solicitacao' && (
+                    <span className="shrink-0 rounded-full bg-tint px-2 py-0.5 text-[10px] text-muted">
+                      solicitação
+                    </span>
+                  )}
+                </div>
+                <div className="mt-0.5 truncate text-[11.5px] text-muted">{m.corpo}</div>
+              </div>
+            </button>
+          ))}
+
+          {(mensagens ?? []).length === 0 && (
+            <div className="border-t border-line py-8 text-center text-[12.5px] text-muted">
+              Nenhuma mensagem recebida.
+            </div>
+          )}
         </div>
       </div>
 

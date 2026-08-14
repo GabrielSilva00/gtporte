@@ -55,7 +55,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       <div className="pointer-events-none fixed bottom-6 right-6 z-50 flex w-[360px] max-w-[calc(100vw-3rem)] flex-col gap-2">
         {toasts.map((t) => {
-          const { bg, fg, Icone } = ESTILO[t.tipo]
+          // Fallback defensivo: um tipo fora da lista nao pode derrubar a tela inteira
+          const { bg, fg, Icone } = ESTILO[t.tipo] ?? ESTILO.sucesso
           return (
             <div
               key={t.id}

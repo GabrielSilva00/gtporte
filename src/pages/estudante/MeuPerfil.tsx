@@ -6,7 +6,14 @@ import { mensagemErro, supabase } from '../../lib/supabase'
 import { CarregandoCards, ErroCarregamento } from '../../components/ui/Estados'
 import { useToast } from '../../components/ui/Toast'
 import { IconeInfo } from '../../components/icons'
-import { DIAS_SEMANA, type DiaGrade } from '../../lib/format'
+import {
+  GradeSemanal,
+  diasInvalidos,
+  gradeDeLinhas,
+  gradeVazia,
+  linhasDaGrade,
+  type MapaGrade,
+} from '../../components/GradeSemanal'
 import { ROTULO_PERFIL_USO, type Estudante, type PerfilUso } from '../../lib/types'
 
 interface LinhaGrade {
@@ -32,9 +39,7 @@ export default function MeuPerfil() {
     perfil_uso: 'ida_volta' as PerfilUso,
   })
 
-  const [grade, setGrade] = useState<Record<number, DiaGrade>>(() =>
-    Object.fromEntries(DIAS_SEMANA.map((d) => [d.numero, { ativo: false, inicio: '', fim: '' }])),
-  )
+  const [grade, setGrade] = useState<MapaGrade>(gradeVazia)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['meu-cadastro', estudanteId],
@@ -67,21 +72,7 @@ export default function MeuPerfil() {
       perfil_uso: e.perfil_uso,
     })
 
-    setGrade(
-      Object.fromEntries(
-        DIAS_SEMANA.map((d) => {
-          const linha = data.grade.find((g) => g.dia_semana === d.numero)
-          return [
-            d.numero,
-            {
-              ativo: !!linha,
-              inicio: linha?.hora_inicio?.slice(0, 5) ?? '',
-              fim: linha?.hora_fim?.slice(0, 5) ?? '',
-            },
-          ]
-        }),
-      ),
-    )
+    setGrade(gradeDeLinhas(data.grade))
   }, [data])
 
   const salvar = useMutation({
@@ -101,15 +92,16 @@ export default function MeuPerfil() {
         .eq('id', estudanteId)
       if (err) throw err
 
-      const linhas = DIAS_SEMANA.filter((d) => {
-        const g = grade[d.numero]
-        return g.ativo && g.inicio && g.fim
-      }).map((d) => ({
-        estudante_id: estudanteId,
-        dia_semana: d.numero,
-        hora_inicio: grade[d.numero].inicio,
-        hora_fim: grade[d.numero].fim,
-      }))
+      const invalidos = diasInvalidos(grade)
+      if (invalidos.length > 0) {
+        throw new Error(
+          `Informe início e término (com término depois do início) em: ${invalidos
+            .map((d) => d.rotulo)
+            .join(', ')}.`,
+        )
+      }
+
+      const linhas = linhasDaGrade(grade, estudanteId)
 
       // A grade e reescrita por inteiro: dia desmarcado deixa de existir.
       await supabase.from('grade_horaria').delete().eq('estudante_id', estudanteId)
@@ -245,50 +237,8 @@ export default function MeuPerfil() {
 
         <div className="mt-4 border-t border-line pt-4">
           <div className="field-label">Horário das aulas</div>
-          <div className="mt-2 flex flex-col gap-2">
-            {DIAS_SEMANA.map((d) => {
-              const g = grade[d.numero]
-              return (
-                <div
-                  key={d.numero}
-                  className={`grid grid-cols-[104px_1fr_1fr] items-center gap-2 rounded-field border px-3 py-2 transition-colors ${
-                    g.ativo ? 'border-primary/30 bg-panel' : 'border-edge'
-                  }`}
-                >
-                  <label className="flex cursor-pointer items-center gap-2 text-[12.5px] font-medium">
-                    <input
-                      type="checkbox"
-                      checked={g.ativo}
-                      onChange={(f) =>
-                        setGrade({ ...grade, [d.numero]: { ...g, ativo: f.target.checked } })
-                      }
-                      className="h-3.5 w-3.5 accent-[#1F3A2E]"
-                    />
-                    {d.rotulo}
-                  </label>
-                  <input
-                    type="time"
-                    aria-label={`Início das aulas de ${d.rotulo}`}
-                    value={g.inicio}
-                    disabled={!g.ativo}
-                    onChange={(f) =>
-                      setGrade({ ...grade, [d.numero]: { ...g, inicio: f.target.value } })
-                    }
-                    className="field py-1.5 text-[12.5px] disabled:opacity-40"
-                  />
-                  <input
-                    type="time"
-                    aria-label={`Término das aulas de ${d.rotulo}`}
-                    value={g.fim}
-                    disabled={!g.ativo}
-                    onChange={(f) =>
-                      setGrade({ ...grade, [d.numero]: { ...g, fim: f.target.value } })
-                    }
-                    className="field py-1.5 text-[12.5px] disabled:opacity-40"
-                  />
-                </div>
-              )
-            })}
+          <div className="mt-2">
+            <GradeSemanal grade={grade} onChange={setGrade} />
           </div>
         </div>
       </div>

@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { mensagemErro, supabase } from '../lib/supabase'
+import { emailDeAcesso, mensagemErro, supabase, supabaseCadastro } from '../lib/supabase'
 import { dataHoraBR } from '../lib/format'
+import { CATEGORIAS, PAGINAS_CONCEDIVEIS, type ChavePagina } from '../lib/paginas'
 import { Avatar } from '../components/ui/Avatar'
 import { Badge, StatusPonto } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
@@ -17,6 +18,15 @@ const BADGE_PERFIL: Record<TipoPerfil, { bg: string; fg: string }> = {
   estudante: { bg: '#EEF1EF', fg: '#6B7570' },
 }
 
+const FORM_VAZIO = {
+  nome: '',
+  login: '',
+  senha: '',
+  email: '',
+  telefone: '',
+  tipo: 'operador' as TipoPerfil,
+}
+
 /** RF20 — gerenciamento de perfis de acesso. Restrito a administradores. */
 export default function Funcionarios() {
   const qc = useQueryClient()
@@ -24,12 +34,8 @@ export default function Funcionarios() {
 
   const [aberto, setAberto] = useState(false)
   const [editando, setEditando] = useState<Perfil | null>(null)
-  const [form, setForm] = useState({
-    nome: '',
-    email: '',
-    telefone: '',
-    tipo: 'operador' as TipoPerfil,
-  })
+  const [form, setForm] = useState(FORM_VAZIO)
+  const [liberadas, setLiberadas] = useState<Set<ChavePagina>>(new Set())
 
   const { data: perfis, isLoading, error } = useQuery({
     queryKey: ['perfis'],
@@ -44,6 +50,24 @@ export default function Funcionarios() {
     },
   })
 
+  // Permissões do perfil em edição — carregadas só quando o modal abre
+  const { data: permissoesSalvas } = useQuery({
+    queryKey: ['permissoes-perfil', editando?.id],
+    enabled: !!editando,
+    queryFn: async () => {
+      const { data, error: err } = await supabase
+        .from('permissao_pagina')
+        .select('pagina')
+        .eq('perfil_id', editando!.id)
+      if (err) throw err
+      return data.map((p) => p.pagina as ChavePagina)
+    },
+  })
+
+  useEffect(() => {
+    setLiberadas(new Set(permissoesSalvas ?? []))
+  }, [permissoesSalvas])
+
   const contadores = useMemo(() => {
     const c = { admin: 0, operador: 0, motorista: 0 }
     ;(perfis ?? []).forEach((p) => {
@@ -52,31 +76,73 @@ export default function Funcionarios() {
     return c
   }, [perfis])
 
+  /** Reescreve a lista de páginas liberadas para o perfil informado. */
+  async function gravarPermissoes(perfilId: string) {
+    const { error: erroLimpeza } = await supabase
+      .from('permissao_pagina')
+      .delete()
+      .eq('perfil_id', perfilId)
+    if (erroLimpeza) throw erroLimpeza
+
+    const linhas = [...liberadas].map((pagina) => ({ perfil_id: perfilId, pagina }))
+    if (linhas.length > 0) {
+      const { error: erroInsercao } = await supabase.from('permissao_pagina').insert(linhas)
+      if (erroInsercao) throw erroInsercao
+    }
+  }
+
   const salvar = useMutation({
     mutationFn: async () => {
-      if (!editando) {
-        // Criação de acesso: o usuário precisa existir no Supabase Auth.
-        // O convite por e-mail exige a service_role key, que não pode ficar
-        // no front-end — por isso a criação é feita pelo Dashboard do Supabase
-        // e aqui apenas ajustamos o perfil correspondente.
-        throw new Error(
-          'Crie o usuário em Authentication > Users no painel do Supabase com ' +
-            `"tipo": "${form.tipo}" em User Metadata. O perfil aparece aqui automaticamente.`,
-        )
+      if (editando) {
+        const { error: err } = await supabase
+          .from('perfil')
+          .update({
+            nome: form.nome.trim(),
+            telefone: form.telefone.trim() || null,
+            tipo: form.tipo,
+          })
+          .eq('id', editando.id)
+        if (err) throw err
+
+        if (form.tipo !== 'admin') await gravarPermissoes(editando.id)
+        return
       }
-      const { error: err } = await supabase
-        .from('perfil')
-        .update({
-          nome: form.nome.trim(),
-          telefone: form.telefone.trim() || null,
-          tipo: form.tipo,
-        })
-        .eq('id', editando.id)
+
+      // Criação do acesso: o administrador define login e senha; o e-mail é
+      // opcional. O Supabase Auth exige um endereço, então sem e-mail real
+      // usamos <login>@gtporte.local apenas como identificador.
+      const login = form.login.trim().toLowerCase()
+      if (login.length < 3) throw new Error('Informe um login com pelo menos 3 caracteres.')
+      if (/\s/.test(login)) throw new Error('O login não pode conter espaços.')
+      if (form.senha.length < 6) throw new Error('A senha precisa ter pelo menos 6 caracteres.')
+
+      // supabaseCadastro é um cliente sem sessão persistida: assim o signUp
+      // não substitui a sessão do administrador que está no painel.
+      const { data, error: err } = await supabaseCadastro.auth.signUp({
+        email: emailDeAcesso(login, form.email),
+        password: form.senha,
+        options: {
+          data: {
+            nome: form.nome.trim(),
+            login,
+            tipo: form.tipo,
+            telefone: form.telefone.trim() || null,
+          },
+        },
+      })
       if (err) throw err
+      if (!data.user) throw new Error('Não foi possível criar o acesso. Tente novamente.')
+
+      // O perfil é criado pelo trigger handle_new_user(); as permissões vêm depois.
+      if (form.tipo !== 'admin' && liberadas.size > 0) {
+        await gravarPermissoes(data.user.id)
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['perfis'] })
-      toast.sucesso('Perfil atualizado.')
+      qc.invalidateQueries({ queryKey: ['perfis-motorista'] })
+      qc.invalidateQueries({ queryKey: ['permissoes-perfil'] })
+      toast.sucesso(editando ? 'Perfil atualizado.' : 'Acesso criado.')
       fechar()
     },
     onError: (e) => toast.erro(mensagemErro(e)),
@@ -100,13 +166,37 @@ export default function Funcionarios() {
 
   function abrirEdicao(p: Perfil) {
     setEditando(p)
-    setForm({ nome: p.nome, email: p.email, telefone: p.telefone ?? '', tipo: p.tipo })
+    setForm({
+      nome: p.nome,
+      login: p.login ?? '',
+      senha: '',
+      email: p.email,
+      telefone: p.telefone ?? '',
+      tipo: p.tipo,
+    })
+    setAberto(true)
+  }
+
+  function abrirNovo() {
+    setEditando(null)
+    setForm(FORM_VAZIO)
+    setLiberadas(new Set())
     setAberto(true)
   }
 
   function fechar() {
     setAberto(false)
     setEditando(null)
+    setLiberadas(new Set())
+  }
+
+  function alternarPagina(chave: ChavePagina) {
+    setLiberadas((atual) => {
+      const proxima = new Set(atual)
+      if (proxima.has(chave)) proxima.delete(chave)
+      else proxima.add(chave)
+      return proxima
+    })
   }
 
   const cards = [
@@ -114,6 +204,12 @@ export default function Funcionarios() {
     { valor: contadores.operador, rotulo: 'operadores', Icone: IconeRelogio, bg: '#F4EAE1', fg: '#C4633A' },
     { valor: contadores.motorista, rotulo: 'motoristas', Icone: IconeMotorista, bg: '#EAF3EC', fg: '#2E7D5A' },
   ]
+
+  // Administrador enxerga tudo por definição; motorista não usa este painel.
+  const permissoesAplicaveis = form.tipo === 'operador'
+  const podeSalvar = editando
+    ? form.nome.trim().length > 2
+    : form.nome.trim().length > 2 && form.login.trim().length >= 3 && form.senha.length >= 6
 
   return (
     <div>
@@ -124,14 +220,7 @@ export default function Funcionarios() {
             O perfil define o que cada usuário enxerga no sistema (RF20).
           </div>
         </div>
-        <button
-          onClick={() => {
-            setEditando(null)
-            setForm({ nome: '', email: '', telefone: '', tipo: 'operador' })
-            setAberto(true)
-          }}
-          className="btn-primary"
-        >
+        <button onClick={abrirNovo} className="btn-primary">
           <IconeMais size={14} />
           Novo funcionário
         </button>
@@ -158,12 +247,12 @@ export default function Funcionarios() {
       {isLoading && <CarregandoTabela linhas={5} />}
 
       {perfis && (
-        <div className="card overflow-hidden">
+        <div className="card overflow-x-auto">
           <table className="w-full border-collapse text-[13px]">
             <thead>
               <tr className="border-b border-edge">
                 <th className="th">Nome</th>
-                <th className="th">E-mail</th>
+                <th className="th">Login</th>
                 <th className="th">Perfil</th>
                 <th className="th">Último acesso</th>
                 <th className="th">Status</th>
@@ -182,7 +271,9 @@ export default function Funcionarios() {
                       <span className="font-medium">{p.nome}</span>
                     </div>
                   </td>
-                  <td className="td font-mono text-[12px] text-muted">{p.email}</td>
+                  <td className="td font-mono text-[12px] text-muted">
+                    {p.login ?? p.email}
+                  </td>
                   <td className="td">
                     <Badge
                       estilo={{ rotulo: ROTULO_TIPO_PERFIL[p.tipo], ...BADGE_PERFIL[p.tipo] }}
@@ -214,7 +305,12 @@ export default function Funcionarios() {
       <Modal
         aberto={aberto}
         titulo={editando ? `Editar ${editando.nome}` : 'Novo funcionário'}
-        largura={620}
+        descricao={
+          editando
+            ? 'Altere o perfil e as páginas liberadas para este usuário.'
+            : 'Defina login e senha de acesso; o e-mail é opcional.'
+        }
+        largura={680}
         onFechar={fechar}
         rodape={
           <>
@@ -224,7 +320,7 @@ export default function Funcionarios() {
                 disabled={alternarAtivo.isPending}
                 className="btn-ghost mr-auto"
               >
-                {editando.ativo ? 'Desativar acesso' : 'Reativar acesso'}
+                {editando.ativo ? 'Bloquear acesso' : 'Liberar acesso'}
               </button>
             )}
             <button onClick={fechar} className="btn-ghost">
@@ -232,69 +328,89 @@ export default function Funcionarios() {
             </button>
             <button
               onClick={() => salvar.mutate()}
-              disabled={salvar.isPending || (!editando && true)}
+              disabled={!podeSalvar || salvar.isPending}
               className="btn-primary"
             >
-              {editando ? 'Salvar alterações' : 'Criar acesso'}
+              {salvar.isPending
+                ? 'Salvando…'
+                : editando
+                  ? 'Salvar alterações'
+                  : 'Criar acesso'}
             </button>
           </>
         }
       >
-        {!editando && (
-          <div className="mb-4 flex items-start gap-2.5 rounded-btn bg-tint px-3.5 py-3 text-[12px] text-muted">
-            <span className="mt-px shrink-0 text-primary">
-              <IconeInfo size={15} />
-            </span>
-            <div>
-              A criação de usuários exige a <b>service_role key</b>, que não pode ser exposta no
-              navegador. Crie o usuário em <b>Authentication &gt; Users</b> no painel do Supabase,
-              informando <code className="font-mono">{'{ "tipo": "operador", "nome": "…" }'}</code>{' '}
-              em <b>User Metadata</b>. O perfil aparece nesta lista automaticamente e você poderá
-              editá-lo aqui.
-            </div>
-          </div>
-        )}
-
         <div className="grid grid-cols-2 gap-3">
           <label className="col-span-2">
             <span className="field-label">Nome completo</span>
             <input
               value={form.nome}
               onChange={(e) => setForm({ ...form, nome: e.target.value })}
-              disabled={!editando}
+              placeholder="Como consta no registro funcional"
+              className="field"
+            />
+          </label>
+
+          <label>
+            <span className="field-label">Login</span>
+            <input
+              value={form.login}
+              onChange={(e) =>
+                setForm({ ...form, login: e.target.value.toLowerCase().replace(/\s/g, '') })
+              }
+              disabled={!!editando}
+              placeholder="marina.rocha"
+              className="field font-mono disabled:opacity-60"
+            />
+            <span className="mt-1 block text-[11.5px] text-muted">
+              {editando ? 'O login não muda depois de criado.' : 'É com ele que o funcionário entra no sistema.'}
+            </span>
+          </label>
+
+          <label>
+            <span className="field-label">{editando ? 'Senha' : 'Senha inicial'}</span>
+            <input
+              type="password"
+              value={form.senha}
+              onChange={(e) => setForm({ ...form, senha: e.target.value })}
+              disabled={!!editando}
+              placeholder={editando ? 'Alterada pelo próprio usuário' : 'mínimo 6 caracteres'}
               className="field disabled:opacity-60"
             />
           </label>
+
           <label className="col-span-2">
-            <span className="field-label">E-mail institucional</span>
+            <span className="field-label">E-mail (opcional)</span>
             <input
+              type="email"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              disabled
+              disabled={!!editando}
               placeholder="nome@aracatuba.sp.gov.br"
-              className="field opacity-60"
+              className="field disabled:opacity-60"
             />
             <span className="mt-1 block text-[11.5px] text-muted">
-              O e-mail é gerenciado pelo Supabase Auth.
+              Sem e-mail o sistema usa <code className="font-mono">{'<login>@gtporte.local'}</code>,
+              que serve apenas como identificador interno.
             </span>
           </label>
+
           <label>
             <span className="field-label">Telefone</span>
             <input
               value={form.telefone}
               onChange={(e) => setForm({ ...form, telefone: e.target.value })}
-              disabled={!editando}
               placeholder="(18) 9 0000-0000"
-              className="field disabled:opacity-60"
+              className="field"
             />
           </label>
+
           <label>
             <span className="field-label">Perfil de acesso</span>
             <select
               value={form.tipo}
               onChange={(e) => setForm({ ...form, tipo: e.target.value as TipoPerfil })}
-              disabled={!editando}
-              className="field disabled:opacity-60"
+              className="field"
             >
               <option value="admin">Administrador</option>
               <option value="operador">Operador</option>
@@ -303,10 +419,84 @@ export default function Funcionarios() {
           </label>
         </div>
 
-        <div className="mt-4 rounded-btn bg-tint px-3.5 py-3 text-[12px] leading-relaxed text-muted">
-          <b>Administrador</b> tem acesso total, incluindo cadastro de rotas e aprovação de
-          documentos. <b>Operador</b> opera o dia a dia sem essas duas permissões.{' '}
-          <b>Motorista</b> não acessa este painel.
+        {/* Permissões por página (RF20) */}
+        <div className="mt-5 border-t border-line pt-4">
+          <div className="field-label">Páginas liberadas</div>
+
+          {permissoesAplicaveis ? (
+            <>
+              <p className="mb-2.5 text-[11.5px] text-muted">
+                O operador só enxerga no menu — e só consegue abrir — as páginas marcadas aqui.
+              </p>
+              <div className="flex flex-col gap-3">
+                {CATEGORIAS.map((categoria) => {
+                  const daCategoria = PAGINAS_CONCEDIVEIS.filter((p) => p.categoria === categoria)
+                  if (daCategoria.length === 0) return null
+                  const todas = daCategoria.every((p) => liberadas.has(p.chave))
+
+                  return (
+                    <div key={categoria} className="rounded-field border border-edge p-2.5">
+                      <div className="mb-1.5 flex items-center justify-between">
+                        <span className="text-[10.5px] font-medium uppercase tracking-[0.1em] text-muted">
+                          {categoria}
+                        </span>
+                        <button
+                          onClick={() =>
+                            setLiberadas((atual) => {
+                              const proxima = new Set(atual)
+                              daCategoria.forEach((p) =>
+                                todas ? proxima.delete(p.chave) : proxima.add(p.chave),
+                              )
+                              return proxima
+                            })
+                          }
+                          className="text-[11.5px] font-medium text-primary hover:text-primary-hover"
+                        >
+                          {todas ? 'desmarcar todas' : 'marcar todas'}
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                        {daCategoria.map(({ chave, rotulo, Icone }) => (
+                          <label
+                            key={chave}
+                            className="flex cursor-pointer items-center gap-2 rounded-[6px] px-1.5 py-1 text-[12.5px] hover:bg-tint"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={liberadas.has(chave)}
+                              onChange={() => alternarPagina(chave)}
+                              className="h-3.5 w-3.5 accent-[#1F3A2E]"
+                            />
+                            <span className="text-soft">
+                              <Icone size={14} />
+                            </span>
+                            <span className="truncate">{rotulo}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          ) : (
+            <div className="mt-1.5 flex items-start gap-2.5 rounded-btn bg-tint px-3.5 py-3 text-[12px] text-muted">
+              <span className="mt-px shrink-0 text-primary">
+                <IconeInfo size={15} />
+              </span>
+              {form.tipo === 'admin' ? (
+                <span>
+                  <b>Administrador</b> tem acesso total ao painel, incluindo cadastro de rotas,
+                  aprovação de documentos e esta própria tela. Não há o que restringir.
+                </span>
+              ) : (
+                <span>
+                  <b>Motorista</b> não usa o painel administrativo. Ele entra no painel próprio,
+                  com as rotas em que estiver vinculado no cadastro de Motoristas.
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </Modal>
     </div>

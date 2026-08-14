@@ -6,6 +6,7 @@ const ITENS = [
   { para: '/estudante', rotulo: 'Minha rota', fim: true },
   { para: '/estudante/documentos', rotulo: 'Documentos' },
   { para: '/estudante/historico', rotulo: 'Histórico' },
+  { para: '/estudante/mensagens', rotulo: 'Mensagens' },
   { para: '/estudante/feedback', rotulo: 'Avaliar' },
   { para: '/estudante/perfil', rotulo: 'Meus dados' },
 ]

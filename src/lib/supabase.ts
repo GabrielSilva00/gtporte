@@ -17,7 +17,31 @@ export const supabase = createClient(url || 'http://localhost:54321', anonKey ||
   },
 })
 
+/**
+ * Cliente sem sessão persistida, usado para criar o acesso de um novo
+ * funcionário (RF20). O signUp autentica o usuário recém-criado no cliente
+ * que o chamou; em um cliente separado isso não derruba a sessão do
+ * administrador que está usando o painel.
+ */
+export const supabaseCadastro = createClient(url || 'http://localhost:54321', anonKey || 'anon', {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+  },
+})
+
 export const BUCKET_DOCUMENTOS = 'documentos'
+
+/** Domínio sintético para acessos criados sem e-mail real — só identifica o login. */
+export const DOMINIO_LOGIN = 'gtporte.local'
+
+/** O Supabase Auth exige um e-mail; sem um real, derivamos do login. */
+export function emailDeAcesso(login: string, email?: string | null): string {
+  const informado = email?.trim()
+  if (informado) return informado
+  return `${login.trim().toLowerCase()}@${DOMINIO_LOGIN}`
+}
 
 /** Converte erros do PostgREST/PL-pgSQL em mensagens legíveis para o usuário. */
 export function mensagemErro(erro: unknown): string {

@@ -5,6 +5,7 @@ const ITENS = [
   { para: '/motorista', rotulo: 'Passageiros', fim: true },
   { para: '/motorista/rotas', rotulo: 'Minhas rotas' },
   { para: '/motorista/avisos', rotulo: 'Avisos' },
+  { para: '/motorista/mensagens', rotulo: 'Mensagens' },
 ]
 
 /** Painel do motorista (RF12, RF15, RF16). */

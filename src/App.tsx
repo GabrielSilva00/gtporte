@@ -5,7 +5,7 @@ import { supabaseConfigurado } from './lib/supabase'
 // Público
 import Login from './pages/Login'
 import Cadastro from './pages/Cadastro'
-import Configuracao from './pages/Configuracao'
+import ConfiguracaoPendente from './pages/ConfiguracaoPendente'
 
 // Administrativo
 import AppShell from './layouts/AppShell'
@@ -20,6 +20,8 @@ import Universidades from './pages/Universidades'
 import Presenca from './pages/Presenca'
 import Relatorios from './pages/Relatorios'
 import Funcionarios from './pages/Funcionarios'
+import Mensagens from './pages/Mensagens'
+import Configuracoes from './pages/Configuracoes'
 
 // Estudante
 import EstudanteShell from './layouts/EstudanteShell'
@@ -36,10 +38,13 @@ import Passageiros from './pages/motorista/Passageiros'
 import MinhasRotas from './pages/motorista/MinhasRotas'
 import Avisos from './pages/motorista/Avisos'
 
+// Estudante + motorista
+import MinhasMensagens from './pages/MinhasMensagens'
+
 const STAFF = ['admin', 'operador'] as const
 
 export default function App() {
-  if (!supabaseConfigurado) return <Configuracao />
+  if (!supabaseConfigurado) return <ConfiguracaoPendente />
 
   return (
     <Routes>
@@ -47,6 +52,8 @@ export default function App() {
       <Route path="/cadastro" element={<Cadastro />} />
 
       {/* ---------------- Painel administrativo (RF20/RF21) ---------------- */}
+      {/* A prop `pagina` liga cada rota à permissão individual concedida em
+          Funcionários; o administrador tem acesso a todas por definição. */}
       <Route
         element={
           <RotaProtegida perfis={[...STAFF]}>
@@ -54,16 +61,110 @@ export default function App() {
           </RotaProtegida>
         }
       >
-        <Route index element={<Dashboard />} />
-        <Route path="estudantes" element={<Estudantes />} />
-        <Route path="documentos" element={<Documentos />} />
-        <Route path="alocacao" element={<Alocacao />} />
-        <Route path="rotas" element={<Rotas />} />
-        <Route path="veiculos" element={<Veiculos />} />
-        <Route path="motoristas" element={<Motoristas />} />
-        <Route path="universidades" element={<Universidades />} />
-        <Route path="presenca" element={<Presenca />} />
-        <Route path="relatorios" element={<Relatorios />} />
+        <Route
+          index
+          element={
+            <RotaProtegida perfis={[...STAFF]} pagina="dashboard">
+              <Dashboard />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="estudantes"
+          element={
+            <RotaProtegida perfis={[...STAFF]} pagina="estudantes">
+              <Estudantes />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="documentos"
+          element={
+            <RotaProtegida perfis={[...STAFF]} pagina="documentos">
+              <Documentos />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="alocacao"
+          element={
+            <RotaProtegida perfis={[...STAFF]} pagina="alocacao">
+              <Alocacao />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="rotas"
+          element={
+            <RotaProtegida perfis={[...STAFF]} pagina="rotas">
+              <Rotas />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="veiculos"
+          element={
+            <RotaProtegida perfis={[...STAFF]} pagina="veiculos">
+              <Veiculos />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="motoristas"
+          element={
+            <RotaProtegida perfis={[...STAFF]} pagina="motoristas">
+              <Motoristas />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="universidades"
+          element={
+            <RotaProtegida perfis={[...STAFF]} pagina="universidades">
+              <Universidades />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="presenca"
+          element={
+            <RotaProtegida perfis={[...STAFF]} pagina="presenca">
+              <Presenca />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="relatorios"
+          element={
+            <RotaProtegida perfis={[...STAFF]} pagina="relatorios">
+              <Relatorios />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="solicitacoes"
+          element={
+            <RotaProtegida perfis={[...STAFF]} pagina="solicitacoes">
+              <Mensagens tipo="solicitacao" />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="mensagens"
+          element={
+            <RotaProtegida perfis={[...STAFF]} pagina="mensagens">
+              <Mensagens tipo="mensagem" />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="configuracoes"
+          element={
+            <RotaProtegida perfis={[...STAFF]} pagina="configuracoes">
+              <Configuracoes />
+            </RotaProtegida>
+          }
+        />
         {/* RF20: gestão de acessos é exclusiva de administradores */}
         <Route
           path="funcionarios"
@@ -87,6 +188,7 @@ export default function App() {
         <Route index element={<MinhaRota />} />
         <Route path="documentos" element={<MeusDocumentos />} />
         <Route path="historico" element={<Historico />} />
+        <Route path="mensagens" element={<MinhasMensagens />} />
         <Route path="feedback" element={<Feedback />} />
         <Route path="perfil" element={<MeuPerfil />} />
       </Route>
@@ -113,6 +215,7 @@ export default function App() {
         <Route index element={<Passageiros />} />
         <Route path="rotas" element={<MinhasRotas />} />
         <Route path="avisos" element={<Avisos />} />
+        <Route path="mensagens" element={<MinhasMensagens />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
