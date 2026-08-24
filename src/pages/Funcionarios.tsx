@@ -8,7 +8,7 @@ import { Badge, StatusPonto } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
 import { CarregandoTabela, ErroCarregamento } from '../components/ui/Estados'
 import { useToast } from '../components/ui/Toast'
-import { IconeEngrenagem, IconeInfo, IconeMais, IconeMotorista, IconeRelogio } from '../components/icons'
+import { IconeChave, IconeEngrenagem, IconeInfo, IconeMais, IconeMotorista, IconeRelogio } from '../components/icons'
 import { ROTULO_TIPO_PERFIL, type Perfil, type TipoPerfil } from '../lib/types'
 
 const BADGE_PERFIL: Record<TipoPerfil, { bg: string; fg: string }> = {
@@ -36,6 +36,8 @@ export default function Funcionarios() {
   const [editando, setEditando] = useState<Perfil | null>(null)
   const [form, setForm] = useState(FORM_VAZIO)
   const [liberadas, setLiberadas] = useState<Set<ChavePagina>>(new Set())
+  /** Perfil cujo modal de acessos está aberto — independente do modal de edição. */
+  const [acessosDe, setAcessosDe] = useState<Perfil | null>(null)
 
   const { data: perfis, isLoading, error } = useQuery({
     queryKey: ['perfis'],
@@ -51,14 +53,15 @@ export default function Funcionarios() {
   })
 
   // Permissões do perfil em edição — carregadas só quando o modal abre
+  const perfilEmFoco = acessosDe ?? editando
   const { data: permissoesSalvas } = useQuery({
-    queryKey: ['permissoes-perfil', editando?.id],
-    enabled: !!editando,
+    queryKey: ['permissoes-perfil', perfilEmFoco?.id],
+    enabled: !!perfilEmFoco,
     queryFn: async () => {
       const { data, error: err } = await supabase
         .from('permissao_pagina')
         .select('pagina')
-        .eq('perfil_id', editando!.id)
+        .eq('perfil_id', perfilEmFoco!.id)
       if (err) throw err
       return data.map((p) => p.pagina as ChavePagina)
     },
@@ -76,19 +79,51 @@ export default function Funcionarios() {
     return c
   }, [perfis])
 
-  /** Reescreve a lista de páginas liberadas para o perfil informado. */
+  /**
+   * Aplica apenas a diferença entre o que está salvo e o que está marcado.
+   * A versão anterior apagava tudo e reinseria: se o insert falhasse depois
+   * do delete, o funcionário ficava sem nenhuma permissão.
+   */
   async function gravarPermissoes(perfilId: string) {
-    const { error: erroLimpeza } = await supabase
-      .from('permissao_pagina')
-      .delete()
-      .eq('perfil_id', perfilId)
-    if (erroLimpeza) throw erroLimpeza
+    const salvas = new Set(permissoesSalvas ?? [])
+    const incluir = [...liberadas].filter((p) => !salvas.has(p))
+    const remover = [...salvas].filter((p) => !liberadas.has(p))
 
-    const linhas = [...liberadas].map((pagina) => ({ perfil_id: perfilId, pagina }))
-    if (linhas.length > 0) {
-      const { error: erroInsercao } = await supabase.from('permissao_pagina').insert(linhas)
+    if (incluir.length > 0) {
+      const { error: erroInsercao } = await supabase
+        .from('permissao_pagina')
+        .insert(incluir.map((pagina) => ({ perfil_id: perfilId, pagina })))
       if (erroInsercao) throw erroInsercao
     }
+
+    if (remover.length > 0) {
+      const { error: erroRemocao } = await supabase
+        .from('permissao_pagina')
+        .delete()
+        .eq('perfil_id', perfilId)
+        .in('pagina', remover)
+      if (erroRemocao) throw erroRemocao
+    }
+  }
+
+  /** Salva só as permissões, sem passar pelo formulário de dados do perfil. */
+  const salvarAcessos = useMutation({
+    mutationFn: async () => {
+      if (!acessosDe) return
+      await gravarPermissoes(acessosDe.id)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['permissoes-perfil'] })
+      qc.invalidateQueries({ queryKey: ['perfis'] })
+      toast.sucesso('Acessos atualizados.')
+      setAcessosDe(null)
+      setLiberadas(new Set())
+    },
+    onError: (e) => toast.erro(mensagemErro(e)),
+  })
+
+  function abrirAcessos(p: Perfil) {
+    setAcessosDe(p)
   }
 
   const salvar = useMutation({
@@ -190,6 +225,15 @@ export default function Funcionarios() {
     setLiberadas(new Set())
   }
 
+  /** Marca ou desmarca de uma vez todas as páginas de uma categoria. */
+  function alternarCategoria(chaves: ChavePagina[], marcar: boolean) {
+    setLiberadas((atual) => {
+      const proxima = new Set(atual)
+      chaves.forEach((c) => (marcar ? proxima.add(c) : proxima.delete(c)))
+      return proxima
+    })
+  }
+
   function alternarPagina(chave: ChavePagina) {
     setLiberadas((atual) => {
       const proxima = new Set(atual)
@@ -256,6 +300,7 @@ export default function Funcionarios() {
                 <th className="th">Perfil</th>
                 <th className="th">Último acesso</th>
                 <th className="th">Status</th>
+                <th className="th w-px" />
               </tr>
             </thead>
             <tbody>
@@ -288,11 +333,28 @@ export default function Funcionarios() {
                       texto={p.ativo ? 'Ativo' : 'Inativo'}
                     />
                   </td>
+                  <td className="td text-right">
+                    {p.tipo === 'operador' ? (
+                      <button
+                        onClick={(ev) => {
+                          ev.stopPropagation()
+                          abrirAcessos(p)
+                        }}
+                        className="btn-ghost whitespace-nowrap px-2.5 py-1.5 text-[11.5px]"
+                        title="Liberar ou bloquear páginas específicas"
+                      >
+                        <IconeChave size={13} />
+                        Acessos
+                      </button>
+                    ) : (
+                      <span className="pr-1 text-[11.5px] text-soft">—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
               {perfis.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="td py-10 text-center text-muted">
+                  <td colSpan={6} className="td py-10 text-center text-muted">
                     Nenhum funcionário cadastrado.
                   </td>
                 </tr>
@@ -428,56 +490,11 @@ export default function Funcionarios() {
               <p className="mb-2.5 text-[11.5px] text-muted">
                 O operador só enxerga no menu — e só consegue abrir — as páginas marcadas aqui.
               </p>
-              <div className="flex flex-col gap-3">
-                {CATEGORIAS.map((categoria) => {
-                  const daCategoria = PAGINAS_CONCEDIVEIS.filter((p) => p.categoria === categoria)
-                  if (daCategoria.length === 0) return null
-                  const todas = daCategoria.every((p) => liberadas.has(p.chave))
-
-                  return (
-                    <div key={categoria} className="rounded-field border border-edge p-2.5">
-                      <div className="mb-1.5 flex items-center justify-between">
-                        <span className="text-[10.5px] font-medium uppercase tracking-[0.1em] text-muted">
-                          {categoria}
-                        </span>
-                        <button
-                          onClick={() =>
-                            setLiberadas((atual) => {
-                              const proxima = new Set(atual)
-                              daCategoria.forEach((p) =>
-                                todas ? proxima.delete(p.chave) : proxima.add(p.chave),
-                              )
-                              return proxima
-                            })
-                          }
-                          className="text-[11.5px] font-medium text-primary hover:text-primary-hover"
-                        >
-                          {todas ? 'desmarcar todas' : 'marcar todas'}
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-                        {daCategoria.map(({ chave, rotulo, Icone }) => (
-                          <label
-                            key={chave}
-                            className="flex cursor-pointer items-center gap-2 rounded-[6px] px-1.5 py-1 text-[12.5px] hover:bg-tint"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={liberadas.has(chave)}
-                              onChange={() => alternarPagina(chave)}
-                              className="h-3.5 w-3.5 accent-[#1F3A2E]"
-                            />
-                            <span className="text-soft">
-                              <Icone size={14} />
-                            </span>
-                            <span className="truncate">{rotulo}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+              <GradePermissoes
+                liberadas={liberadas}
+                onAlternar={alternarPagina}
+                onAlternarCategoria={alternarCategoria}
+              />
             </>
           ) : (
             <div className="mt-1.5 flex items-start gap-2.5 rounded-btn bg-tint px-3.5 py-3 text-[12px] text-muted">
@@ -499,6 +516,124 @@ export default function Funcionarios() {
           )}
         </div>
       </Modal>
+
+      {/*
+        Modal dedicado a acessos: permite liberar e bloquear páginas de um
+        funcionário já cadastrado sem passar pelo formulário de dados dele.
+      */}
+      <Modal
+        aberto={!!acessosDe}
+        titulo={acessosDe ? `Acessos de ${acessosDe.nome}` : 'Acessos'}
+        descricao="O operador só enxerga no menu — e só consegue abrir — as páginas marcadas."
+        largura={680}
+        onFechar={() => {
+          setAcessosDe(null)
+          setLiberadas(new Set())
+        }}
+        rodape={
+          <>
+            <button
+              onClick={() => alternarCategoria(PAGINAS_CONCEDIVEIS.map((p) => p.chave), false)}
+              className="btn-ghost mr-auto text-danger"
+            >
+              Bloquear tudo
+            </button>
+            <button
+              onClick={() => {
+                setAcessosDe(null)
+                setLiberadas(new Set())
+              }}
+              className="btn-ghost"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => salvarAcessos.mutate()}
+              disabled={salvarAcessos.isPending}
+              className="btn-primary"
+            >
+              {salvarAcessos.isPending ? 'Salvando…' : 'Salvar acessos'}
+            </button>
+          </>
+        }
+      >
+        <div className="mb-3 flex items-center justify-between rounded-field bg-tint px-3.5 py-2.5">
+          <span className="text-[12.5px] text-muted">
+            {liberadas.size} de {PAGINAS_CONCEDIVEIS.length} páginas liberadas
+          </span>
+          <button
+            onClick={() => alternarCategoria(PAGINAS_CONCEDIVEIS.map((p) => p.chave), true)}
+            className="text-[11.5px] font-medium text-primary hover:text-primary-hover"
+          >
+            liberar todas
+          </button>
+        </div>
+
+        <GradePermissoes
+          liberadas={liberadas}
+          onAlternar={alternarPagina}
+          onAlternarCategoria={alternarCategoria}
+        />
+      </Modal>
+    </div>
+  )
+}
+
+/**
+ * Grade de páginas por categoria. Usada tanto no cadastro do funcionário
+ * quanto no modal de acessos, que edita só as permissões.
+ */
+function GradePermissoes({
+  liberadas,
+  onAlternar,
+  onAlternarCategoria,
+}: {
+  liberadas: Set<ChavePagina>
+  onAlternar: (chave: ChavePagina) => void
+  onAlternarCategoria: (chaves: ChavePagina[], marcar: boolean) => void
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      {CATEGORIAS.map((categoria) => {
+        const daCategoria = PAGINAS_CONCEDIVEIS.filter((p) => p.categoria === categoria)
+        if (daCategoria.length === 0) return null
+        const todas = daCategoria.every((p) => liberadas.has(p.chave))
+
+        return (
+          <div key={categoria} className="rounded-field border border-edge p-2.5">
+            <div className="mb-1.5 flex items-center justify-between">
+              <span className="text-[10.5px] font-medium uppercase tracking-[0.1em] text-muted">
+                {categoria}
+              </span>
+              <button
+                onClick={() => onAlternarCategoria(daCategoria.map((p) => p.chave), !todas)}
+                className="text-[11.5px] font-medium text-primary hover:text-primary-hover"
+              >
+                {todas ? 'desmarcar todas' : 'marcar todas'}
+              </button>
+            </div>
+            <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+              {daCategoria.map(({ chave, rotulo, Icone }) => (
+                <label
+                  key={chave}
+                  className="flex cursor-pointer items-center gap-2 rounded-[6px] px-1.5 py-1 text-[12.5px] hover:bg-tint"
+                >
+                  <input
+                    type="checkbox"
+                    checked={liberadas.has(chave)}
+                    onChange={() => onAlternar(chave)}
+                    className="h-3.5 w-3.5 accent-[#1F3A2E]"
+                  />
+                  <span className="text-soft">
+                    <Icone size={14} />
+                  </span>
+                  <span className="truncate">{rotulo}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
