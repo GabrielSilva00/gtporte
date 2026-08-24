@@ -4,6 +4,7 @@ import { BUCKET_DOCUMENTOS, mensagemErro, supabase } from '../lib/supabase'
 import { dataHoraBR } from '../lib/format'
 import { useAuth } from '../auth/AuthProvider'
 import { Modal } from '../components/ui/Modal'
+import { Tabs } from '../components/ui/Tabs'
 import { CarregandoTabela, ErroCarregamento, Vazio } from '../components/ui/Estados'
 import { useToast } from '../components/ui/Toast'
 import { IconeArquivo, IconeInfo } from '../components/icons'
@@ -199,21 +200,20 @@ export default function Documentos() {
         <div className="grid h-[calc(100vh-210px)] grid-cols-1 gap-3.5 lg:grid-cols-[320px_1fr]">
           {/* Fila */}
           <div className="card flex flex-col overflow-hidden">
-            <div className="flex gap-1.5 border-b border-edge px-3.5 py-3">
-              {(['pendente', 'aprovado', 'rejeitado'] as Aba[]).map((a) => (
-                <button
-                  key={a}
-                  onClick={() => {
-                    setAba(a)
-                    setSelecionadoId(null)
-                  }}
-                  className={`rounded-md px-2.5 py-1 text-[11.5px] transition-colors ${
-                    aba === a ? 'bg-primary font-medium text-white' : 'text-muted hover:bg-bg'
-                  }`}
-                >
-                  {ROTULO_ABA[a]} · {contadores[a]}
-                </button>
-              ))}
+            <div className="border-b border-edge px-3.5 py-3">
+              <Tabs
+                variante="pilulas"
+                abas={(['pendente', 'aprovado', 'rejeitado'] as Aba[]).map((a) => ({
+                  chave: a,
+                  rotulo: ROTULO_ABA[a],
+                  contador: contadores[a],
+                }))}
+                ativa={aba}
+                onMudar={(a) => {
+                  setAba(a)
+                  setSelecionadoId(null)
+                }}
+              />
             </div>
 
             <div className="flex-1 overflow-y-auto">

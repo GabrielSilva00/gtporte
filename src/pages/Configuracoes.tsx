@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/AuthProvider'
 import { mensagemErro, supabase } from '../lib/supabase'
 import { Modal } from '../components/ui/Modal'
+import { Tabs } from '../components/ui/Tabs'
 import { CarregandoCards, ErroCarregamento } from '../components/ui/Estados'
 import { useToast } from '../components/ui/Toast'
 import { IconeInfo, IconeMais } from '../components/icons'
@@ -201,21 +202,7 @@ export default function Configuracoes() {
         </div>
       </div>
 
-      <div className="mb-4 flex gap-1 overflow-x-auto border-b border-edge">
-        {ABAS.map((a) => (
-          <button
-            key={a.chave}
-            onClick={() => setAba(a.chave)}
-            className={`whitespace-nowrap border-b-2 px-3.5 py-2.5 text-[13px] transition-colors ${
-              aba === a.chave
-                ? 'border-primary font-semibold text-ink'
-                : 'border-transparent text-muted hover:text-ink'
-            }`}
-          >
-            {a.rotulo}
-          </button>
-        ))}
-      </div>
+      <Tabs abas={ABAS} ativa={aba} onMudar={setAba} className="mb-4" />
 
       {error && <ErroCarregamento mensagem={mensagemErro(error)} />}
       {isLoading && <CarregandoCards itens={2} altura={180} />}
