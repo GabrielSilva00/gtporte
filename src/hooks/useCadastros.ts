@@ -83,3 +83,19 @@ export function useOcupacaoRotas() {
     },
   })
 }
+
+/**
+ * Ocupação de uma data específica, via RPC ocupacao_por_data.
+ * A view vw_ocupacao_rota é sempre "ao vivo" e não recorta por data — este
+ * hook é o que permite comparar hoje com o dia anterior no painel.
+ */
+export function useOcupacaoPorData(data: string) {
+  return useQuery({
+    queryKey: ['ocupacao-por-data', data],
+    queryFn: async () => {
+      const { data: linhas, error } = await supabase.rpc('ocupacao_por_data', { p_data: data })
+      if (error) throw error
+      return (linhas ?? []) as OcupacaoRota[]
+    },
+  })
+}

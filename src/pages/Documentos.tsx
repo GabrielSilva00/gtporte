@@ -305,15 +305,15 @@ export default function Documentos() {
                   )}
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-5">
-                  <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
+                <div className="flex-1 overflow-y-auto p-4">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                     {selecionado.documentos.map((d) => {
                       const c = CORES_SIGLA[d.status]
                       const url = previews[d.id]
                       return (
                         <div key={d.id} className="overflow-hidden rounded-[10px] border border-edge">
                           <div
-                            className="relative flex aspect-[1.5] items-center justify-center"
+                            className="relative flex aspect-[4/3] max-h-[136px] items-center justify-center"
                             style={{
                               backgroundColor: '#FCFAF4',
                               backgroundImage:
@@ -325,42 +325,42 @@ export default function Documentos() {
                                 href={url}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="flex items-center gap-2 rounded-md border border-edge bg-white px-3 py-2 text-[11px] text-muted hover:border-primary/40"
+                                className="flex max-w-[90%] items-center gap-1.5 rounded-md border border-edge bg-white px-2 py-1.5 text-[10.5px] text-muted hover:border-primary/40"
                               >
-                                <IconeArquivo size={14} />
-                                <span className="font-mono">{d.nome_arquivo}</span>
+                                <IconeArquivo size={12} />
+                                <span className="truncate font-mono">{d.nome_arquivo}</span>
                               </a>
                             ) : (
-                              <span className="rounded-md border border-edge bg-white px-3 py-2 text-[11px] text-soft">
+                              <span className="rounded-md border border-edge bg-white px-2 py-1.5 text-[10.5px] text-soft">
                                 arquivo indisponível
                               </span>
                             )}
                             <span
-                              className="absolute right-2.5 top-2.5 rounded-full px-2 py-0.5 text-[10px] uppercase"
+                              className="absolute right-2 top-2 rounded-full px-1.5 py-px text-[9.5px] uppercase"
                               style={{ background: c.bg, color: c.fg }}
                             >
                               {d.status}
                             </span>
                           </div>
 
-                          <div className="px-3.5 py-3">
-                            <div className="text-[12.5px] font-medium">{ROTULO_DOCUMENTO[d.tipo]}</div>
-                            <div className="mt-0.5 text-[11px] text-soft">
+                          <div className="px-3 py-2.5">
+                            <div className="text-[12px] font-medium">{ROTULO_DOCUMENTO[d.tipo]}</div>
+                            <div className="mt-0.5 text-[10.5px] text-soft">
                               Enviado {dataHoraBR(d.criado_em)}
                             </div>
                             {d.observacao && (
-                              <div className="mt-2 rounded-md bg-bg-danger px-2.5 py-1.5 text-[11px] text-danger">
+                              <div className="mt-1.5 rounded-md bg-bg-danger px-2 py-1 text-[10.5px] text-danger">
                                 {d.observacao}
                               </div>
                             )}
 
                             {ehAdmin && (
-                              <div className="mt-2.5 flex gap-1.5">
+                              <div className="mt-2 flex gap-1.5">
                                 {d.status === 'aprovado' ? (
                                   <button
                                     onClick={() => cancelarAprovacao.mutate(d.id)}
                                     disabled={cancelarAprovacao.isPending}
-                                    className="flex-1 rounded-md border border-edge py-1.5 text-[11.5px] text-muted hover:border-warn hover:text-warn"
+                                    className="flex-1 rounded-md border border-edge py-1 text-[11px] text-muted hover:border-warn hover:text-warn"
                                   >
                                     Cancelar aprovação
                                   </button>
@@ -368,14 +368,14 @@ export default function Documentos() {
                                   <>
                                     <button
                                       onClick={() => setModalRejeicao({ doc: d })}
-                                      className="flex-1 rounded-md border border-danger py-1.5 text-[11.5px] text-danger hover:bg-bg-danger"
+                                      className="flex-1 rounded-md border border-danger py-1 text-[11px] text-danger hover:bg-bg-danger"
                                     >
                                       Rejeitar
                                     </button>
                                     <button
                                       onClick={() => aprovar.mutate(d.id)}
                                       disabled={aprovar.isPending}
-                                      className="flex-1 rounded-md bg-success py-1.5 text-[11.5px] font-medium text-white hover:brightness-95"
+                                      className="flex-1 rounded-md bg-success py-1 text-[11px] font-medium text-white hover:brightness-95"
                                     >
                                       Aprovar
                                     </button>

@@ -1,11 +1,12 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { useOcupacaoRotas } from '../hooks/useCadastros'
+import { useOcupacaoPorData } from '../hooks/useCadastros'
 import { supabase, mensagemErro } from '../lib/supabase'
-import { corOcupacao, dataExtenso, dataHoraBR, hora, numero, percentual } from '../lib/format'
+import { corOcupacao, dataBR, dataExtenso, dataHoraBR, hora, numero, percentual } from '../lib/format'
 import { Avatar } from '../components/ui/Avatar'
 import { Badge } from '../components/ui/Badge'
+import { Tabs } from '../components/ui/Tabs'
 import { ProgressBar } from '../components/ui/ProgressBar'
 import { CarregandoCards, ErroCarregamento } from '../components/ui/Estados'
 import {
@@ -33,7 +34,9 @@ const COR_SITUACAO: Record<SituacaoOperacional, { bg: string; fg: string }> = {
 
 export default function Dashboard() {
   const navegar = useNavigate()
-  const { data: ocupacoes, isLoading, error } = useOcupacaoRotas()
+  const [diaOcupacao, setDiaOcupacao] = useState<'hoje' | 'ontem'>('hoje')
+  const dataOcupacao = useMemo(() => dataRelativa(diaOcupacao), [diaOcupacao])
+  const { data: ocupacoes, isLoading, error } = useOcupacaoPorData(dataOcupacao)
 
   const { data: totais } = useQuery({
     queryKey: ['dashboard-totais'],
@@ -195,15 +198,11 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="mb-5 flex items-end justify-between">
+      <div className="mb-5">
         <div>
           <h1 className="text-[22px] font-semibold tracking-[-0.01em]">Visão geral</h1>
           <div className="mt-1 text-[13px] text-muted">{dataExtenso()}</div>
         </div>
-        <button onClick={() => navegar('/alocacao')} className="btn-primary">
-          <IconeAlocacao size={15} />
-          Executar alocação
-        </button>
       </div>
 
       {error && <ErroCarregamento mensagem={mensagemErro(error)} />}
@@ -232,9 +231,22 @@ export default function Dashboard() {
       <div className="mb-3.5 grid grid-cols-1 gap-3.5 xl:grid-cols-[1.5fr_1fr]">
         {/* Ocupação */}
         <div className="card p-5">
-          <div className="mb-4 flex items-baseline justify-between">
-            <div className="text-[14.5px] font-semibold">Ocupação de hoje</div>
-            <div className="text-[12px] text-muted">passageiros / capacidade</div>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2.5">
+            <div>
+              <div className="text-[14.5px] font-semibold">Ocupação do dia</div>
+              <div className="mt-0.5 text-[12px] text-muted">
+                {dataBR(dataOcupacao)} · passageiros / capacidade
+              </div>
+            </div>
+            <Tabs
+              variante="pilulas"
+              abas={[
+                { chave: 'hoje', rotulo: 'Hoje' },
+                { chave: 'ontem', rotulo: 'Dia anterior' },
+              ]}
+              ativa={diaOcupacao}
+              onMudar={setDiaOcupacao}
+            />
           </div>
 
           {isLoading && <CarregandoCards itens={3} altura={38} />}
@@ -257,9 +269,11 @@ export default function Dashboard() {
                 </div>
               )
             })}
-            {ocupacoes?.length === 0 && (
+            {!isLoading && ocupacoes?.length === 0 && (
               <div className="py-6 text-center text-[12.5px] text-muted">
-                Nenhuma rota cadastrada ainda.
+                {diaOcupacao === 'hoje'
+                  ? 'Nenhuma rota cadastrada ainda.'
+                  : 'Nenhuma ocupação registrada no dia anterior.'}
               </div>
             )}
           </div>
@@ -394,4 +408,11 @@ export default function Dashboard() {
       </div>
     </div>
   )
+}
+
+/** Data no formato YYYY-MM-DD, no fuso local, para hoje ou para o dia anterior. */
+function dataRelativa(dia: 'hoje' | 'ontem') {
+  const d = new Date()
+  if (dia === 'ontem') d.setDate(d.getDate() - 1)
+  return d.toLocaleDateString('sv-SE')
 }
