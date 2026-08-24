@@ -2,11 +2,17 @@ import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useOcupacaoRotas } from '../hooks/useCadastros'
 import { mensagemErro, supabase } from '../lib/supabase'
-import { hoje, horaCurta } from '../lib/format'
+import { badgeSolicitacaoVolta, hoje, horaCurta } from '../lib/format'
+import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
 import { useToast } from '../components/ui/Toast'
 import { CarregandoTabela, ErroCarregamento, Vazio } from '../components/ui/Estados'
-import { ROTULO_PERFIL_USO, type Alocacao, type Presenca as PresencaTipo } from '../lib/types'
+import {
+  ROTULO_PERFIL_USO,
+  type Alocacao,
+  type Presenca as PresencaTipo,
+  type SolicitacaoVolta,
+} from '../lib/types'
 
 type Trecho = 'ida' | 'volta'
 
@@ -62,9 +68,27 @@ export default function Presenca() {
         presencas = p as PresencaTipo[]
       }
 
+      // Solicitações de volta avulsa do dia (migration 0012) — o balcão
+      // precisa enxergar quem está aguardando decisão do motorista.
+      let solicitacoes: SolicitacaoVolta[] = []
+      if (ids.length > 0) {
+        const { data: s, error: erroS } = await supabase
+          .from('solicitacao_volta')
+          .select('*')
+          .eq('data', data)
+          .in('alocacao_id', ids)
+        if (erroS) throw erroS
+        solicitacoes = s as SolicitacaoVolta[]
+      }
+
       const porAlocacao = new Map(presencas.map((p) => [p.alocacao_id, p]))
+      const solicitacaoPor = new Map(solicitacoes.map((s) => [s.alocacao_id, s]))
       return (alocacoes as unknown as Alocacao[])
-        .map((a) => ({ alocacao: a, presenca: porAlocacao.get(a.id) ?? null }))
+        .map((a) => ({
+          alocacao: a,
+          presenca: porAlocacao.get(a.id) ?? null,
+          solicitacao: solicitacaoPor.get(a.id) ?? null,
+        }))
         .sort((x, y) => (x.alocacao.estudante?.nome ?? '').localeCompare(y.alocacao.estudante?.nome ?? ''))
     },
   })
@@ -123,12 +147,14 @@ export default function Presenca() {
     const cancelados = linhas.filter(
       (l) => l.presenca?.cancelou_ida || l.presenca?.cancelou_volta,
     ).length
+    const aguardando = linhas.filter((l) => l.solicitacao?.status === 'pendente').length
     const capacidade = rotaSelecionada?.capacidade_maxima ?? 0
     return [
       { rotulo: 'Alocados', valor: linhas.length, cor: undefined },
       { rotulo: 'Confirmaram ida', valor: ida, cor: '#2E7D5A' },
       { rotulo: 'Confirmaram volta', valor: volta, cor: '#C4633A' },
       { rotulo: 'Cancelamentos', valor: cancelados, cor: '#9E3E3E' },
+      { rotulo: 'Voltas a decidir', valor: aguardando, cor: '#B8862B' },
       { rotulo: 'Vagas remanescentes', valor: Math.max(0, capacidade - volta), cor: undefined },
     ]
   }, [manifesto, rotaSelecionada])
@@ -198,7 +224,7 @@ export default function Presenca() {
               </tr>
             </thead>
             <tbody>
-              {manifesto.map(({ alocacao, presenca }, i) => {
+              {manifesto.map(({ alocacao, presenca, solicitacao }, i) => {
                 const est = alocacao.estudante
                 const nome = est?.nome ?? '—'
                 const perfilUso = est?.perfil_uso ?? 'ida_volta'
@@ -231,6 +257,11 @@ export default function Presenca() {
                         motivo={presenca?.motivo_cancelamento_volta}
                         naoSeAplica={perfilUso === 'somente_ida'}
                       />
+                      {solicitacao && solicitacao.status !== 'cancelada' && (
+                        <div className="mt-1 flex justify-center">
+                          <Badge estilo={badgeSolicitacaoVolta(solicitacao.status)} />
+                        </div>
+                      )}
                     </td>
                     <td className="td text-[12px] text-muted">
                       <span className="font-mono">
@@ -241,6 +272,17 @@ export default function Presenca() {
                       {cancelamento && (
                         <div className="mt-0.5 text-[11px] text-danger">
                           Cancelado: {cancelamento}
+                        </div>
+                      )}
+                      {solicitacao && solicitacao.status !== 'cancelada' && (
+                        <div className="mt-1 max-w-[280px] text-[11px] leading-relaxed">
+                          <span className="text-soft">Volta avulsa: </span>
+                          {solicitacao.justificativa}
+                          {solicitacao.motivo_recusa && (
+                            <div className="mt-0.5 text-danger">
+                              Recusada: {solicitacao.motivo_recusa}
+                            </div>
+                          )}
                         </div>
                       )}
                     </td>

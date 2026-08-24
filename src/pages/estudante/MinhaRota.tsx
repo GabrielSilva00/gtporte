@@ -1,7 +1,16 @@
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { mensagemErro, supabase } from '../../lib/supabase'
-import { badgeDocumental, dataExtenso, hora, horaCurta } from '../../lib/format'
+import {
+  badgeDocumental,
+  badgeSolicitacaoVolta,
+  dataExtenso,
+  dataHoraBR,
+  hora,
+  horaCurta,
+} from '../../lib/format'
 import { Badge } from '../../components/ui/Badge'
+import { Modal } from '../../components/ui/Modal'
 import { CarregandoCards, ErroCarregamento, Vazio } from '../../components/ui/Estados'
 import { useToast } from '../../components/ui/Toast'
 import {
@@ -31,6 +40,9 @@ const COR_SITUACAO: Record<SituacaoOperacional, { bg: string; fg: string }> = {
 export default function MinhaRota() {
   const qc = useQueryClient()
   const toast = useToast()
+
+  const [modalJustificativa, setModalJustificativa] = useState(false)
+  const [justificativa, setJustificativa] = useState('')
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['minha-rota'],
@@ -91,11 +103,54 @@ export default function MinhaRota() {
     onError: (e) => toast.erro(mensagemErro(e)),
   })
 
+  /**
+   * Volta avulsa: quem tem perfil ida e volta e não confirmou a ida
+   * precisa justificar, e o motorista da rota decide (migration 0012).
+   */
+  const solicitarVolta = useMutation({
+    mutationFn: async () => {
+      const { data: r, error: err } = await supabase.rpc('solicitar_volta_avulsa', {
+        p_justificativa: justificativa.trim(),
+      })
+      if (err) throw err
+      return r as { mensagem: string }
+    },
+    onSuccess: (r) => {
+      toast.sucesso(r.mensagem)
+      setModalJustificativa(false)
+      setJustificativa('')
+      qc.invalidateQueries({ queryKey: ['minha-rota'] })
+    },
+    onError: (e) => toast.erro(mensagemErro(e)),
+  })
+
+  const cancelarSolicitacao = useMutation({
+    mutationFn: async () => {
+      const { error: err } = await supabase.rpc('cancelar_solicitacao_volta', {})
+      if (err) throw err
+    },
+    onSuccess: () => {
+      toast.sucesso('Solicitação cancelada.')
+      qc.invalidateQueries({ queryKey: ['minha-rota'] })
+    },
+    onError: (e) => toast.erro(mensagemErro(e)),
+  })
+
   if (isLoading) return <CarregandoCards itens={2} altura={200} />
   if (error) return <ErroCarregamento mensagem={mensagemErro(error)} />
   if (!data) return <Vazio titulo="Cadastro não encontrado" />
 
-  const { estudante, alocacao, rota, presenca_hoje: presenca } = data
+  const {
+    estudante,
+    alocacao,
+    rota,
+    presenca_hoje: presenca,
+    solicitacao_volta: solicitacao,
+  } = data
+
+  // A volta precisa de justificativa quando a ida do dia não foi confirmada.
+  const voltaExigeJustificativa =
+    estudante.perfil_uso === 'ida_volta' && !presenca?.confirmou_ida && !presenca?.confirmou_volta
   const perfilUso = estudante.perfil_uso
   const aprovado = estudante.status_documental === 'aprovado'
 
@@ -292,17 +347,72 @@ export default function MinhaRota() {
                 indisponivel={perfilUso === 'somente_ida'}
                 textoIndisponivel="Não se aplica ao seu perfil"
                 carregando={confirmar.isPending}
-                onConfirmar={() => confirmar.mutate('volta')}
+                rotuloAcao={voltaExigeJustificativa ? 'Justificar →' : undefined}
+                onConfirmar={() =>
+                  voltaExigeJustificativa ? setModalJustificativa(true) : confirmar.mutate('volta')
+                }
               />
             </div>
 
-            {perfilUso === 'ida_volta' && !presenca?.confirmou_ida && (
+            {solicitacao && solicitacao.status !== 'cancelada' && (
+              <div className="mt-3.5 rounded-btn border border-edge bg-panel px-3.5 py-3">
+                <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                  <span className="text-[12.5px] font-medium">Solicitação de volta avulsa</span>
+                  <Badge estilo={badgeSolicitacaoVolta(solicitacao.status)} />
+                </div>
+
+                <p className="text-[12px] leading-relaxed text-muted">
+                  <span className="text-soft">Sua justificativa: </span>
+                  {solicitacao.justificativa}
+                </p>
+
+                {solicitacao.status === 'pendente' && (
+                  <div className="mt-2.5 flex flex-wrap items-center gap-3">
+                    <span className="text-[11.5px] text-muted">
+                      Enviada {dataHoraBR(solicitacao.criado_em)} — aguardando o motorista.
+                    </span>
+                    <button
+                      onClick={() => cancelarSolicitacao.mutate()}
+                      disabled={cancelarSolicitacao.isPending}
+                      className="text-[11.5px] font-medium text-danger hover:underline"
+                    >
+                      cancelar solicitação
+                    </button>
+                  </div>
+                )}
+
+                {solicitacao.status === 'recusada' && (
+                  <>
+                    <div className="mt-2.5 rounded-md bg-bg-danger px-2.5 py-2 text-[11.5px] text-danger">
+                      <b>Motivo da recusa:</b> {solicitacao.motivo_recusa}
+                    </div>
+                    <button
+                      onClick={() => {
+                        setJustificativa('')
+                        setModalJustificativa(true)
+                      }}
+                      className="btn-ghost mt-2.5 px-3 py-1.5 text-[12px]"
+                    >
+                      Enviar nova justificativa
+                    </button>
+                  </>
+                )}
+
+                {solicitacao.status === 'aprovada' && (
+                  <div className="mt-2 text-[11.5px] text-success">
+                    Aprovada {dataHoraBR(solicitacao.decidido_em)}. Sua volta já está confirmada.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {voltaExigeJustificativa && !solicitacao && (
               <div className="mt-3.5 flex items-start gap-2.5 rounded-btn bg-tint px-3.5 py-3 text-[12px] text-muted">
                 <span className="mt-px shrink-0 text-primary">
                   <IconeInfo size={15} />
                 </span>
-                Se você não confirmar a ida, a volta só é liberada com antecedência mínima e se
-                houver assento remanescente.
+                Sem confirmar a ida, o embarque só na volta depende de justificativa aprovada pelo
+                motorista, de antecedência mínima e de assento remanescente.
               </div>
             )}
           </div>
@@ -325,6 +435,43 @@ export default function MinhaRota() {
           )}
         </>
       )}
+
+      <Modal
+        aberto={modalJustificativa}
+        titulo="Justificar embarque somente na volta"
+        descricao="O motorista da rota recebe sua justificativa e decide se aprova o embarque."
+        largura={520}
+        onFechar={() => setModalJustificativa(false)}
+        rodape={
+          <>
+            <button onClick={() => setModalJustificativa(false)} className="btn-ghost">
+              Cancelar
+            </button>
+            <button
+              onClick={() => solicitarVolta.mutate()}
+              disabled={justificativa.trim().length < 10 || solicitarVolta.isPending}
+              className="btn-primary"
+            >
+              {solicitarVolta.isPending ? 'Enviando…' : 'Enviar ao motorista'}
+            </button>
+          </>
+        }
+      >
+        <label>
+          <span className="field-label">Por que você vai embarcar somente na volta?</span>
+          <textarea
+            rows={4}
+            value={justificativa}
+            onChange={(e) => setJustificativa(e.target.value)}
+            placeholder="Ex.: fui de carona pela manhã porque tive prova às 7h e não daria tempo de pegar o ônibus."
+            className="field resize-y"
+          />
+        </label>
+        <p className="mt-2 text-[11.5px] text-muted">
+          Mínimo de 10 caracteres ({justificativa.trim().length} digitados). A justificativa fica
+          registrada e pode ser consultada pelo Setor de Transporte.
+        </p>
+      </Modal>
     </div>
   )
 }
@@ -337,6 +484,8 @@ interface BotaoPresencaProps {
   indisponivel: boolean
   textoIndisponivel: string
   carregando: boolean
+  /** Texto da ação; padrão "Confirmar". A volta avulsa usa "Justificar". */
+  rotuloAcao?: string
   onConfirmar: () => void
 }
 
@@ -348,6 +497,7 @@ function BotaoPresenca({
   indisponivel,
   textoIndisponivel,
   carregando,
+  rotuloAcao,
   onConfirmar,
 }: BotaoPresencaProps) {
   if (indisponivel) {
@@ -381,7 +531,7 @@ function BotaoPresenca({
     >
       <div className="text-[13px] font-medium">{titulo}</div>
       <div className="mt-1 font-mono text-[11.5px] text-muted">partida {horario}</div>
-      <div className="mt-2 text-[12px] font-medium text-primary">Confirmar →</div>
+      <div className="mt-2 text-[12px] font-medium text-primary">{rotuloAcao ?? 'Confirmar →'}</div>
     </button>
   )
 }

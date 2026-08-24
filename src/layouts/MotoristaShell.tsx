@@ -4,6 +4,8 @@ import PortalShell from './PortalShell'
 const ITENS = [
   { para: '/motorista', rotulo: 'Passageiros', fim: true },
   { para: '/motorista/rotas', rotulo: 'Minhas rotas' },
+  { para: '/motorista/solicitacoes', rotulo: 'Solicitações' },
+  { para: '/motorista/documentos', rotulo: 'Meus documentos' },
   { para: '/motorista/avisos', rotulo: 'Avisos' },
   { para: '/motorista/mensagens', rotulo: 'Mensagens' },
 ]
