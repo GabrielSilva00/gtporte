@@ -30,11 +30,11 @@ processo de trabalho.
 
 | Indicador | Valor |
 |---|---|
-| Commits na branch de trabalho | 11 |
-| Arquivos alterados | 44 |
-| Linhas adicionadas / removidas | 7.227 / 557 |
-| Arquivos novos | 23 |
-| Migrations de banco novas | 6 (`0008` a `0013`) |
+| Commits na branch de trabalho | 12 |
+| Arquivos alterados | 49 |
+| Linhas adicionadas / removidas | 8.071 / 601 |
+| Arquivos novos | 26 |
+| Migrations de banco novas | 6 (`0008` a `0012`, mais `0014` de correções) |
 | Tabelas no banco | 15 → 22 |
 | Telas do painel do motorista | 4 → 6 |
 | Relatórios gerenciais | 6 → 10 |
@@ -92,7 +92,8 @@ O trabalho foi dividido em fases, com um commit ao fim de cada uma:
 | 2 | Seis migrations de banco | 1 |
 | 3 | Telas que consomem as migrations (itens 5, 6, 8, 9, 12, 13, 14, 15, 16) | 6 |
 | 4 | Skill, hooks e agente revisor | 1 |
-| 5 | Documentação | 1 |
+| 5 | Tarefa delegada e correções da revisão | 1 |
+| 6 | Documentação | 1 |
 
 A fase 0 existir foi uma escolha deliberada. Três das mudanças pediam formulários em abas, e duas
 somavam cerca de cento e dez campos. Sem extrair antes um componente de abas e um renderizador de
@@ -209,13 +210,86 @@ inteira quando não é dito.
 
 ### 5.4 Resultado
 
-<!-- RESULTADO_TAREFA -->
+O agente executou a tarefa em uma passagem, sem precisar de correção de rumo. O que ele entregou:
+
+- removeu as três constantes duplicadas;
+- ajustou os imports caso a caso — em dois arquivos `ROTULO_SITUACAO_OPERACIONAL` ficou sem uso e
+  foi removido, no terceiro continuou sendo usado em outro ponto e foi mantido, que era exatamente
+  a armadilha apontada no prompt;
+- adaptou cada ponto de uso ao formato do JSX local: onde havia o componente `<Badge>`, passou a
+  função direto; onde o JSX aplicava cor via `style`, leu `.bg` e `.fg`;
+- preservou o `.toUpperCase()` que já existia, para o texto exibido não mudar;
+- verificou com `tsc --noEmit` limpo e `npm run build` completo.
+
+**Conferência independente.** Confirmamos por conta própria que nenhuma ocorrência de
+`COR_SITUACAO` restou no código, que os rótulos de `badgeSituacaoOperacional` são idênticos aos de
+`ROTULO_SITUACAO_OPERACIONAL`, e que o build passa.
+
+Uma ressalva: em `MinhaRota.tsx` o agente derivou o valor fora do bloco condicional e precisou de
+asserção não-nula (`badgeSituacao!`) em três lugares. É seguro — o trecho só renderiza sob
+`rota &&` — mas é o tipo de solução que enfraquece a checagem para contornar um detalhe de escopo.
+Movemos o cálculo para dentro do bloco, o que dispensou a asserção. Vale como registro de que
+**revisar a entrega do agente continua sendo necessário mesmo quando ela passa em todos os testes**:
+o critério objetivo estava satisfeito, e ainda assim havia o que melhorar.
 
 ---
 
 ## 6. Revisão automatizada da branch
 
-<!-- RESULTADO_REVISAO -->
+Depois de fechar as dezesseis solicitações, rodamos o agente revisor sobre a branch inteira
+comparada com `main` — 44 arquivos, 7.227 linhas adicionadas até aquele ponto. O `tsc --noEmit` passava limpo, então
+tudo o que ele encontrou é, por definição, o que o compilador não vê.
+
+Foram **onze achados**, quatro deles graves. Os mais relevantes:
+
+**1. Dados pessoais do motorista expostos.** A migration `0011` acrescentou CPF, RG, data de
+nascimento, endereço residencial completo e e-mail pessoal à tabela `motorista`. Essa tabela tinha,
+desde o início do projeto, uma policy de leitura `auth.role() = 'authenticated'` — escrita quando ela
+continha apenas nome, telefone e CNH, para que o estudante pudesse ver quem dirige a rota dele.
+Ninguém revisou a policy ao ampliar a tabela. O resultado: qualquer estudante logado conseguia ler
+o CPF e o endereço de toda a equipe de motoristas.
+
+**2. Motorista podia aprovar o próprio documento.** A policy de inserção em `documento_motorista`
+validava o `motorista_id`, mas não o `status`. Como existe um gatilho que recalcula a situação
+documental na hora, bastava inserir um documento já com `status = 'aprovado'` por chamada direta à
+API para se auto-aprovar, contornando a regra de que só o administrador aprova. A tela enviava
+`'pendente'` por convenção, não por obrigação. A mesma falha existia no lado do estudante desde o
+início do projeto.
+
+**3. Uma RPC contornando a Row Level Security.** A função `ocupacao_por_data`, criada na migration
+`0008`, repete o trabalho de uma view que havia sido declarada `security_invoker = true`
+justamente para que a RLS valesse. A função nova, sendo `security definer` e sem checar quem chama,
+desfazia essa decisão.
+
+**4. Indicadores da Visão geral zerados em silêncio.** Este é o achado mais instrutivo. A RPC
+`ocupacao_por_data` devolve seis colunas; o hook a tipava como `OcupacaoRota`, que tem quinze. O
+Dashboard filtrava por `o.status`, campo que a RPC não devolve — então "Rotas em operação" mostrava
+zero, "em revisão" mostrava zero e a "Ocupação média" somava capacidade zero. **Sem nenhum erro de
+compilação**, porque a conversão de tipo forçada (`as OcupacaoRota[]`) mentia para o compilador.
+
+Os demais achados: salvar um bloco em Configurações apagava o que estava digitado nos outros blocos
+ainda não salvos; os filtros de relatório vazavam de um relatório para o outro, produzindo recorte
+fantasma em documento de prestação de contas; o `UploadFoto` criava um object URL por render sem
+revogar; um checkbox usava hexadecimal cru divergindo do token da paleta; e o cancelamento de
+solicitação não era registrado no log de auditoria.
+
+O revisor também informou explicitamente o que **não** encontrou: nenhum componente de `ui/`
+reimplementado à mão nas telas novas, RLS completa nas sete tabelas criadas, listas de páginas do
+front e do banco em sincronia, e o retorno jsonb de `minha_rota()` batendo campo a campo com o tipo
+TypeScript.
+
+**Todos os achados acionáveis foram corrigidos** na migration `0014_correcoes_revisao.sql` e no
+commit `f5bae1f`. O seed de demonstração, que estava dentro de `supabase/migrations/` e seria
+aplicado por um `supabase db push` em produção, foi movido para `supabase/seed/`.
+
+**O que isso ensina.** Os três primeiros achados são falhas de segurança que passariam despercebidas
+em revisão humana por serem *invisíveis no diff*: em nenhum deles o código errado foi escrito nesta
+branch. O que a branch fez foi **acrescentar colunas a uma tabela cuja policy já existia** — e a
+policy, que não aparece no diff, deixou de ser adequada. Revisar só o que mudou não bastava; era
+preciso revisar o que o que mudou *afetou*.
+
+O quarto mostra o custo de uma conversão de tipo forçada: `as OcupacaoRota[]` transformou um erro
+que o compilador teria pego numa tela que mostra zero sem reclamar.
 
 ---
 
@@ -260,6 +334,13 @@ produzir nada.
 
 **Confiar em ferramenta não verificada.** Escrever os hooks assumindo `jq` instalado foi otimismo.
 Custou uma reescrita completa.
+
+**Um laço infinito no próprio gerador deste relatório.** O conversor de Markdown para `.docx`
+tratava linhas iniciadas por `*` como lista. Um parágrafo que começa com `**Negrito**` casa com
+esse padrão sem ser lista: o laço recusava a linha, não avançava o índice, e o script travava. Só
+apareceu porque o texto deste relatório usa negrito no início de vários parágrafos. É um lembrete de
+que código auxiliar — script de build, gerador, ferramenta de apoio — merece o mesmo cuidado que o
+código do produto, e frequentemente não recebe.
 
 ---
 

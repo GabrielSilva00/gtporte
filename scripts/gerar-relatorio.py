@@ -147,7 +147,9 @@ def converter(markdown: str) -> "docx.document.Document":
                 run.font.color.rgb = PRIMARIA
                 primeiro_titulo = False
             else:
-                d.add_heading(texto, level=min(nivel, 3))
+                # Títulos não passam por escrever_inline, então as crases de
+                # `código` apareceriam literalmente no documento.
+                d.add_heading(texto.replace("`", ""), level=min(nivel, 3))
             i += 1
             continue
 
@@ -183,10 +185,19 @@ def converter(markdown: str) -> "docx.document.Document":
             i += 1
             continue
 
-        # Parágrafo comum: junta linhas até a próxima em branco
+        # Parágrafo comum: junta linhas até a próxima em branco.
+        # A primeira linha é sempre consumida: um parágrafo que começa com
+        # "**Negrito**" não é lista, mas casa com o prefixo "*" e, sem esse
+        # cuidado, o laço não avançaria nunca.
         if linha.strip():
-            bloco = []
-            while i < len(linhas) and linhas[i].strip() and not linhas[i].startswith(("#", "|", "```", ">", "-", "*")):
+            bloco = [linha.strip()]
+            i += 1
+            while (
+                i < len(linhas)
+                and linhas[i].strip()
+                and not linhas[i].startswith(("#", "|", "```", ">"))
+                and not re.match(r"^\s*([-*]\s+|\d+\.\s+)", linhas[i])
+            ):
                 bloco.append(linhas[i].strip())
                 i += 1
             escrever_inline(d.add_paragraph(), " ".join(bloco))
