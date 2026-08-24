@@ -1,7 +1,23 @@
 import { useState } from 'react'
 import { useMotoristas, useOcupacaoRotas, useUniversidades, useVeiculos } from '../hooks/useCadastros'
 import { mensagemErro, supabase } from '../lib/supabase'
-import { dataBR, hora } from '../lib/format'
+import { badgeVeiculo, dataBR, diasParaVencer, DIAS_SEMANA, hora } from '../lib/format'
+import {
+  ROTULO_PERFIL_USO,
+  ROTULO_SITUACAO_MOTORISTA,
+  ROTULO_VINCULO,
+  type Estudante,
+  type Motorista,
+  type Universidade,
+  type Veiculo,
+} from '../lib/types'
+
+/** A tabela usa "Aprovado/Pendente/Rejeitado"; o relatório repete o rótulo. */
+const ROTULO_STATUS_DOCUMENTAL: Record<string, string> = {
+  aprovado: 'Aprovado',
+  pendente: 'Pendente',
+  rejeitado: 'Rejeitado',
+}
 import { exportarExcel, exportarPDF, type Coluna } from '../lib/exportar'
 import { useToast } from '../components/ui/Toast'
 import { Modal } from '../components/ui/Modal'
@@ -9,8 +25,11 @@ import {
   IconeDashboard,
   IconeDocumento,
   IconeEquipe,
+  IconeEstudante,
+  IconeMotorista,
   IconePresenca,
   IconeRota,
+  IconeUniversidade,
   IconeVeiculo,
 } from '../components/icons'
 
@@ -21,6 +40,25 @@ type ChaveRelatorio =
   | 'historico'
   | 'feedbacks'
   | 'log'
+  | 'cad_estudantes'
+  | 'cad_universidades'
+  | 'cad_veiculos'
+  | 'cad_motoristas'
+
+/** Cada relatório declara os filtros que realmente usa. */
+type ChaveFiltro =
+  | 'periodo'
+  | 'rota'
+  | 'veiculo'
+  | 'motorista'
+  | 'universidade'
+  | 'grade'
+  | 'situacaoMotorista'
+  | 'statusVeiculo'
+  | 'statusDocumental'
+  | 'perfilUso'
+
+type Categoria = 'Operação' | 'Cadastros' | 'Auditoria'
 
 interface Filtros {
   inicio: string
@@ -29,6 +67,13 @@ interface Filtros {
   veiculoId: string
   motoristaId: string
   universidadeId: string
+  diaSemana: string
+  horaInicio: string
+  horaFim: string
+  situacaoMotorista: string
+  statusVeiculo: string
+  statusDocumental: string
+  perfilUso: string
 }
 
 const FILTROS_VAZIOS: Filtros = {
@@ -38,12 +83,21 @@ const FILTROS_VAZIOS: Filtros = {
   veiculoId: '',
   motoristaId: '',
   universidadeId: '',
+  diaSemana: '',
+  horaInicio: '',
+  horaFim: '',
+  situacaoMotorista: '',
+  statusVeiculo: '',
+  statusDocumental: '',
+  perfilUso: '',
 }
 
 const RELATORIOS: {
   chave: ChaveRelatorio
   titulo: string
   descricao: string
+  categoria: Categoria
+  filtros: ChaveFiltro[]
   Icone: typeof IconePresenca
   iconBg: string
   iconFg: string
@@ -53,6 +107,8 @@ const RELATORIOS: {
     chave: 'frequencia',
     titulo: 'Frequência por estudante',
     descricao: 'Embarques confirmados por aluno e período.',
+    categoria: 'Operação',
+    filtros: ['periodo', 'rota', 'universidade'],
     Icone: IconePresenca,
     iconBg: '#EAF3EC',
     iconFg: '#2E7D5A',
@@ -62,6 +118,8 @@ const RELATORIOS: {
     chave: 'ocupacao',
     titulo: 'Ocupação por veículo',
     descricao: 'Assentos ocupados por rota e capacidade da frota.',
+    categoria: 'Operação',
+    filtros: ['rota', 'veiculo', 'motorista'],
     Icone: IconeVeiculo,
     iconBg: '#FBEEDA',
     iconFg: '#8A5A15',
@@ -71,6 +129,8 @@ const RELATORIOS: {
     chave: 'alunos_rota',
     titulo: 'Alunos por rota',
     descricao: 'Distribuição atual por rota e universidade.',
+    categoria: 'Operação',
+    filtros: ['rota', 'universidade'],
     Icone: IconeRota,
     iconBg: '#EEF1EF',
     iconFg: '#1F3A2E',
@@ -80,6 +140,8 @@ const RELATORIOS: {
     chave: 'historico',
     titulo: 'Histórico de utilização',
     descricao: 'Cronologia individual de alocações por estudante.',
+    categoria: 'Auditoria',
+    filtros: ['periodo', 'rota'],
     Icone: IconeDashboard,
     iconBg: '#F4EAE1',
     iconFg: '#C4633A',
@@ -89,6 +151,8 @@ const RELATORIOS: {
     chave: 'feedbacks',
     titulo: 'Feedbacks recebidos',
     descricao: 'Avaliações registradas pelos estudantes.',
+    categoria: 'Auditoria',
+    filtros: ['periodo'],
     Icone: IconeDocumento,
     iconBg: '#EEF1EF',
     iconFg: '#6B7570',
@@ -98,12 +162,75 @@ const RELATORIOS: {
     chave: 'log',
     titulo: 'Log administrativo',
     descricao: 'Alterações cadastrais e ajustes manuais de alocação.',
+    categoria: 'Auditoria',
+    filtros: ['periodo'],
     Icone: IconeEquipe,
     iconBg: '#EEF1EF',
     iconFg: '#1F3A2E',
     requisito: 'RN12',
   },
+  {
+    chave: 'cad_estudantes',
+    titulo: 'Cadastro de estudantes',
+    descricao:
+      'Lista completa com curso, perfil de uso e situação documental. Permite recortar por horário de aula.',
+    categoria: 'Cadastros',
+    filtros: ['universidade', 'statusDocumental', 'perfilUso', 'grade'],
+    Icone: IconeEstudante,
+    iconBg: '#EAF3EC',
+    iconFg: '#2E7D5A',
+    requisito: 'RF01',
+  },
+  {
+    chave: 'cad_universidades',
+    titulo: 'Cadastro de universidades',
+    descricao: 'Instituições atendidas, endereço do campus e estudantes vinculados.',
+    categoria: 'Cadastros',
+    filtros: [],
+    Icone: IconeUniversidade,
+    iconBg: '#EEF1EF',
+    iconFg: '#1F3A2E',
+    requisito: 'RF06',
+  },
+  {
+    chave: 'cad_veiculos',
+    titulo: 'Cadastro de veículos',
+    descricao: 'Frota com capacidade, ano e situação operacional.',
+    categoria: 'Cadastros',
+    filtros: ['statusVeiculo'],
+    Icone: IconeVeiculo,
+    iconBg: '#FBEEDA',
+    iconFg: '#8A5A15',
+    requisito: 'RF05',
+  },
+  {
+    chave: 'cad_motoristas',
+    titulo: 'Cadastro de motoristas',
+    descricao:
+      'Equipe com CNH, exame toxicológico e vínculo. Destaca o que está vencido ou a vencer.',
+    categoria: 'Cadastros',
+    filtros: ['situacaoMotorista', 'statusDocumental'],
+    Icone: IconeMotorista,
+    iconBg: '#F4EAE1',
+    iconFg: '#C4633A',
+    requisito: 'RF04',
+  },
 ]
+
+const CATEGORIAS: Categoria[] = ['Operação', 'Cadastros', 'Auditoria']
+
+const ROTULO_FILTRO: Record<ChaveFiltro, string> = {
+  periodo: 'período',
+  rota: 'rota',
+  veiculo: 'veículo',
+  motorista: 'motorista',
+  universidade: 'universidade',
+  grade: 'horário de aula',
+  situacaoMotorista: 'situação',
+  statusVeiculo: 'situação',
+  statusDocumental: 'documentação',
+  perfilUso: 'perfil de uso',
+}
 
 const COLUNAS: Record<ChaveRelatorio, Coluna[]> = {
   frequencia: [
@@ -153,6 +280,71 @@ const COLUNAS: Record<ChaveRelatorio, Coluna[]> = {
     { chave: 'entidade', titulo: 'Entidade' },
     { chave: 'responsavel', titulo: 'Responsável' },
   ],
+  cad_estudantes: [
+    { chave: 'prontuario', titulo: 'Prontuário' },
+    { chave: 'nome', titulo: 'Estudante' },
+    { chave: 'universidade', titulo: 'Universidade' },
+    { chave: 'curso', titulo: 'Curso' },
+    { chave: 'cidade', titulo: 'Cidade' },
+    { chave: 'perfil_uso', titulo: 'Perfil de uso' },
+    { chave: 'documentacao', titulo: 'Documentação' },
+    { chave: 'aulas', titulo: 'Grade horária' },
+    { chave: 'telefone', titulo: 'Telefone' },
+  ],
+  cad_universidades: [
+    { chave: 'nome', titulo: 'Instituição' },
+    { chave: 'cidade', titulo: 'Cidade' },
+    { chave: 'endereco', titulo: 'Endereço' },
+    { chave: 'cep', titulo: 'CEP' },
+    { chave: 'estudantes', titulo: 'Estudantes' },
+  ],
+  cad_veiculos: [
+    { chave: 'placa', titulo: 'Placa' },
+    { chave: 'modelo', titulo: 'Modelo' },
+    { chave: 'ano', titulo: 'Ano' },
+    { chave: 'capacidade_maxima', titulo: 'Capacidade' },
+    { chave: 'situacao', titulo: 'Situação' },
+    { chave: 'observacao', titulo: 'Observação' },
+  ],
+  cad_motoristas: [
+    { chave: 'nome', titulo: 'Motorista' },
+    { chave: 'cpf', titulo: 'CPF' },
+    { chave: 'cnh', titulo: 'CNH' },
+    { chave: 'categoria_cnh', titulo: 'Cat.' },
+    { chave: 'validade_cnh', titulo: 'Validade CNH' },
+    { chave: 'toxicologico', titulo: 'Toxicológico até' },
+    { chave: 'situacao', titulo: 'Situação' },
+    { chave: 'vinculo', titulo: 'Vínculo' },
+    { chave: 'documentacao', titulo: 'Documentação' },
+    { chave: 'telefone', titulo: 'Telefone' },
+  ],
+}
+
+/** Descreve a grade em uma célula só, para caber na exportação. */
+function descreverGrade(
+  linhas: { dia_semana: number; hora_inicio: string; hora_fim: string }[],
+): string {
+  if (!linhas || linhas.length === 0) return '-'
+  return [...linhas]
+    .sort((a, b) => a.dia_semana - b.dia_semana)
+    .map((l) => {
+      const dia = DIAS_SEMANA.find((d) => d.numero === l.dia_semana)
+      return `${dia?.curto ?? l.dia_semana} ${hora(l.hora_inicio)}–${hora(l.hora_fim)}`
+    })
+    .join('; ')
+}
+
+/**
+ * Data de validade com marca de vencimento. Em PDF e Excel não há cor,
+ * então a informação precisa estar no próprio texto.
+ */
+function comAlerta(data: string | null): string {
+  if (!data) return '-'
+  const dias = diasParaVencer(data)
+  if (dias === null) return dataBR(data)
+  if (dias < 0) return `${dataBR(data)} (vencido)`
+  if (dias <= 60) return `${dataBR(data)} (vence em ${dias}d)`
+  return dataBR(data)
 }
 
 /** RF17, RF18, RF19 — relatórios gerenciais com filtros e exportação. */
@@ -170,6 +362,10 @@ export default function Relatorios() {
     linhas: Record<string, unknown>[]
   } | null>(null)
   const [gerando, setGerando] = useState<ChaveRelatorio | null>(null)
+  /** Relatório cujo painel de filtros está aberto. */
+  const [configurando, setConfigurando] = useState<ChaveRelatorio | null>(null)
+
+  const meta = RELATORIOS.find((r) => r.chave === configurando) ?? null
 
   const subtitulo = montarSubtitulo(filtros, rotas, veiculos, motoristas, universidades)
 
@@ -279,11 +475,114 @@ export default function Relatorios() {
           responsavel: l.perfil?.nome ?? 'sistema',
         }))
       }
+
+      case 'cad_estudantes': {
+        // O recorte por horário de aula vem da grade_horaria. Com o filtro
+        // ativo o embed vira !inner, o que já elimina quem não tem aula na
+        // janela pedida sem precisar trazer todo mundo e filtrar aqui.
+        const temGrade = !!(filtros.diaSemana || filtros.horaInicio || filtros.horaFim)
+        const embed = temGrade ? 'grade_horaria!inner' : 'grade_horaria'
+
+        let q = supabase
+          .from('estudante')
+          .select(
+            `*, universidade:universidade_id (nome), cidade:cidade_id (nome), ${embed} (dia_semana, hora_inicio, hora_fim)`,
+          )
+          .eq('ativo', true)
+
+        if (filtros.universidadeId) q = q.eq('universidade_id', filtros.universidadeId)
+        if (filtros.statusDocumental) q = q.eq('status_documental', filtros.statusDocumental)
+        if (filtros.perfilUso) q = q.eq('perfil_uso', filtros.perfilUso)
+
+        if (filtros.diaSemana) q = q.eq('grade_horaria.dia_semana', Number(filtros.diaSemana))
+        // "Sai da aula neste intervalo": o término da aula cai na janela.
+        if (filtros.horaInicio) q = q.gte('grade_horaria.hora_fim', filtros.horaInicio)
+        if (filtros.horaFim) q = q.lte('grade_horaria.hora_fim', filtros.horaFim)
+
+        const { data, error } = await q.order('nome')
+        if (error) throw error
+
+        return (data as unknown as (Estudante & {
+          universidade: { nome: string } | null
+          cidade: { nome: string } | null
+          grade_horaria: { dia_semana: number; hora_inicio: string; hora_fim: string }[]
+        })[]).map((e) => ({
+          prontuario: e.prontuario,
+          nome: e.nome,
+          universidade: e.universidade?.nome ?? '-',
+          curso: e.curso ?? '-',
+          cidade: e.cidade?.nome ?? '-',
+          perfil_uso: ROTULO_PERFIL_USO[e.perfil_uso],
+          documentacao: ROTULO_STATUS_DOCUMENTAL[e.status_documental],
+          aulas: descreverGrade(e.grade_horaria),
+          telefone: e.telefone ?? '-',
+        }))
+      }
+
+      case 'cad_universidades': {
+        const [uni, alunos] = await Promise.all([
+          supabase.from('universidade').select('*, cidade:cidade_id (nome, uf)').order('nome'),
+          supabase.from('estudante').select('universidade_id').eq('ativo', true),
+        ])
+        if (uni.error) throw uni.error
+        if (alunos.error) throw alunos.error
+
+        const porUni = new Map<string, number>()
+        for (const a of alunos.data as { universidade_id: string }[]) {
+          porUni.set(a.universidade_id, (porUni.get(a.universidade_id) ?? 0) + 1)
+        }
+
+        return (uni.data as unknown as (Universidade & {
+          cidade: { nome: string; uf: string } | null
+        })[]).map((u) => ({
+          nome: u.nome,
+          cidade: u.cidade ? `${u.cidade.nome}/${u.cidade.uf}` : '-',
+          endereco: [u.logradouro, u.numero, u.bairro].filter(Boolean).join(', ') || '-',
+          cep: u.cep ?? '-',
+          estudantes: porUni.get(u.id) ?? 0,
+        }))
+      }
+
+      case 'cad_veiculos': {
+        let q = supabase.from('veiculo').select('*')
+        if (filtros.statusVeiculo) q = q.eq('status', filtros.statusVeiculo)
+        const { data, error } = await q.order('placa')
+        if (error) throw error
+
+        return (data as Veiculo[]).map((v) => ({
+          placa: v.placa,
+          modelo: v.modelo,
+          ano: v.ano ?? '-',
+          capacidade_maxima: v.capacidade_maxima,
+          situacao: badgeVeiculo(v.status).rotulo,
+          observacao: v.observacao ?? '-',
+        }))
+      }
+
+      case 'cad_motoristas': {
+        let q = supabase.from('motorista').select('*')
+        if (filtros.situacaoMotorista) q = q.eq('situacao', filtros.situacaoMotorista)
+        if (filtros.statusDocumental) q = q.eq('status_documental', filtros.statusDocumental)
+        const { data, error } = await q.order('nome')
+        if (error) throw error
+
+        return (data as Motorista[]).map((m) => ({
+          nome: m.nome,
+          cpf: m.cpf ?? '-',
+          cnh: m.cnh,
+          categoria_cnh: m.categoria_cnh,
+          validade_cnh: comAlerta(m.validade_cnh),
+          toxicologico: comAlerta(m.toxicologico_validade),
+          situacao: ROTULO_SITUACAO_MOTORISTA[m.situacao ?? 'ativo'],
+          vinculo: m.vinculo ? ROTULO_VINCULO[m.vinculo] : '-',
+          documentacao: ROTULO_STATUS_DOCUMENTAL[m.status_documental ?? 'pendente'],
+          telefone: m.telefone ?? '-',
+        }))
+      }
     }
   }
 
   async function gerar(chave: ChaveRelatorio, formato: 'previa' | 'pdf' | 'excel') {
-    const meta = RELATORIOS.find((r) => r.chave === chave)!
     setGerando(chave)
     try {
       const linhas = await carregar(chave)
@@ -291,9 +590,11 @@ export default function Relatorios() {
         toast.alerta('Nenhum dado encontrado para os filtros selecionados.')
         return
       }
-      if (formato === 'pdf') exportarPDF(meta.titulo, subtitulo, COLUNAS[chave], linhas)
-      else if (formato === 'excel') exportarExcel(meta.titulo, COLUNAS[chave], linhas)
-      else setPrevia({ chave, titulo: meta.titulo, linhas })
+      const info = RELATORIOS.find((r) => r.chave === chave)!
+      if (formato === 'pdf') exportarPDF(info.titulo, subtitulo, COLUNAS[chave], linhas)
+      else if (formato === 'excel') exportarExcel(info.titulo, COLUNAS[chave], linhas)
+      else setPrevia({ chave, titulo: info.titulo, linhas })
+      setConfigurando(null)
     } catch (e) {
       toast.erro(mensagemErro(e))
     } finally {
@@ -310,91 +611,13 @@ export default function Relatorios() {
         </div>
       </div>
 
-      {/* Filtros */}
-      <div className="card mb-4 grid grid-cols-2 gap-3 p-4 lg:grid-cols-6">
-        <label>
-          <span className="field-label">Início</span>
-          <input
-            type="date"
-            value={filtros.inicio}
-            onChange={(e) => setFiltros({ ...filtros, inicio: e.target.value })}
-            className="field py-2 text-[12.5px]"
-          />
-        </label>
-        <label>
-          <span className="field-label">Fim</span>
-          <input
-            type="date"
-            value={filtros.fim}
-            onChange={(e) => setFiltros({ ...filtros, fim: e.target.value })}
-            className="field py-2 text-[12.5px]"
-          />
-        </label>
-        <label>
-          <span className="field-label">Rota</span>
-          <select
-            value={filtros.rotaId}
-            onChange={(e) => setFiltros({ ...filtros, rotaId: e.target.value })}
-            className="field py-2 text-[12.5px]"
-          >
-            <option value="">Todas</option>
-            {rotas?.map((r) => (
-              <option key={r.rota_id} value={r.rota_id}>
-                {r.codigo}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span className="field-label">Veículo</span>
-          <select
-            value={filtros.veiculoId}
-            onChange={(e) => setFiltros({ ...filtros, veiculoId: e.target.value })}
-            className="field py-2 text-[12.5px]"
-          >
-            <option value="">Todos</option>
-            {veiculos?.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.placa}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span className="field-label">Motorista</span>
-          <select
-            value={filtros.motoristaId}
-            onChange={(e) => setFiltros({ ...filtros, motoristaId: e.target.value })}
-            className="field py-2 text-[12.5px]"
-          >
-            <option value="">Todos</option>
-            {motoristas?.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.nome}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span className="field-label">Universidade</span>
-          <select
-            value={filtros.universidadeId}
-            onChange={(e) => setFiltros({ ...filtros, universidadeId: e.target.value })}
-            className="field py-2 text-[12.5px]"
-          >
-            <option value="">Todas</option>
-            {universidades?.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.nome}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {RELATORIOS.map(({ chave, titulo, descricao, Icone, iconBg, iconFg, requisito }) => (
-          <div key={chave} className="card p-[18px]">
+      {CATEGORIAS.map((categoria) => (
+        <section key={categoria} className="mb-5">
+          <div className="eyebrow mb-2.5">{categoria}</div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {RELATORIOS.filter((r) => r.categoria === categoria).map(
+              ({ chave, titulo, descricao, filtros: aceita, Icone, iconBg, iconFg, requisito }) => (
+          <div key={chave} className="card flex flex-col p-[18px]">
             <div className="flex items-start justify-between">
               <div
                 className="flex h-9 w-9 items-center justify-center rounded-[9px]"
@@ -410,33 +633,298 @@ export default function Relatorios() {
               )}
             </div>
             <div className="mt-3 text-[14px] font-semibold">{titulo}</div>
-            <div className="mt-1 text-[12px] leading-[1.5] text-muted">{descricao}</div>
+            <div className="mt-1 flex-1 text-[12px] leading-[1.5] text-muted">{descricao}</div>
+
+            {aceita.length > 0 && (
+              <div className="mt-2.5 text-[11px] text-soft">
+                Filtros: {aceita.map((k) => ROTULO_FILTRO[k]).join(', ')}
+              </div>
+            )}
+
             <div className="mt-3.5 flex gap-1.5">
-              <button
-                onClick={() => gerar(chave, 'pdf')}
-                disabled={gerando === chave}
-                className="flex-1 rounded-field border border-edge py-1.5 text-[12px] hover:bg-bg disabled:opacity-50"
-              >
-                PDF
-              </button>
-              <button
-                onClick={() => gerar(chave, 'excel')}
-                disabled={gerando === chave}
-                className="flex-1 rounded-field border border-edge py-1.5 text-[12px] hover:bg-bg disabled:opacity-50"
-              >
-                Excel
-              </button>
               <button
                 onClick={() => gerar(chave, 'previa')}
                 disabled={gerando === chave}
-                className="flex-[1.6] rounded-field bg-primary py-1.5 text-[12px] font-medium text-primary-fg hover:bg-primary-hover disabled:opacity-50"
+                className="flex-1 rounded-field border border-edge py-1.5 text-[12px] hover:bg-bg disabled:opacity-50"
               >
-                {gerando === chave ? 'Gerando…' : 'Gerar'}
+                {gerando === chave ? 'Gerando…' : 'Gerar direto'}
+              </button>
+              <button
+                onClick={() => setConfigurando(chave)}
+                disabled={gerando === chave}
+                className="flex-[1.4] rounded-field bg-primary py-1.5 text-[12px] font-medium text-primary-fg hover:bg-primary-hover disabled:opacity-50"
+              >
+                {aceita.length > 0 ? 'Filtrar e gerar' : 'Exportar'}
               </button>
             </div>
           </div>
-        ))}
-      </div>
+              ),
+            )}
+          </div>
+        </section>
+      ))}
+
+      {/*
+        Filtros contextuais: cada relatório mostra apenas o que ele
+        realmente aplica. A barra fixa anterior exibia seis campos, e
+        parte deles não tinha efeito nenhum no relatório escolhido.
+      */}
+      <Modal
+        aberto={meta !== null}
+        titulo={meta?.titulo ?? ''}
+        descricao={
+          meta?.filtros.length
+            ? 'Refine o recorte antes de gerar. Campos em branco não filtram.'
+            : 'Este relatório não usa filtros — escolha o formato de saída.'
+        }
+        largura={620}
+        onFechar={() => setConfigurando(null)}
+        rodape={
+          <>
+            <button
+              onClick={() => setFiltros(FILTROS_VAZIOS)}
+              className="btn-ghost mr-auto"
+              disabled={!meta?.filtros.length}
+            >
+              Limpar filtros
+            </button>
+            <button
+              onClick={() => meta && gerar(meta.chave, 'excel')}
+              disabled={gerando !== null}
+              className="btn-ghost"
+            >
+              Excel
+            </button>
+            <button
+              onClick={() => meta && gerar(meta.chave, 'pdf')}
+              disabled={gerando !== null}
+              className="btn-ghost"
+            >
+              PDF
+            </button>
+            <button
+              onClick={() => meta && gerar(meta.chave, 'previa')}
+              disabled={gerando !== null}
+              className="btn-primary"
+            >
+              {gerando ? 'Gerando…' : 'Visualizar'}
+            </button>
+          </>
+        }
+      >
+        {meta && meta.filtros.length > 0 ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {meta.filtros.includes('periodo') && (
+              <>
+                <label>
+                  <span className="field-label">Início</span>
+                  <input
+                    type="date"
+                    value={filtros.inicio}
+                    onChange={(e) => setFiltros({ ...filtros, inicio: e.target.value })}
+                    className="field"
+                  />
+                </label>
+                <label>
+                  <span className="field-label">Fim</span>
+                  <input
+                    type="date"
+                    value={filtros.fim}
+                    onChange={(e) => setFiltros({ ...filtros, fim: e.target.value })}
+                    className="field"
+                  />
+                </label>
+              </>
+            )}
+
+            {meta.filtros.includes('rota') && (
+              <label>
+                <span className="field-label">Rota</span>
+                <select
+                  value={filtros.rotaId}
+                  onChange={(e) => setFiltros({ ...filtros, rotaId: e.target.value })}
+                  className="field"
+                >
+                  <option value="">Todas</option>
+                  {rotas?.map((r) => (
+                    <option key={r.rota_id} value={r.rota_id}>
+                      {r.codigo} · {r.nome}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {meta.filtros.includes('veiculo') && (
+              <label>
+                <span className="field-label">Veículo</span>
+                <select
+                  value={filtros.veiculoId}
+                  onChange={(e) => setFiltros({ ...filtros, veiculoId: e.target.value })}
+                  className="field"
+                >
+                  <option value="">Todos</option>
+                  {veiculos?.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.placa} · {v.modelo}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {meta.filtros.includes('motorista') && (
+              <label>
+                <span className="field-label">Motorista</span>
+                <select
+                  value={filtros.motoristaId}
+                  onChange={(e) => setFiltros({ ...filtros, motoristaId: e.target.value })}
+                  className="field"
+                >
+                  <option value="">Todos</option>
+                  {motoristas?.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.nome}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {meta.filtros.includes('universidade') && (
+              <label>
+                <span className="field-label">Universidade</span>
+                <select
+                  value={filtros.universidadeId}
+                  onChange={(e) => setFiltros({ ...filtros, universidadeId: e.target.value })}
+                  className="field"
+                >
+                  <option value="">Todas</option>
+                  {universidades?.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.nome}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {meta.filtros.includes('perfilUso') && (
+              <label>
+                <span className="field-label">Perfil de uso</span>
+                <select
+                  value={filtros.perfilUso}
+                  onChange={(e) => setFiltros({ ...filtros, perfilUso: e.target.value })}
+                  className="field"
+                >
+                  <option value="">Todos</option>
+                  <option value="ida_volta">Ida e volta</option>
+                  <option value="somente_ida">Somente ida</option>
+                  <option value="somente_volta">Somente volta</option>
+                </select>
+              </label>
+            )}
+
+            {meta.filtros.includes('statusDocumental') && (
+              <label>
+                <span className="field-label">Documentação</span>
+                <select
+                  value={filtros.statusDocumental}
+                  onChange={(e) => setFiltros({ ...filtros, statusDocumental: e.target.value })}
+                  className="field"
+                >
+                  <option value="">Todas</option>
+                  <option value="aprovado">Aprovada</option>
+                  <option value="pendente">Pendente</option>
+                  <option value="rejeitado">Rejeitada</option>
+                </select>
+              </label>
+            )}
+
+            {meta.filtros.includes('statusVeiculo') && (
+              <label>
+                <span className="field-label">Situação do veículo</span>
+                <select
+                  value={filtros.statusVeiculo}
+                  onChange={(e) => setFiltros({ ...filtros, statusVeiculo: e.target.value })}
+                  className="field"
+                >
+                  <option value="">Todas</option>
+                  <option value="disponivel">Disponível</option>
+                  <option value="em_rota">Em rota</option>
+                  <option value="manutencao">Manutenção</option>
+                </select>
+              </label>
+            )}
+
+            {meta.filtros.includes('situacaoMotorista') && (
+              <label>
+                <span className="field-label">Situação do motorista</span>
+                <select
+                  value={filtros.situacaoMotorista}
+                  onChange={(e) => setFiltros({ ...filtros, situacaoMotorista: e.target.value })}
+                  className="field"
+                >
+                  <option value="">Todas</option>
+                  <option value="ativo">Ativo</option>
+                  <option value="ferias">Férias</option>
+                  <option value="afastado">Afastado</option>
+                  <option value="inativo">Inativo</option>
+                </select>
+              </label>
+            )}
+
+            {meta.filtros.includes('grade') && (
+              <div className="rounded-field border border-edge p-3 sm:col-span-2">
+                <div className="field-label">Horário de aula</div>
+                <p className="mb-2.5 text-[11.5px] text-muted">
+                  Traz os estudantes cuja aula <b>termina</b> dentro da faixa — é o recorte usado
+                  para planejar o horário de retorno.
+                </p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <label>
+                    <span className="field-label">Dia da semana</span>
+                    <select
+                      value={filtros.diaSemana}
+                      onChange={(e) => setFiltros({ ...filtros, diaSemana: e.target.value })}
+                      className="field"
+                    >
+                      <option value="">Qualquer dia</option>
+                      {DIAS_SEMANA.map((d) => (
+                        <option key={d.numero} value={String(d.numero)}>
+                          {d.rotulo}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span className="field-label">Sai a partir de</span>
+                    <input
+                      type="time"
+                      value={filtros.horaInicio}
+                      onChange={(e) => setFiltros({ ...filtros, horaInicio: e.target.value })}
+                      className="field"
+                    />
+                  </label>
+                  <label>
+                    <span className="field-label">Sai até</span>
+                    <input
+                      type="time"
+                      value={filtros.horaFim}
+                      onChange={(e) => setFiltros({ ...filtros, horaFim: e.target.value })}
+                      className="field"
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-[12.5px] text-muted">
+            Escolha o formato no rodapé. A lista sai completa, na ordem de cadastro.
+          </p>
+        )}
+      </Modal>
 
       {/* Prévia */}
       <Modal
