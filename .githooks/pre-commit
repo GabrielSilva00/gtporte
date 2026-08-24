@@ -1,0 +1,44 @@
+#!/bin/sh
+# Hook nativo do git — mesma checagem do hook do Claude Code, disponível
+# para quem commita pelo terminal, pelo VS Code ou por qualquer outro
+# cliente. Assim o portão de qualidade vale para o grupo inteiro, e não
+# só para quem estiver usando o agente.
+#
+# Ativar uma vez por clone:
+#   git config core.hooksPath .githooks
+#
+# Pular em um caso excepcional:
+#   git commit --no-verify
+
+raiz="$(git rev-parse --show-toplevel)"
+cd "$raiz" || exit 0
+
+# Sem dependências instaladas não há o que checar — não trave o commit.
+if [ ! -d node_modules/typescript ]; then
+  echo "pre-commit: node_modules ausente, checagem de tipos ignorada."
+  exit 0
+fi
+
+echo "pre-commit: verificando tipos…"
+if ! node node_modules/typescript/bin/tsc --noEmit -p tsconfig.app.json; then
+  echo ""
+  echo "pre-commit: o projeto não compila. Corrija os erros acima."
+  echo "            (para pular: git commit --no-verify)"
+  exit 1
+fi
+
+# Rastro de depuração no que está indo para o commit.
+sujeira="$(git diff --cached --unified=0 -- src \
+  | grep -E '^\+[^+]' \
+  | grep -E 'console\.(log|debug|dir)\(' || true)"
+
+if [ -n "$sujeira" ]; then
+  echo ""
+  echo "pre-commit: console.log encontrado no código que vai ser commitado:"
+  echo "$sujeira"
+  echo "            (para pular: git commit --no-verify)"
+  exit 1
+fi
+
+echo "pre-commit: ok."
+exit 0
