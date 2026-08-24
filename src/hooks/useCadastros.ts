@@ -1,6 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
-import type { Cidade, Motorista, OcupacaoRota, Rota, Universidade, Veiculo } from '../lib/types'
+import type {
+  Cidade,
+  Motorista,
+  OcupacaoRota,
+  Organizacao,
+  Rota,
+  Universidade,
+  Veiculo,
+} from '../lib/types'
 
 /** Selects reutilizados pelas telas — evita duplicar o embed do PostgREST. */
 const SELECT_ROTA = `
@@ -97,5 +105,21 @@ export function useOcupacaoPorData(data: string) {
       if (error) throw error
       return (linhas ?? []) as OcupacaoRota[]
     },
+  })
+}
+
+/**
+ * Cadastro institucional (migration 0009). É um singleton — a migration
+ * garante uma única linha, então `maybeSingle` basta.
+ */
+export function useOrganizacao() {
+  return useQuery({
+    queryKey: ['organizacao'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('organizacao').select('*').maybeSingle()
+      if (error) throw error
+      return data as Organizacao | null
+    },
+    staleTime: 5 * 60_000,
   })
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { rotaInicial, useAuth } from '../auth/AuthProvider'
 import { IconeOnibus } from '../components/icons'
 import heroLogin from '../assets/home-hero.jpg'
@@ -9,7 +9,7 @@ import { useToast } from '../components/ui/Toast'
 /** Público declarado no formulário. Não concede acesso: serve para orientar a
  *  interface e barrar quem escolheu a opção errada. Quem manda é o tipo gravado
  *  em public.perfil, respaldado pelas policies de RLS. */
-type Publico = 'estudante' | 'servidor'
+type Publico = 'estudante' | 'servidor' | 'motorista'
 
 const NOME_TIPO: Record<string, string> = {
   admin: 'servidor (administrador)',
@@ -22,6 +22,7 @@ const NOME_TIPO: Record<string, string> = {
  *  Motorista entra pelo acesso de servidor, que é como ele consta na prefeitura. */
 function corresponde(publico: Publico, tipo: string): boolean {
   if (publico === 'servidor') return tipo === 'admin' || tipo === 'operador' || tipo === 'motorista'
+  if (publico === 'motorista') return tipo === 'motorista'
   return tipo === 'estudante'
 }
 
@@ -47,7 +48,15 @@ export default function Login() {
   const local = useLocation() as { state?: { de?: string } }
   const toast = useToast()
 
-  const [publico, setPublico] = useState<Publico>('estudante')
+  // ?publico= vem dos links divulgados em Configurações › Acessos. Só
+  // pré-seleciona a interface — quem autoriza continua sendo a RLS.
+  const [params] = useSearchParams()
+  const publicoDaUrl = params.get('publico')
+  const [publico, setPublico] = useState<Publico>(
+    publicoDaUrl === 'servidor' || publicoDaUrl === 'motorista' ? publicoDaUrl : 'estudante',
+  )
+  /** Estudante entra por e-mail; servidor e motorista entram por login. */
+  const usaLogin = publico !== 'estudante'
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -77,7 +86,7 @@ export default function Login() {
         await sair()
         setErro(
           `Esta conta é de ${NOME_TIPO[tipo] ?? tipo}, e você escolheu entrar como ` +
-            `${publico === 'servidor' ? 'servidor' : 'estudante'}. ` +
+            `${publico === 'estudante' ? 'estudante' : publico}. ` +
             'A senha está certa; use a outra opção de acesso.',
         )
         return
@@ -174,15 +183,18 @@ export default function Login() {
           >
             Acesse sua conta
           </h2>
-          {publico !== 'estudante' && (
+          {publico === 'servidor' && (
             <p className="mb-5 text-[13.5px] text-muted">Acesso restrito ao Setor de Transporte.</p>
+          )}
+          {publico === 'motorista' && (
+            <p className="mb-5 text-[13.5px] text-muted">Painel do motorista.</p>
           )}
 
           {/* O acesso de servidor é a exceção: fica indicado, não em destaque. */}
-          {publico === 'servidor' && (
+          {usaLogin && (
             <div className="mb-4 flex items-center justify-between rounded-btn border border-edge bg-panel px-3 py-2">
               <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted">
-                Acesso de servidor
+                {publico === 'motorista' ? 'Acesso do motorista' : 'Acesso de servidor'}
               </span>
               <button
                 type="button"
@@ -200,16 +212,16 @@ export default function Login() {
           <div className="flex flex-col gap-3.5">
             <label className="block">
               <span className="field-label">
-                {publico === 'servidor' ? 'Login ou e-mail' : 'E-mail institucional'}
+                {usaLogin ? 'Login ou e-mail' : 'E-mail institucional'}
               </span>
               <input
-                type={publico === 'servidor' ? 'text' : 'email'}
+                type={usaLogin ? 'text' : 'email'}
                 required
-                autoComplete={publico === 'servidor' ? 'username' : 'email'}
+                autoComplete={usaLogin ? 'username' : 'email'}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={
-                  publico === 'servidor' ? 'marina.rocha' : 'voce@aracatuba.sp.gov.br'
+                  usaLogin ? 'marina.rocha' : 'voce@aracatuba.sp.gov.br'
                 }
                 className="field"
               />
@@ -270,7 +282,9 @@ export default function Login() {
               </>
             ) : (
               <div className="mt-3 text-center text-[12.5px] text-muted">
-                A conta de servidor é criada pelo Setor de Transporte.
+                {publico === 'motorista'
+                  ? 'Seu acesso é criado pelo Setor de Transporte.'
+                  : 'A conta de servidor é criada pelo Setor de Transporte.'}
               </div>
             )}
           </div>
