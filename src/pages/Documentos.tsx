@@ -1,22 +1,63 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { BUCKET_DOCUMENTOS, mensagemErro, supabase } from '../lib/supabase'
-import { dataHoraBR } from '../lib/format'
+import { dataBR, dataHoraBR } from '../lib/format'
 import { useAuth } from '../auth/AuthProvider'
 import { Modal } from '../components/ui/Modal'
+import { Tabs } from '../components/ui/Tabs'
 import { CarregandoTabela, ErroCarregamento, Vazio } from '../components/ui/Estados'
 import { useToast } from '../components/ui/Toast'
 import { IconeArquivo, IconeInfo } from '../components/icons'
 import {
   ROTULO_DOCUMENTO,
+  ROTULO_DOCUMENTO_MOTORISTA,
   SIGLA_DOCUMENTO,
+  SIGLA_DOCUMENTO_MOTORISTA,
   type Documento,
+  type DocumentoMotorista,
   type Estudante,
+  type Motorista,
   type StatusDocumental,
   type TipoDocumento,
+  type TipoDocumentoMotorista,
 } from '../lib/types'
 
 type Aba = StatusDocumental
+
+/** Qual população está sendo analisada. */
+type Titular = 'estudante' | 'motorista'
+
+/**
+ * Estudante e motorista têm tabelas de documento separadas, com enums
+ * próprios (migration 0010), porque os tipos são disjuntos. Para a tela
+ * poder atender os dois sem duplicar a fila inteira, os dois lados são
+ * normalizados nesta forma comum.
+ */
+interface DocNormalizado {
+  id: string
+  rotulo: string
+  sigla: string
+  ordem: number
+  nome_arquivo: string
+  storage_path: string
+  status: StatusDocumental
+  observacao: string | null
+  criado_em: string
+  revisado_em: string | null
+  validade: string | null
+}
+
+interface TitularComDocs {
+  id: string
+  nome: string
+  /** Linha secundária na fila: universidade ou categoria da CNH. */
+  subtitulo: string
+  /** Linha de identificação no cabeçalho do detalhe. */
+  detalhe: string
+  status_documental: StatusDocumental
+  documentos: DocNormalizado[]
+  ultimoEnvio: string
+}
 
 const CORES_SIGLA: Record<StatusDocumental, { bg: string; fg: string }> = {
   aprovado: { bg: '#EAF3EC', fg: '#2E7D5A' },
@@ -24,10 +65,6 @@ const CORES_SIGLA: Record<StatusDocumental, { bg: string; fg: string }> = {
   rejeitado: { bg: '#FBECEC', fg: '#9E3E3E' },
 }
 
-interface EstudanteComDocs extends Estudante {
-  documentos: Documento[]
-  ultimoEnvio: string
-}
 
 /** RF03 — análise documental. RN07: aprovar/rejeitar é exclusivo de admin. */
 export default function Documentos() {
@@ -35,14 +72,19 @@ export default function Documentos() {
   const qc = useQueryClient()
   const toast = useToast()
 
+  const [titular, setTitular] = useState<Titular>('estudante')
   const [aba, setAba] = useState<Aba>('pendente')
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null)
   const [previews, setPreviews] = useState<Record<string, string>>({})
-  const [modalRejeicao, setModalRejeicao] = useState<{ doc?: Documento; todos?: boolean } | null>(null)
+  const [modalRejeicao, setModalRejeicao] = useState<{
+    doc?: DocNormalizado
+    todos?: boolean
+  } | null>(null)
   const [observacao, setObservacao] = useState('')
 
-  const { data: fila, isLoading, error } = useQuery({
+  const filaEstudantes = useQuery({
     queryKey: ['fila-documentos'],
+    enabled: titular === 'estudante',
     queryFn: async () => {
       const { data, error: err } = await supabase
         .from('estudante')
@@ -54,18 +96,58 @@ export default function Documentos() {
 
       return (data as unknown as (Estudante & { documento: Documento[] })[])
         .filter((e) => e.documento.length > 0)
-        .map<EstudanteComDocs>((e) => ({
-          ...e,
-          documentos: [...e.documento].sort(
-            (a, b) => TIPO_ORDEM.indexOf(a.tipo) - TIPO_ORDEM.indexOf(b.tipo),
-          ),
-          ultimoEnvio: e.documento.reduce(
-            (max, d) => (d.criado_em > max ? d.criado_em : max),
-            e.documento[0].criado_em,
-          ),
+        .map<TitularComDocs>((e) => ({
+          id: e.id,
+          nome: e.nome,
+          subtitulo: e.universidade?.nome ?? '—',
+          detalhe: [
+            `Prontuário ${e.prontuario}`,
+            e.universidade?.nome,
+            e.curso,
+          ]
+            .filter(Boolean)
+            .join(' · '),
+          status_documental: e.status_documental,
+          documentos: normalizarEstudante(e.documento),
+          ultimoEnvio: ultimoEnvioDe(e.documento),
         }))
     },
   })
+
+  const filaMotoristas = useQuery({
+    queryKey: ['fila-documentos-motorista'],
+    enabled: titular === 'motorista',
+    queryFn: async () => {
+      const { data, error: err } = await supabase
+        .from('motorista')
+        .select('*, documento_motorista (*)')
+        .order('nome')
+      if (err) throw err
+
+      return (data as unknown as (Motorista & { documento_motorista: DocumentoMotorista[] })[])
+        .filter((m) => m.documento_motorista.length > 0)
+        .map<TitularComDocs>((m) => ({
+          id: m.id,
+          nome: m.nome,
+          subtitulo: `CNH ${m.cnh} · cat. ${m.categoria_cnh}`,
+          detalhe: [
+            `CNH ${m.cnh}`,
+            `categoria ${m.categoria_cnh}`,
+            m.matricula_interna ? `matrícula ${m.matricula_interna}` : null,
+          ]
+            .filter(Boolean)
+            .join(' · '),
+          status_documental: m.status_documental ?? 'pendente',
+          documentos: normalizarMotorista(m.documento_motorista),
+          ultimoEnvio: ultimoEnvioDe(m.documento_motorista),
+        }))
+    },
+  })
+
+  const ativa = titular === 'estudante' ? filaEstudantes : filaMotoristas
+  const fila = ativa.data
+  const isLoading = ativa.isLoading
+  const error = ativa.error
 
   const contadores = useMemo(() => {
     const c: Record<Aba, number> = { pendente: 0, aprovado: 0, rejeitado: 0 }
@@ -104,6 +186,8 @@ export default function Documentos() {
 
   function aoConcluir(mensagem: string) {
     qc.invalidateQueries({ queryKey: ['fila-documentos'] })
+    qc.invalidateQueries({ queryKey: ['fila-documentos-motorista'] })
+    qc.invalidateQueries({ queryKey: ['motoristas'] })
     qc.invalidateQueries({ queryKey: ['estudantes'] })
     qc.invalidateQueries({ queryKey: ['contadores-nav'] })
     qc.invalidateQueries({ queryKey: ['dashboard-totais'] })
@@ -112,9 +196,8 @@ export default function Documentos() {
 
   const aprovar = useMutation({
     mutationFn: async (documentoId: string) => {
-      const { error: err } = await supabase.rpc('aprovar_documento', {
-        p_documento_id: documentoId,
-      })
+      const rpc = titular === 'estudante' ? 'aprovar_documento' : 'aprovar_documento_motorista'
+      const { error: err } = await supabase.rpc(rpc, { p_documento_id: documentoId })
       if (err) throw err
     },
     onSuccess: () => aoConcluir('Documento aprovado.'),
@@ -123,7 +206,8 @@ export default function Documentos() {
 
   const rejeitar = useMutation({
     mutationFn: async ({ documentoId, motivo }: { documentoId: string; motivo: string }) => {
-      const { error: err } = await supabase.rpc('rejeitar_documento', {
+      const rpc = titular === 'estudante' ? 'rejeitar_documento' : 'rejeitar_documento_motorista'
+      const { error: err } = await supabase.rpc(rpc, {
         p_documento_id: documentoId,
         p_observacao: motivo,
       })
@@ -139,9 +223,11 @@ export default function Documentos() {
 
   const cancelarAprovacao = useMutation({
     mutationFn: async (documentoId: string) => {
-      const { error: err } = await supabase.rpc('cancelar_aprovacao_documento', {
-        p_documento_id: documentoId,
-      })
+      const rpc =
+        titular === 'estudante'
+          ? 'cancelar_aprovacao_documento'
+          : 'cancelar_aprovacao_documento_motorista'
+      const { error: err } = await supabase.rpc(rpc, { p_documento_id: documentoId })
       if (err) throw err
     },
     onSuccess: () => aoConcluir('Aprovação cancelada. O documento voltou para pendente.'),
@@ -151,11 +237,18 @@ export default function Documentos() {
   const revisarTudo = useMutation({
     mutationFn: async ({ status, motivo }: { status: StatusDocumental; motivo?: string }) => {
       if (!selecionado) return
-      const { error: err } = await supabase.rpc('revisar_documentos_estudante', {
-        p_estudante_id: selecionado.id,
-        p_status: status,
-        p_observacao: motivo ?? null,
-      })
+      const { error: err } =
+        titular === 'estudante'
+          ? await supabase.rpc('revisar_documentos_estudante', {
+              p_estudante_id: selecionado.id,
+              p_status: status,
+              p_observacao: motivo ?? null,
+            })
+          : await supabase.rpc('revisar_documentos_motorista', {
+              p_motorista_id: selecionado.id,
+              p_status: status,
+              p_observacao: motivo ?? null,
+            })
       if (err) throw err
     },
     onSuccess: (_d, v) => {
@@ -168,11 +261,28 @@ export default function Documentos() {
 
   return (
     <div>
-      <div className="mb-5">
-        <h1 className="text-[22px] font-semibold">Validação de documentos</h1>
-        <div className="mt-1 text-[13px] text-muted">
-          Estudante só é alocado após aprovação documental.
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-[22px] font-semibold">Validação de documentos</h1>
+          <div className="mt-1 text-[13px] text-muted">
+            {titular === 'estudante'
+              ? 'Estudante só é alocado após aprovação documental.'
+              : 'Motorista sem documentação válida não pode assumir rota.'}
+          </div>
         </div>
+        <Tabs
+          variante="pilulas"
+          abas={[
+            { chave: 'estudante', rotulo: 'Estudantes' },
+            { chave: 'motorista', rotulo: 'Motoristas' },
+          ]}
+          ativa={titular}
+          onMudar={(t) => {
+            setTitular(t)
+            setSelecionadoId(null)
+            setPreviews({})
+          }}
+        />
       </div>
 
       {!ehAdmin && (
@@ -191,7 +301,11 @@ export default function Documentos() {
       {fila && fila.length === 0 && (
         <Vazio
           titulo="Nenhum documento enviado"
-          descricao="Os envios aparecem aqui assim que um estudante submeter a documentação."
+          descricao={
+            titular === 'estudante'
+              ? 'Os envios aparecem aqui assim que um estudante submeter a documentação.'
+              : 'Os envios aparecem aqui assim que um motorista submeter a documentação pelo painel dele.'
+          }
         />
       )}
 
@@ -199,21 +313,20 @@ export default function Documentos() {
         <div className="grid h-[calc(100vh-210px)] grid-cols-1 gap-3.5 lg:grid-cols-[320px_1fr]">
           {/* Fila */}
           <div className="card flex flex-col overflow-hidden">
-            <div className="flex gap-1.5 border-b border-edge px-3.5 py-3">
-              {(['pendente', 'aprovado', 'rejeitado'] as Aba[]).map((a) => (
-                <button
-                  key={a}
-                  onClick={() => {
-                    setAba(a)
-                    setSelecionadoId(null)
-                  }}
-                  className={`rounded-md px-2.5 py-1 text-[11.5px] transition-colors ${
-                    aba === a ? 'bg-primary font-medium text-white' : 'text-muted hover:bg-bg'
-                  }`}
-                >
-                  {ROTULO_ABA[a]} · {contadores[a]}
-                </button>
-              ))}
+            <div className="border-b border-edge px-3.5 py-3">
+              <Tabs
+                variante="pilulas"
+                abas={(['pendente', 'aprovado', 'rejeitado'] as Aba[]).map((a) => ({
+                  chave: a,
+                  rotulo: ROTULO_ABA[a],
+                  contador: contadores[a],
+                }))}
+                ativa={aba}
+                onMudar={(a) => {
+                  setAba(a)
+                  setSelecionadoId(null)
+                }}
+              />
             </div>
 
             <div className="flex-1 overflow-y-auto">
@@ -231,7 +344,7 @@ export default function Documentos() {
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[13px] font-medium">{e.nome}</div>
                       <div className="mt-0.5 truncate text-[11.5px] text-soft">
-                        {e.universidade?.nome}
+                        {e.subtitulo}
                       </div>
                     </div>
                     <div className="whitespace-nowrap font-mono text-[10.5px] text-soft">
@@ -250,7 +363,7 @@ export default function Documentos() {
                           className="rounded-full px-1.5 py-0.5 font-mono text-3xs tracking-[0.04em]"
                           style={{ background: c.bg, color: c.fg }}
                         >
-                          {SIGLA_DOCUMENTO[d.tipo]}
+                          {d.sigla}
                         </span>
                       )
                     })}
@@ -260,7 +373,9 @@ export default function Documentos() {
 
               {listaAba.length === 0 && (
                 <div className="px-4 py-10 text-center text-[12.5px] text-muted">
-                  Nenhum estudante nesta aba.
+                  {titular === 'estudante'
+                    ? 'Nenhum estudante nesta aba.'
+                    : 'Nenhum motorista nesta aba.'}
                 </div>
               )}
             </div>
@@ -270,7 +385,7 @@ export default function Documentos() {
           <div className="card flex flex-col overflow-hidden">
             {!selecionado && (
               <div className="flex flex-1 items-center justify-center text-[13px] text-muted">
-                Selecione um estudante na fila.
+                Selecione {titular === 'estudante' ? 'um estudante' : 'um motorista'} na fila.
               </div>
             )}
 
@@ -279,10 +394,7 @@ export default function Documentos() {
                 <div className="flex items-start justify-between gap-3 border-b border-edge px-5 py-4">
                   <div>
                     <div className="text-[17px] font-semibold">{selecionado.nome}</div>
-                    <div className="mt-0.5 text-[12.5px] text-muted">
-                      Prontuário {selecionado.prontuario} · {selecionado.universidade?.nome}
-                      {selecionado.curso ? ` · ${selecionado.curso}` : ''}
-                    </div>
+                    <div className="mt-0.5 text-[12.5px] text-muted">{selecionado.detalhe}</div>
                   </div>
                   {ehAdmin && (
                     <div className="flex shrink-0 gap-2">
@@ -305,15 +417,15 @@ export default function Documentos() {
                   )}
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-5">
-                  <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
+                <div className="flex-1 overflow-y-auto p-4">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                     {selecionado.documentos.map((d) => {
                       const c = CORES_SIGLA[d.status]
                       const url = previews[d.id]
                       return (
                         <div key={d.id} className="overflow-hidden rounded-[10px] border border-edge">
                           <div
-                            className="relative flex aspect-[1.5] items-center justify-center"
+                            className="relative flex aspect-[4/3] max-h-[136px] items-center justify-center"
                             style={{
                               backgroundColor: '#FCFAF4',
                               backgroundImage:
@@ -325,42 +437,47 @@ export default function Documentos() {
                                 href={url}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="flex items-center gap-2 rounded-md border border-edge bg-white px-3 py-2 text-[11px] text-muted hover:border-primary/40"
+                                className="flex max-w-[90%] items-center gap-1.5 rounded-md border border-edge bg-white px-2 py-1.5 text-[10.5px] text-muted hover:border-primary/40"
                               >
-                                <IconeArquivo size={14} />
-                                <span className="font-mono">{d.nome_arquivo}</span>
+                                <IconeArquivo size={12} />
+                                <span className="truncate font-mono">{d.nome_arquivo}</span>
                               </a>
                             ) : (
-                              <span className="rounded-md border border-edge bg-white px-3 py-2 text-[11px] text-soft">
+                              <span className="rounded-md border border-edge bg-white px-2 py-1.5 text-[10.5px] text-soft">
                                 arquivo indisponível
                               </span>
                             )}
                             <span
-                              className="absolute right-2.5 top-2.5 rounded-full px-2 py-0.5 text-[10px] uppercase"
+                              className="absolute right-2 top-2 rounded-full px-1.5 py-px text-[9.5px] uppercase"
                               style={{ background: c.bg, color: c.fg }}
                             >
                               {d.status}
                             </span>
                           </div>
 
-                          <div className="px-3.5 py-3">
-                            <div className="text-[12.5px] font-medium">{ROTULO_DOCUMENTO[d.tipo]}</div>
-                            <div className="mt-0.5 text-[11px] text-soft">
+                          <div className="px-3 py-2.5">
+                            <div className="text-[12px] font-medium">{d.rotulo}</div>
+                            <div className="mt-0.5 text-[10.5px] text-soft">
                               Enviado {dataHoraBR(d.criado_em)}
                             </div>
+                            {d.validade && (
+                              <div className="mt-0.5 text-[10.5px] text-muted">
+                                Válido até {dataBR(d.validade)}
+                              </div>
+                            )}
                             {d.observacao && (
-                              <div className="mt-2 rounded-md bg-bg-danger px-2.5 py-1.5 text-[11px] text-danger">
+                              <div className="mt-1.5 rounded-md bg-bg-danger px-2 py-1 text-[10.5px] text-danger">
                                 {d.observacao}
                               </div>
                             )}
 
                             {ehAdmin && (
-                              <div className="mt-2.5 flex gap-1.5">
+                              <div className="mt-2 flex gap-1.5">
                                 {d.status === 'aprovado' ? (
                                   <button
                                     onClick={() => cancelarAprovacao.mutate(d.id)}
                                     disabled={cancelarAprovacao.isPending}
-                                    className="flex-1 rounded-md border border-edge py-1.5 text-[11.5px] text-muted hover:border-warn hover:text-warn"
+                                    className="flex-1 rounded-md border border-edge py-1 text-[11px] text-muted hover:border-warn hover:text-warn"
                                   >
                                     Cancelar aprovação
                                   </button>
@@ -368,14 +485,14 @@ export default function Documentos() {
                                   <>
                                     <button
                                       onClick={() => setModalRejeicao({ doc: d })}
-                                      className="flex-1 rounded-md border border-danger py-1.5 text-[11.5px] text-danger hover:bg-bg-danger"
+                                      className="flex-1 rounded-md border border-danger py-1 text-[11px] text-danger hover:bg-bg-danger"
                                     >
                                       Rejeitar
                                     </button>
                                     <button
                                       onClick={() => aprovar.mutate(d.id)}
                                       disabled={aprovar.isPending}
-                                      className="flex-1 rounded-md bg-success py-1.5 text-[11.5px] font-medium text-white hover:brightness-95"
+                                      className="flex-1 rounded-md bg-success py-1 text-[11px] font-medium text-white hover:brightness-95"
                                     >
                                       Aprovar
                                     </button>
@@ -454,3 +571,55 @@ const ROTULO_ABA: Record<Aba, string> = {
 }
 
 const TIPO_ORDEM: TipoDocumento[] = ['rg', 'cpf', 'matricula', 'residencia']
+
+/** Os quatro obrigatórios primeiro; os opcionais em seguida. */
+const TIPO_ORDEM_MOTORISTA: TipoDocumentoMotorista[] = [
+  'cnh_frente',
+  'cnh_verso',
+  'residencia',
+  'toxicologico',
+  'aso',
+  'contrato',
+  'certificado',
+  'outro',
+]
+
+function normalizarEstudante(docs: Documento[]): DocNormalizado[] {
+  return docs
+    .map((d) => ({
+      id: d.id,
+      rotulo: ROTULO_DOCUMENTO[d.tipo],
+      sigla: SIGLA_DOCUMENTO[d.tipo],
+      ordem: TIPO_ORDEM.indexOf(d.tipo),
+      nome_arquivo: d.nome_arquivo,
+      storage_path: d.storage_path,
+      status: d.status,
+      observacao: d.observacao,
+      criado_em: d.criado_em,
+      revisado_em: d.revisado_em,
+      validade: null,
+    }))
+    .sort((a, b) => a.ordem - b.ordem)
+}
+
+function normalizarMotorista(docs: DocumentoMotorista[]): DocNormalizado[] {
+  return docs
+    .map((d) => ({
+      id: d.id,
+      rotulo: ROTULO_DOCUMENTO_MOTORISTA[d.tipo],
+      sigla: SIGLA_DOCUMENTO_MOTORISTA[d.tipo],
+      ordem: TIPO_ORDEM_MOTORISTA.indexOf(d.tipo),
+      nome_arquivo: d.nome_arquivo,
+      storage_path: d.storage_path,
+      status: d.status,
+      observacao: d.observacao,
+      criado_em: d.criado_em,
+      revisado_em: d.revisado_em,
+      validade: d.validade,
+    }))
+    .sort((a, b) => a.ordem - b.ordem || a.criado_em.localeCompare(b.criado_em))
+}
+
+function ultimoEnvioDe(docs: { criado_em: string }[]): string {
+  return docs.reduce((max, d) => (d.criado_em > max ? d.criado_em : max), docs[0].criado_em)
+}

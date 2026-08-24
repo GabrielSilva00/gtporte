@@ -1,6 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
-import type { Cidade, Motorista, OcupacaoRota, Rota, Universidade, Veiculo } from '../lib/types'
+import type {
+  Cidade,
+  Motorista,
+  OcupacaoPorData,
+  OcupacaoRota,
+  Organizacao,
+  Rota,
+  Universidade,
+  Veiculo,
+} from '../lib/types'
 
 /** Selects reutilizados pelas telas — evita duplicar o embed do PostgREST. */
 const SELECT_ROTA = `
@@ -81,5 +90,37 @@ export function useOcupacaoRotas() {
       if (error) throw error
       return data as OcupacaoRota[]
     },
+  })
+}
+
+/**
+ * Ocupação de uma data específica, via RPC ocupacao_por_data.
+ * A view vw_ocupacao_rota é sempre "ao vivo" e não recorta por data — este
+ * hook é o que permite comparar hoje com o dia anterior no painel.
+ */
+export function useOcupacaoPorData(data: string) {
+  return useQuery({
+    queryKey: ['ocupacao-por-data', data],
+    queryFn: async () => {
+      const { data: linhas, error } = await supabase.rpc('ocupacao_por_data', { p_data: data })
+      if (error) throw error
+      return (linhas ?? []) as OcupacaoPorData[]
+    },
+  })
+}
+
+/**
+ * Cadastro institucional (migration 0009). É um singleton — a migration
+ * garante uma única linha, então `maybeSingle` basta.
+ */
+export function useOrganizacao() {
+  return useQuery({
+    queryKey: ['organizacao'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('organizacao').select('*').maybeSingle()
+      if (error) throw error
+      return data as Organizacao | null
+    },
+    staleTime: 5 * 60_000,
   })
 }

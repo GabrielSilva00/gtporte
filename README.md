@@ -75,6 +75,25 @@ Sem o `.env` a aplicação abre em uma tela de configuração explicando o que f
 
 ---
 
+## 4. Portão de qualidade
+
+O projeto não tem suíte de testes: o único portão automático é o compilador. Para que ele rode
+sozinho antes de cada commit, ative o hook versionado — **uma vez por clone**:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+A partir daí, `git commit` só passa se `tsc --noEmit` estiver limpo e se não houver
+`console.log` novo no que está indo para o commit. Em um caso excepcional, `git commit --no-verify`
+pula a checagem.
+
+Quem usa o Claude Code herda as mesmas checagens por `.claude/settings.json`, mais um type-check
+automático a cada arquivo alterado em `src/`. O roteiro de teste no navegador está em
+`.claude/skills/testar-site/` e é invocado com `/testar-site`.
+
+---
+
 ## Os três painéis
 
 O login é único: `/login` identifica o perfil e envia cada um para o seu painel (RF21).

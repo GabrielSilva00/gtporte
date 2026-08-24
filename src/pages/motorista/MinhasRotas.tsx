@@ -2,18 +2,19 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../../auth/AuthProvider'
 import { useMinhasRotas } from '../../hooks/useMinhasRotas'
 import { mensagemErro, supabase } from '../../lib/supabase'
-import { badgeMotorista, dataBR, hora, horaCurta, percentual } from '../../lib/format'
+import {
+  badgeMotorista,
+  badgeSituacaoOperacional,
+  dataBR,
+  hora,
+  horaCurta,
+  percentual,
+} from '../../lib/format'
 import { Badge } from '../../components/ui/Badge'
 import { ProgressBar } from '../../components/ui/ProgressBar'
 import { CarregandoCards, ErroCarregamento, Vazio } from '../../components/ui/Estados'
 import { IconeSeta } from '../../components/icons'
-import { ROTULO_SITUACAO_OPERACIONAL, type Motorista, type SituacaoOperacional } from '../../lib/types'
-
-const COR_SITUACAO: Record<SituacaoOperacional, { bg: string; fg: string }> = {
-  aguardando: { bg: '#FBEEDA', fg: '#8A5A15' },
-  em_rota: { bg: '#EAF3EC', fg: '#2E7D5A' },
-  concluida: { bg: '#EEF1EF', fg: '#6B7570' },
-}
+import { type Motorista } from '../../lib/types'
 
 /** Visão geral das rotas e do cadastro do motorista logado. */
 export default function MinhasRotas() {
@@ -81,6 +82,8 @@ export default function MinhasRotas() {
       <div className="flex flex-col gap-3">
         {rotas?.map((r) => {
           const pct = percentual(r.passageiros, r.capacidade_maxima)
+          // Cor e rótulo da situação operacional (exibido em caixa alta no cabeçalho do card).
+          const situacao = badgeSituacaoOperacional(r.situacao_operacional)
           return (
             <div key={r.rota_id} className="card p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -91,12 +94,9 @@ export default function MinhasRotas() {
                     </span>
                     <span
                       className="rounded-full px-2.5 py-[3px] font-mono text-[10.5px] tracking-[0.04em]"
-                      style={{
-                        background: COR_SITUACAO[r.situacao_operacional].bg,
-                        color: COR_SITUACAO[r.situacao_operacional].fg,
-                      }}
+                      style={{ background: situacao.bg, color: situacao.fg }}
                     >
-                      {ROTULO_SITUACAO_OPERACIONAL[r.situacao_operacional].toUpperCase()}
+                      {situacao.rotulo.toUpperCase()}
                     </span>
                   </div>
                   <div className="mt-1 text-[15px] font-semibold">{r.nome}</div>

@@ -70,7 +70,9 @@ function formatarCelula(valor: unknown): string {
 function nomeArquivo(titulo: string): string {
   const base = titulo
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    // Faixa dos diacríticos combinantes, escapada — no fonte cru os
+    // caracteres ficavam invisíveis e fáceis de corromper em um editor.
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-zA-Z0-9]+/g, '_')
     .toLowerCase()
   return `gtporte_${base}_${new Date().toISOString().slice(0, 10)}`

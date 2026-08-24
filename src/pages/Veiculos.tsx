@@ -1,13 +1,14 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useVeiculos } from '../hooks/useCadastros'
 import { mensagemErro, supabase } from '../lib/supabase'
 import { badgeVeiculo } from '../lib/format'
 import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
+import { Tabs } from '../components/ui/Tabs'
 import { CarregandoCards, ErroCarregamento, Vazio } from '../components/ui/Estados'
 import { useToast } from '../components/ui/Toast'
-import { IconeMais, IconeVeiculo } from '../components/icons'
+import { IconeBusca, IconeMais, IconeVeiculo } from '../components/icons'
 import type { StatusVeiculo, Veiculo } from '../lib/types'
 
 interface Formulario {
@@ -85,11 +86,34 @@ export default function Veiculos() {
     setAberto(false)
     setEditando(null)
   }
+  const [busca, setBusca] = useState('')
+  const [filtroStatus, setFiltroStatus] = useState<'todos' | StatusVeiculo>('todos')
+
 
   const valido =
     form.placa.trim().length >= 7 &&
     form.modelo.trim().length > 0 &&
     Number(form.capacidade_maxima) > 0
+
+  const contadores = useMemo(() => {
+    const base: Record<'todos' | StatusVeiculo, number> = {
+      todos: veiculos?.length ?? 0,
+      disponivel: 0,
+      em_rota: 0,
+      manutencao: 0,
+    }
+    for (const v of veiculos ?? []) base[v.status] += 1
+    return base
+  }, [veiculos])
+
+  const filtrados = useMemo(() => {
+    const termo = busca.trim().toLowerCase()
+    return (veiculos ?? []).filter((v) => {
+      if (filtroStatus !== 'todos' && v.status !== filtroStatus) return false
+      if (!termo) return true
+      return `${v.placa} ${v.modelo}`.toLowerCase().includes(termo)
+    })
+  }, [veiculos, filtroStatus, busca])
 
   return (
     <div>
@@ -97,7 +121,7 @@ export default function Veiculos() {
         <div>
           <h1 className="text-[22px] font-semibold">Veículos</h1>
           <div className="mt-1 text-[13px] text-muted">
-            Frota municipal · {veiculos?.length ?? 0} cadastrados
+            Frota municipal · {veiculos?.length ?? 0} cadastrados · {filtrados.length} no filtro
           </div>
         </div>
         <button onClick={abrirNovo} className="btn-primary">
@@ -114,8 +138,39 @@ export default function Veiculos() {
       )}
 
       {veiculos && veiculos.length > 0 && (
+        <div className="card mb-3.5 flex flex-wrap items-center gap-3 p-3.5">
+          <div className="relative min-w-[220px] flex-1">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-soft">
+              <IconeBusca size={15} />
+            </span>
+            <input
+              className="field pl-9"
+              placeholder="Placa ou modelo"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+            />
+          </div>
+          <Tabs
+            variante="pilulas"
+            abas={[
+              { chave: 'todos', rotulo: 'Todos', contador: contadores.todos },
+              { chave: 'disponivel', rotulo: 'Disponível', contador: contadores.disponivel },
+              { chave: 'em_rota', rotulo: 'Em rota', contador: contadores.em_rota },
+              { chave: 'manutencao', rotulo: 'Manutenção', contador: contadores.manutencao },
+            ]}
+            ativa={filtroStatus}
+            onMudar={setFiltroStatus}
+          />
+        </div>
+      )}
+
+      {veiculos && veiculos.length > 0 && filtrados.length === 0 && (
+        <Vazio titulo="Nenhum veículo no filtro" descricao="Ajuste a busca ou a situação selecionada." />
+      )}
+
+      {filtrados.length > 0 && (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {veiculos.map((v) => (
+          {filtrados.map((v) => (
             <button
               key={v.id}
               onClick={() => abrirEdicao(v)}

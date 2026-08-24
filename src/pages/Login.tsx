@@ -1,14 +1,15 @@
 import { useState } from 'react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { rotaInicial, useAuth } from '../auth/AuthProvider'
 import { IconeOnibus } from '../components/icons'
+import heroLogin from '../assets/home-hero.jpg'
 import { DOMINIO_LOGIN, mensagemErro, supabase } from '../lib/supabase'
 import { useToast } from '../components/ui/Toast'
 
 /** Público declarado no formulário. Não concede acesso: serve para orientar a
  *  interface e barrar quem escolheu a opção errada. Quem manda é o tipo gravado
  *  em public.perfil, respaldado pelas policies de RLS. */
-type Publico = 'estudante' | 'servidor'
+type Publico = 'estudante' | 'servidor' | 'motorista'
 
 const NOME_TIPO: Record<string, string> = {
   admin: 'servidor (administrador)',
@@ -21,6 +22,7 @@ const NOME_TIPO: Record<string, string> = {
  *  Motorista entra pelo acesso de servidor, que é como ele consta na prefeitura. */
 function corresponde(publico: Publico, tipo: string): boolean {
   if (publico === 'servidor') return tipo === 'admin' || tipo === 'operador' || tipo === 'motorista'
+  if (publico === 'motorista') return tipo === 'motorista'
   return tipo === 'estudante'
 }
 
@@ -46,7 +48,15 @@ export default function Login() {
   const local = useLocation() as { state?: { de?: string } }
   const toast = useToast()
 
-  const [publico, setPublico] = useState<Publico>('estudante')
+  // ?publico= vem dos links divulgados em Configurações › Acessos. Só
+  // pré-seleciona a interface — quem autoriza continua sendo a RLS.
+  const [params] = useSearchParams()
+  const publicoDaUrl = params.get('publico')
+  const [publico, setPublico] = useState<Publico>(
+    publicoDaUrl === 'servidor' || publicoDaUrl === 'motorista' ? publicoDaUrl : 'estudante',
+  )
+  /** Estudante entra por e-mail; servidor e motorista entram por login. */
+  const usaLogin = publico !== 'estudante'
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -76,7 +86,7 @@ export default function Login() {
         await sair()
         setErro(
           `Esta conta é de ${NOME_TIPO[tipo] ?? tipo}, e você escolheu entrar como ` +
-            `${publico === 'servidor' ? 'servidor' : 'estudante'}. ` +
+            `${publico === 'estudante' ? 'estudante' : publico}. ` +
             'A senha está certa; use a outra opção de acesso.',
         )
         return
@@ -122,35 +132,42 @@ export default function Login() {
   }
 
   return (
-    <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[1.05fr_1fr]">
+    <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[1.7fr_1fr]">
       {/* Painel institucional */}
-      <div className="hidden flex-col justify-between bg-primary p-11 text-primary-fg lg:flex">
-        <div className="flex items-center gap-2.5">
-          <IconeOnibus size={30} />
-          <span className="text-[15px] font-semibold tracking-[0.02em]">GTPORTE</span>
-        </div>
+      <div className="relative hidden overflow-hidden bg-primary lg:block">
+        <img
+          src={heroLogin}
+          alt="Estudante embarcando no transporte acadêmico"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        {/* Sobreposição: garante contraste do texto claro sobre a foto. */}
+        <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/75 to-primary/35" />
 
-        <div className="max-w-[440px]">
-          <div className="mb-[18px] font-mono text-[11px] uppercase tracking-[0.16em] opacity-60">
-            Setor de Transporte · Araçatuba
+        <div className="relative flex h-full flex-col justify-between p-11 text-primary-fg">
+          <div className="flex items-center gap-2.5">
+            <IconeOnibus size={30} />
+            <span className="text-[15px] font-semibold tracking-[0.02em]">GTPORTE</span>
           </div>
-          <h1 className="mb-[18px] text-[36px] font-medium leading-[1.15] tracking-[-0.015em]">
-            Gestão do transporte acadêmico
-          </h1>
-          <p className="text-[14.5px] leading-[1.55] opacity-75">
-            Cadastro digital, validação de documentos, distribuição automática por horário de aulas
-            e confirmação diária de presença, em um só lugar.
-          </p>
-        </div>
 
-        <div className="font-mono text-[11px] tracking-[0.06em] opacity-50">
-          © 2026 Prefeitura de Araçatuba · Núcleo de TI
+          <div className="max-w-[520px]">
+            <h1 className="mb-[18px] text-[40px] font-medium leading-[1.12] tracking-[-0.015em]">
+              Gestão do transporte acadêmico
+            </h1>
+            <p className="text-[15px] leading-[1.55] opacity-85">
+              Cadastro digital, validação de documentos, distribuição automática por horário de aulas
+              e confirmação diária de presença, em um só lugar.
+            </p>
+          </div>
+
+          <div className="font-mono text-[11px] tracking-[0.06em] opacity-60">
+            © 2026 Prefeitura de Araçatuba · Núcleo de TI
+          </div>
         </div>
       </div>
 
       {/* Formulário */}
       <div className="flex items-center justify-center bg-bg p-8 lg:p-11">
-        <form onSubmit={submeter} className="w-full max-w-[400px]">
+        <form onSubmit={submeter} className="w-full max-w-[360px]">
           <div className="mb-2 flex items-center gap-2 lg:hidden">
             <span className="text-primary">
               <IconeOnibus size={24} />
@@ -159,18 +176,25 @@ export default function Login() {
           </div>
 
           <div className="eyebrow mb-2">Entrar</div>
-          <h2 className="mb-1.5 text-[26px] font-semibold tracking-[-0.01em]">Acesse sua conta</h2>
-          <p className="mb-5 text-[13.5px] text-muted">
-            {publico === 'estudante'
-              ? 'Sua rota, presença e documentos.'
-              : 'Acesso restrito ao Setor de Transporte.'}
-          </p>
+          <h2
+            className={`text-[26px] font-semibold tracking-[-0.01em] ${
+              publico === 'estudante' ? 'mb-5' : 'mb-1.5'
+            }`}
+          >
+            Acesse sua conta
+          </h2>
+          {publico === 'servidor' && (
+            <p className="mb-5 text-[13.5px] text-muted">Acesso restrito ao Setor de Transporte.</p>
+          )}
+          {publico === 'motorista' && (
+            <p className="mb-5 text-[13.5px] text-muted">Painel do motorista.</p>
+          )}
 
           {/* O acesso de servidor é a exceção: fica indicado, não em destaque. */}
-          {publico === 'servidor' && (
+          {usaLogin && (
             <div className="mb-4 flex items-center justify-between rounded-btn border border-edge bg-panel px-3 py-2">
               <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted">
-                Acesso de servidor
+                {publico === 'motorista' ? 'Acesso do motorista' : 'Acesso de servidor'}
               </span>
               <button
                 type="button"
@@ -188,16 +212,16 @@ export default function Login() {
           <div className="flex flex-col gap-3.5">
             <label className="block">
               <span className="field-label">
-                {publico === 'servidor' ? 'Login ou e-mail' : 'E-mail institucional'}
+                {usaLogin ? 'Login ou e-mail' : 'E-mail institucional'}
               </span>
               <input
-                type={publico === 'servidor' ? 'text' : 'email'}
+                type={usaLogin ? 'text' : 'email'}
                 required
-                autoComplete={publico === 'servidor' ? 'username' : 'email'}
+                autoComplete={usaLogin ? 'username' : 'email'}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={
-                  publico === 'servidor' ? 'marina.rocha' : 'voce@aracatuba.sp.gov.br'
+                  usaLogin ? 'marina.rocha' : 'voce@aracatuba.sp.gov.br'
                 }
                 className="field"
               />
@@ -258,7 +282,9 @@ export default function Login() {
               </>
             ) : (
               <div className="mt-3 text-center text-[12.5px] text-muted">
-                A conta de servidor é criada pelo Setor de Transporte.
+                {publico === 'motorista'
+                  ? 'Seu acesso é criado pelo Setor de Transporte.'
+                  : 'A conta de servidor é criada pelo Setor de Transporte.'}
               </div>
             )}
           </div>

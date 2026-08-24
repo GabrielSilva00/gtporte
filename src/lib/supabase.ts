@@ -33,6 +33,35 @@ export const supabaseCadastro = createClient(url || 'http://localhost:54321', an
 
 export const BUCKET_DOCUMENTOS = 'documentos'
 
+/** Bucket público — só o logotipo, que precisa aparecer antes do login. */
+export const BUCKET_INSTITUCIONAL = 'institucional'
+
+function extensao(arquivo: File): string {
+  return arquivo.name.split('.').pop()?.toLowerCase() || 'bin'
+}
+
+/**
+ * Caminho de um arquivo do estudante. A primeira pasta é o id dele, que é
+ * o que as policies de storage.objects verificam.
+ */
+export function caminhoArquivoEstudante(estudanteId: string, tipo: string, arquivo: File): string {
+  return `${estudanteId}/${tipo}-${Date.now()}.${extensao(arquivo)}`
+}
+
+/**
+ * Caminho de um arquivo do motorista, no mesmo bucket privado. O prefixo
+ * literal 'motorista' nunca colide com o uuid de um estudante (migration
+ * 0010).
+ */
+export function caminhoArquivoMotorista(motoristaId: string, tipo: string, arquivo: File): string {
+  return `motorista/${motoristaId}/${tipo}-${Date.now()}.${extensao(arquivo)}`
+}
+
+/** Caminho do logotipo institucional, no bucket público. */
+export function caminhoLogotipo(arquivo: File): string {
+  return `organizacao/logo-${Date.now()}.${extensao(arquivo)}`
+}
+
 /** Domínio sintético para acessos criados sem e-mail real — só identifica o login. */
 export const DOMINIO_LOGIN = 'gtporte.local'
 

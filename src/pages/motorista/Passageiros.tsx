@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMinhasRotas } from '../../hooks/useMinhasRotas'
 import { mensagemErro, supabase } from '../../lib/supabase'
-import { dataExtenso, hoje, hora, horaCurta } from '../../lib/format'
+import { badgeSolicitacaoVolta, dataExtenso, hoje, hora, horaCurta } from '../../lib/format'
 import { Avatar } from '../../components/ui/Avatar'
+import { Badge } from '../../components/ui/Badge'
 import { CarregandoTabela, ErroCarregamento, Vazio } from '../../components/ui/Estados'
 import { useToast } from '../../components/ui/Toast'
 import { IconeCheck, IconeRelogio, IconeSeta, IconeVeiculo } from '../../components/icons'
@@ -13,6 +14,7 @@ import {
   type Alocacao,
   type Presenca,
   type SituacaoOperacional,
+  type SolicitacaoVolta,
 } from '../../lib/types'
 
 const SITUACOES: SituacaoOperacional[] = ['aguardando', 'em_rota', 'concluida']
@@ -65,9 +67,26 @@ export default function Passageiros() {
         presencas = p as Presenca[]
       }
 
+      // Pedidos de embarque somente na volta aguardando decisão (0012)
+      let solicitacoes: SolicitacaoVolta[] = []
+      if (ids.length > 0) {
+        const { data: s, error: erroS } = await supabase
+          .from('solicitacao_volta')
+          .select('*')
+          .eq('data', data)
+          .in('alocacao_id', ids)
+        if (erroS) throw erroS
+        solicitacoes = s as SolicitacaoVolta[]
+      }
+
       const porAlocacao = new Map(presencas.map((p) => [p.alocacao_id, p]))
+      const solicitacaoPor = new Map(solicitacoes.map((s) => [s.alocacao_id, s]))
       return lista
-        .map((a) => ({ alocacao: a, presenca: porAlocacao.get(a.id) ?? null }))
+        .map((a) => ({
+          alocacao: a,
+          presenca: porAlocacao.get(a.id) ?? null,
+          solicitacao: solicitacaoPor.get(a.id) ?? null,
+        }))
         .sort((x, y) => (x.alocacao.estudante?.nome ?? '').localeCompare(y.alocacao.estudante?.nome ?? ''))
     },
     refetchInterval: 60_000,
@@ -274,7 +293,7 @@ export default function Passageiros() {
               </tr>
             </thead>
             <tbody>
-              {manifesto.map(({ alocacao, presenca }) => {
+              {manifesto.map(({ alocacao, presenca, solicitacao }) => {
                 const est = alocacao.estudante
                 return (
                   <tr key={alocacao.id} className="border-b border-line last:border-0">
@@ -298,6 +317,11 @@ export default function Passageiros() {
                     </td>
                     <td className="td text-center">
                       <Marca confirmado={!!presenca?.confirmou_volta} hora={presenca?.hora_volta} />
+                      {solicitacao && solicitacao.status !== 'cancelada' && (
+                        <div className="mt-1 flex justify-center">
+                          <Badge estilo={badgeSolicitacaoVolta(solicitacao.status)} />
+                        </div>
+                      )}
                     </td>
                   </tr>
                 )

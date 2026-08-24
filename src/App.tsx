@@ -37,6 +37,8 @@ import MotoristaShell from './layouts/MotoristaShell'
 import Passageiros from './pages/motorista/Passageiros'
 import MinhasRotas from './pages/motorista/MinhasRotas'
 import Avisos from './pages/motorista/Avisos'
+import SolicitacoesVolta from './pages/motorista/SolicitacoesVolta'
+import MeusDocumentosMotorista from './pages/motorista/MeusDocumentos'
 
 // Estudante + motorista
 import MinhasMensagens from './pages/MinhasMensagens'
@@ -214,6 +216,8 @@ export default function App() {
       >
         <Route index element={<Passageiros />} />
         <Route path="rotas" element={<MinhasRotas />} />
+        <Route path="solicitacoes" element={<SolicitacoesVolta />} />
+        <Route path="documentos" element={<MeusDocumentosMotorista />} />
         <Route path="avisos" element={<Avisos />} />
         <Route path="mensagens" element={<MinhasMensagens />} />
       </Route>
