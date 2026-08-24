@@ -656,3 +656,19 @@ export interface OrganizacaoUniversidade {
   vigencia_fim: string | null
   universidade?: Pick<Universidade, 'id' | 'nome' | 'cor'> | null
 }
+
+/**
+ * Retorno da RPC ocupacao_por_data (migration 0008). É deliberadamente
+ * mais estreito que OcupacaoRota: a função responde por uma data, e não
+ * pelo estado ao vivo da rota, então não traz status, veículo, motorista
+ * nem horários. Tipo separado justamente para o compilador acusar quem
+ * tentar ler um campo que a RPC não devolve.
+ */
+export interface OcupacaoPorData {
+  rota_id: string
+  codigo: string
+  nome: string
+  capacidade_maxima: number
+  ocupacao: number
+  percentual: number
+}

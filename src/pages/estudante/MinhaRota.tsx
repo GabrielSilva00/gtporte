@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { mensagemErro, supabase } from '../../lib/supabase'
 import {
   badgeDocumental,
+  badgeSituacaoOperacional,
   badgeSolicitacaoVolta,
   dataExtenso,
   dataHoraBR,
@@ -24,17 +25,9 @@ import {
 } from '../../components/icons'
 import {
   ROTULO_PERFIL_USO,
-  ROTULO_SITUACAO_OPERACIONAL,
   type AvisoRota,
   type MinhaRota as MinhaRotaTipo,
-  type SituacaoOperacional,
 } from '../../lib/types'
-
-const COR_SITUACAO: Record<SituacaoOperacional, { bg: string; fg: string }> = {
-  aguardando: { bg: '#FBEEDA', fg: '#8A5A15' },
-  em_rota: { bg: '#EAF3EC', fg: '#2E7D5A' },
-  concluida: { bg: '#EEF1EF', fg: '#6B7570' },
-}
 
 /** RF11 + RF13/RF14 — rota atribuída e confirmação de presença. */
 export default function MinhaRota() {
@@ -242,11 +235,11 @@ export default function MinhaRota() {
                   <span
                     className="rounded-full px-2.5 py-[3px] font-mono text-[10.5px] tracking-[0.04em]"
                     style={{
-                      background: COR_SITUACAO[rota.situacao_operacional].bg,
-                      color: COR_SITUACAO[rota.situacao_operacional].fg,
+                      background: badgeSituacaoOperacional(rota.situacao_operacional).bg,
+                      color: badgeSituacaoOperacional(rota.situacao_operacional).fg,
                     }}
                   >
-                    {ROTULO_SITUACAO_OPERACIONAL[rota.situacao_operacional].toUpperCase()}
+                    {badgeSituacaoOperacional(rota.situacao_operacional).rotulo.toUpperCase()}
                   </span>
                 </div>
                 <div className="mt-1 text-[16px] font-semibold">{rota.nome}</div>

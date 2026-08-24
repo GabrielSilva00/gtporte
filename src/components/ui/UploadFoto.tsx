@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { iniciais, corAvatar } from '../../lib/format'
 
 interface Props {
@@ -31,7 +31,22 @@ export function UploadFoto({
   ajuda = 'JPG ou PNG, até 2 MB.',
 }: Props) {
   const input = useRef<HTMLInputElement>(null)
-  const previa = arquivo ? URL.createObjectURL(arquivo) : url
+
+  // Um object URL por arquivo, revogado ao trocar. Criar direto no corpo
+  // do render vazaria um blob a cada tecla digitada nos formulários longos
+  // que usam este componente.
+  const [urlLocal, setUrlLocal] = useState<string | null>(null)
+  useEffect(() => {
+    if (!arquivo) {
+      setUrlLocal(null)
+      return
+    }
+    const gerada = URL.createObjectURL(arquivo)
+    setUrlLocal(gerada)
+    return () => URL.revokeObjectURL(gerada)
+  }, [arquivo])
+
+  const previa = useMemo(() => urlLocal ?? url, [urlLocal, url])
 
   return (
     <div className="flex items-center gap-3.5">

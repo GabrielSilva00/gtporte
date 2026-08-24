@@ -1,9 +1,18 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { useOcupacaoPorData } from '../hooks/useCadastros'
+import { useOcupacaoPorData, useOcupacaoRotas } from '../hooks/useCadastros'
 import { supabase, mensagemErro } from '../lib/supabase'
-import { corOcupacao, dataBR, dataExtenso, dataHoraBR, hora, numero, percentual } from '../lib/format'
+import {
+  badgeSituacaoOperacional,
+  corOcupacao,
+  dataBR,
+  dataExtenso,
+  dataHoraBR,
+  hora,
+  numero,
+  percentual,
+} from '../lib/format'
 import { Avatar } from '../components/ui/Avatar'
 import { Badge } from '../components/ui/Badge'
 import { Tabs } from '../components/ui/Tabs'
@@ -19,24 +28,17 @@ import {
   IconeRota,
   IconeVeiculo,
 } from '../components/icons'
-import {
-  ROTULO_SITUACAO_OPERACIONAL,
-  type Mensagem,
-  type SituacaoOperacional,
-} from '../lib/types'
-
-/** Cores da situação operacional — mesma convenção do painel do motorista. */
-const COR_SITUACAO: Record<SituacaoOperacional, { bg: string; fg: string }> = {
-  aguardando: { bg: '#FBEEDA', fg: '#8A5A15' },
-  em_rota: { bg: '#EAF3EC', fg: '#2E7D5A' },
-  concluida: { bg: '#EEF1EF', fg: '#6B7570' },
-}
+import { type Mensagem } from '../lib/types'
 
 export default function Dashboard() {
   const navegar = useNavigate()
+  // Estado ao vivo das rotas: alimenta os indicadores e a lista de operação.
+  const { data: ocupacoes, isLoading, error } = useOcupacaoRotas()
+
+  // Recorte por data, exclusivo do card "Ocupação do dia".
   const [diaOcupacao, setDiaOcupacao] = useState<'hoje' | 'ontem'>('hoje')
   const dataOcupacao = useMemo(() => dataRelativa(diaOcupacao), [diaOcupacao])
-  const { data: ocupacoes, isLoading, error } = useOcupacaoPorData(dataOcupacao)
+  const { data: ocupacaoDoDia, isLoading: carregandoDia } = useOcupacaoPorData(dataOcupacao)
 
   const { data: totais } = useQuery({
     queryKey: ['dashboard-totais'],
@@ -249,10 +251,10 @@ export default function Dashboard() {
             />
           </div>
 
-          {isLoading && <CarregandoCards itens={3} altura={38} />}
+          {carregandoDia && <CarregandoCards itens={3} altura={38} />}
 
           <div className="flex flex-col gap-3.5">
-            {(ocupacoes ?? []).map((o) => {
+            {(ocupacaoDoDia ?? []).map((o) => {
               const pct = percentual(o.ocupacao, o.capacidade_maxima)
               return (
                 <div key={o.rota_id}>
@@ -269,7 +271,7 @@ export default function Dashboard() {
                 </div>
               )
             })}
-            {!isLoading && ocupacoes?.length === 0 && (
+            {!carregandoDia && ocupacaoDoDia?.length === 0 && (
               <div className="py-6 text-center text-[12.5px] text-muted">
                 {diaOcupacao === 'hoje'
                   ? 'Nenhuma rota cadastrada ainda.'
@@ -363,6 +365,9 @@ export default function Dashboard() {
 
         {rotasOperando.map((o) => {
           const pct = percentual(o.ocupacao, o.capacidade_maxima)
+          // O badge desta tabela é em caixa alta; a cor e o rótulo vêm do formatador comum.
+          const badge = badgeSituacaoOperacional(o.situacao_operacional)
+          const situacao = { ...badge, rotulo: badge.rotulo.toUpperCase() }
           return (
             <div
               key={o.rota_id}
@@ -388,13 +393,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="justify-self-end">
-                <Badge
-                  estilo={{
-                    rotulo: ROTULO_SITUACAO_OPERACIONAL[o.situacao_operacional].toUpperCase(),
-                    ...COR_SITUACAO[o.situacao_operacional],
-                  }}
-                  mono
-                />
+                <Badge estilo={situacao} mono />
               </div>
             </div>
           )

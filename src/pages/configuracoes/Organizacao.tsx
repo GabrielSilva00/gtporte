@@ -44,8 +44,22 @@ export default function Organizacao({ somenteLeitura }: { somenteLeitura: boolea
   const [uniSelecionadas, setUniSelecionadas] = useState<Set<string>>(new Set())
   const [cidadesSelecionadas, setCidadesSelecionadas] = useState<Set<string>>(new Set())
 
+  /**
+   * Mescla em vez de substituir. Salvar um bloco invalida a query, e
+   * sobrescrever o estado inteiro apagaria em silêncio o que o usuário
+   * digitou em outros blocos e ainda não salvou — com ~70 campos, digitar
+   * em mais de um bloco antes de salvar é o caso comum, não a exceção.
+   */
   useEffect(() => {
-    if (organizacao) setValores({ ...(organizacao as unknown as Valores) })
+    if (!organizacao) return
+    const doServidor = organizacao as unknown as Valores
+    setValores((atual) => {
+      const mesclado: Valores = { ...doServidor }
+      for (const [chave, valor] of Object.entries(atual)) {
+        if (valor !== doServidor[chave]) mesclado[chave] = valor
+      }
+      return mesclado
+    })
   }, [organizacao])
 
   // Vínculos com instituições e municípios — tabelas filhas de 0009
@@ -485,7 +499,7 @@ function SelecaoMultipla({
                 checked={selecionados.has(i.id)}
                 disabled={somenteLeitura}
                 onChange={() => onAlternar(i.id)}
-                className="h-3.5 w-3.5 accent-[#1F3A2E]"
+                className="h-3.5 w-3.5 accent-primary"
               />
               {i.cor && (
                 <span

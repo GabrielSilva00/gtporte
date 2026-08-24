@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import type {
   Cidade,
   Motorista,
+  OcupacaoPorData,
   OcupacaoRota,
   Organizacao,
   Rota,
@@ -103,7 +104,7 @@ export function useOcupacaoPorData(data: string) {
     queryFn: async () => {
       const { data: linhas, error } = await supabase.rpc('ocupacao_por_data', { p_data: data })
       if (error) throw error
-      return (linhas ?? []) as OcupacaoRota[]
+      return (linhas ?? []) as OcupacaoPorData[]
     },
   })
 }

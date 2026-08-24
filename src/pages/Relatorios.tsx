@@ -643,14 +643,25 @@ export default function Relatorios() {
 
             <div className="mt-3.5 flex gap-1.5">
               <button
-                onClick={() => gerar(chave, 'previa')}
+                onClick={() => {
+                  setFiltros(FILTROS_VAZIOS)
+                  gerar(chave, 'previa')
+                }}
                 disabled={gerando === chave}
                 className="flex-1 rounded-field border border-edge py-1.5 text-[12px] hover:bg-bg disabled:opacity-50"
               >
-                {gerando === chave ? 'Gerando…' : 'Gerar direto'}
+                {gerando === chave ? 'Gerando…' : 'Gerar sem filtro'}
               </button>
               <button
-                onClick={() => setConfigurando(chave)}
+                onClick={() => {
+                  // Os filtros são um estado só, compartilhado pelos dez
+                  // relatórios. Sem limpar na troca, um recorte de período
+                  // feito em Frequência seguiria aplicado no Log — um filtro
+                  // fantasma em relatório de prestação de contas é pior que
+                  // um erro visível.
+                  setFiltros(FILTROS_VAZIOS)
+                  setConfigurando(chave)
+                }}
                 disabled={gerando === chave}
                 className="flex-[1.4] rounded-field bg-primary py-1.5 text-[12px] font-medium text-primary-fg hover:bg-primary-hover disabled:opacity-50"
               >
