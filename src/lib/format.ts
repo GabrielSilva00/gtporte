@@ -1,5 +1,8 @@
 import type {
   SituacaoAlocacao,
+  SituacaoMotorista,
+  SituacaoOperacional,
+  SolicitacaoStatus,
   StatusDocumental,
   StatusMotorista,
   StatusRota,
@@ -166,4 +169,57 @@ export interface DiaGrade {
   ativo: boolean
   inicio: string
   fim: string
+}
+
+export function badgeSituacaoMotorista(situacao: SituacaoMotorista): EstiloBadge {
+  switch (situacao) {
+    case 'ativo':
+      return { rotulo: 'ATIVO', ...VERDE }
+    case 'ferias':
+      return { rotulo: 'FÉRIAS', ...AMBAR }
+    case 'afastado':
+      return { rotulo: 'AFASTADO', ...VERMELHO }
+    default:
+      return { rotulo: 'INATIVO', ...NEUTRO }
+  }
+}
+
+export function badgeSolicitacaoVolta(status: SolicitacaoStatus): EstiloBadge {
+  switch (status) {
+    case 'aprovada':
+      return { rotulo: 'Aprovada', ...VERDE }
+    case 'recusada':
+      return { rotulo: 'Recusada', ...VERMELHO }
+    case 'cancelada':
+      return { rotulo: 'Cancelada', ...NEUTRO }
+    default:
+      return { rotulo: 'Aguardando', ...AMBAR }
+  }
+}
+
+/**
+ * Cores da situação operacional da rota. Estava duplicada literalmente em
+ * Dashboard, MinhaRota e MinhasRotas — aqui fica a única definição.
+ */
+export function badgeSituacaoOperacional(situacao: SituacaoOperacional): EstiloBadge {
+  switch (situacao) {
+    case 'em_rota':
+      return { rotulo: 'Em rota', ...VERDE }
+    case 'concluida':
+      return { rotulo: 'Concluída', ...NEUTRO }
+    default:
+      return { rotulo: 'Aguardando', ...AMBAR }
+  }
+}
+
+/**
+ * Alerta de vencimento: quantos dias faltam para a data, ou null quando
+ * não há data. Usado por CNH, exame toxicológico, ASO e apólice.
+ */
+export function diasParaVencer(data: string | null): number | null {
+  if (!data) return null
+  const alvo = new Date(`${data}T00:00:00`)
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
+  return Math.round((alvo.getTime() - hoje.getTime()) / 86_400_000)
 }

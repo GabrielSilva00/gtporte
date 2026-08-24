@@ -8,7 +8,12 @@ import { useToast } from '../components/ui/Toast'
 import { IconeMais, IconeUniversidade } from '../components/icons'
 import type { Cidade, Universidade } from '../lib/types'
 
-const CORES = ['#1F3A2E', '#8A5A15', '#C4633A', '#2E7D5A', '#9E3E3E', '#6B7570']
+const CORES = [
+  '#1F3A2E', '#2E7D5A', '#4A8F6B', '#1F5C7A',
+  '#2B6CB0', '#3F51A8', '#6B4FA8', '#8A3E8C',
+  '#9E3E3E', '#C4633A', '#B8862B', '#8A5A15',
+  '#6B7570', '#455A5F', '#7A5C3E', '#3D3D5C',
+]
 
 /** RF06 (universidades) + RF07 (cidades de origem e destino). */
 export default function Universidades() {
@@ -21,7 +26,16 @@ export default function Universidades() {
   const [modalCidade, setModalCidade] = useState(false)
   const [editandoUni, setEditandoUni] = useState<Universidade | null>(null)
   const [editandoCidade, setEditandoCidade] = useState<Cidade | null>(null)
-  const [formUni, setFormUni] = useState({ nome: '', cidade_id: '', cor: CORES[0] })
+  const [formUni, setFormUni] = useState({
+    nome: '',
+    cidade_id: '',
+    cor: CORES[0],
+    logradouro: '',
+    numero: '',
+    complemento: '',
+    bairro: '',
+    cep: '',
+  })
   const [formCidade, setFormCidade] = useState({ nome: '', uf: 'SP' })
 
   // Contadores reais por universidade (substituem os números fixos do protótipo).
@@ -71,6 +85,11 @@ export default function Universidades() {
         nome: formUni.nome.trim(),
         cidade_id: formUni.cidade_id,
         cor: formUni.cor,
+        logradouro: formUni.logradouro.trim() || null,
+        numero: formUni.numero.trim() || null,
+        complemento: formUni.complemento.trim() || null,
+        bairro: formUni.bairro.trim() || null,
+        cep: formUni.cep.trim() || null,
       }
       const resposta = editandoUni
         ? await supabase.from('universidade').update(payload).eq('id', editandoUni.id)
@@ -105,13 +124,31 @@ export default function Universidades() {
 
   function abrirNovaUni() {
     setEditandoUni(null)
-    setFormUni({ nome: '', cidade_id: cidades?.[0]?.id ?? '', cor: CORES[0] })
+    setFormUni({
+      nome: '',
+      cidade_id: cidades?.[0]?.id ?? '',
+      cor: CORES[0],
+      logradouro: '',
+      numero: '',
+      complemento: '',
+      bairro: '',
+      cep: '',
+    })
     setModalUni(true)
   }
 
   function abrirEdicaoUni(u: Universidade) {
     setEditandoUni(u)
-    setFormUni({ nome: u.nome, cidade_id: u.cidade_id, cor: u.cor })
+    setFormUni({
+      nome: u.nome,
+      cidade_id: u.cidade_id,
+      cor: u.cor,
+      logradouro: u.logradouro ?? '',
+      numero: u.numero ?? '',
+      complemento: u.complemento ?? '',
+      bairro: u.bairro ?? '',
+      cep: u.cep ?? '',
+    })
     setModalUni(true)
   }
 
@@ -205,7 +242,7 @@ export default function Universidades() {
           </button>
         </div>
 
-        <div className="card divide-y divide-line">
+        <div className="card max-h-[460px] divide-y divide-line overflow-y-auto">
           {(cidades ?? []).map((c) => (
             <button
               key={c.id}
@@ -231,6 +268,8 @@ export default function Universidades() {
       <Modal
         aberto={modalUni}
         titulo={editandoUni ? `Editar ${editandoUni.nome}` : 'Nova universidade'}
+        descricao="O endereço do campus alimenta o planejamento de itinerários."
+        largura={720}
         onFechar={() => setModalUni(false)}
         rodape={
           <>
@@ -272,19 +311,80 @@ export default function Universidades() {
               ))}
             </select>
           </label>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <label className="col-span-2 sm:col-span-3">
+              <span className="field-label">Logradouro</span>
+              <input
+                value={formUni.logradouro}
+                onChange={(e) => setFormUni({ ...formUni, logradouro: e.target.value })}
+                placeholder="Rua Marechal Rondon"
+                className="field"
+              />
+            </label>
+            <label>
+              <span className="field-label">Número</span>
+              <input
+                value={formUni.numero}
+                onChange={(e) => setFormUni({ ...formUni, numero: e.target.value })}
+                placeholder="2100"
+                className="field"
+              />
+            </label>
+            <label className="col-span-2">
+              <span className="field-label">Bairro</span>
+              <input
+                value={formUni.bairro}
+                onChange={(e) => setFormUni({ ...formUni, bairro: e.target.value })}
+                placeholder="Centro"
+                className="field"
+              />
+            </label>
+            <label>
+              <span className="field-label">Complemento</span>
+              <input
+                value={formUni.complemento}
+                onChange={(e) => setFormUni({ ...formUni, complemento: e.target.value })}
+                placeholder="Bloco A"
+                className="field"
+              />
+            </label>
+            <label>
+              <span className="field-label">CEP</span>
+              <input
+                value={formUni.cep}
+                onChange={(e) =>
+                  setFormUni({
+                    ...formUni,
+                    cep: e.target.value.replace(/D/g, '').slice(0, 8).replace(/^(d{5})(d)/, '$1-$2'),
+                  })
+                }
+                placeholder="16050-000"
+                className="field font-mono"
+              />
+            </label>
+          </div>
+
           <div>
             <span className="field-label">Cor de identificação</span>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-8 gap-2">
               {CORES.map((cor) => (
                 <button
                   key={cor}
+                  type="button"
                   onClick={() => setFormUni({ ...formUni, cor })}
-                  className={`h-9 w-9 rounded-[10px] transition-transform ${
-                    formUni.cor === cor ? 'scale-110 ring-2 ring-ink/20 ring-offset-2' : ''
+                  className={`flex h-9 w-9 items-center justify-center rounded-[10px] text-white transition-transform ${
+                    formUni.cor === cor ? 'scale-110 ring-2 ring-ink/25 ring-offset-2' : ''
                   }`}
                   style={{ background: cor }}
                   aria-label={`Cor ${cor}`}
-                />
+                  aria-pressed={formUni.cor === cor}
+                >
+                  {formUni.cor === cor && (
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                  )}
+                </button>
               ))}
             </div>
           </div>
