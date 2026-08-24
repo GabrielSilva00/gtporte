@@ -347,6 +347,11 @@ create policy config_write_admin on public.configuracao_sistema
 
 -- =====================================================================
 -- STORAGE - bucket privado de documentos (RF02)
+-- ATENCAO: a partir de 0010_documento_motorista.sql as quatro policies
+-- abaixo sao redefinidas la para tambem cobrir o prefixo
+-- motorista/{motorista_id}/. Reexecutar ESTE arquivo depois de 0010
+-- revoga o acesso do motorista aos proprios arquivos - nesse caso,
+-- reaplique 0010 em seguida.
 -- =====================================================================
 insert into storage.buckets (id, name, public)
 values ('documentos', 'documentos', false)
