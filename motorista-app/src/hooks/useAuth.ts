@@ -4,6 +4,25 @@ import type { Session } from '@supabase/supabase-js'
 
 export interface Perfil { id:string; nome:string; tipo:string; login:string|null }
 
+/** Dominio sintetico dos acessos criados sem e-mail real (ver src/lib/supabase.ts da raiz). */
+const DOMINIO_LOGIN = 'gtporte.local'
+
+/**
+ * O acesso do motorista e criado com login e senha, e o Supabase Auth autentica
+ * por e-mail. Quem sabe qual e-mail ficou gravado e o banco: email_do_login() e
+ * security definer e liberada para anon justamente por rodar antes do login.
+ * Adivinhar o dominio aqui quebra todo acesso criado com e-mail informado.
+ */
+async function resolverEmail(identificador:string):Promise<string> {
+  const valor = identificador.trim()
+  if (valor.includes('@')) return valor
+  const login = valor.toLowerCase()
+  const {data} = await supabase.rpc('email_do_login', {p_login: login})
+  if (data) return data as string
+  // Acessos antigos, criados sem e-mail: o endereco deriva do proprio login.
+  return `${login}@${DOMINIO_LOGIN}`
+}
+
 export function useAuth() {
   const [session, setSession] = useState<Session|null>(null)
   const [perfil, setPerfil] = useState<Perfil|null>(null)
@@ -21,7 +40,7 @@ export function useAuth() {
   }
 
   async function login(id:string, senha:string) {
-    const email = id.includes('@') ? id.trim() : `${id.trim().toLowerCase()}@gtporte.local`
+    const email = await resolverEmail(id)
     const {error} = await supabase.auth.signInWithPassword({email,password:senha})
     if(error) throw new Error(error.message==='Invalid login credentials'?'Login ou senha incorretos.':error.message)
   }

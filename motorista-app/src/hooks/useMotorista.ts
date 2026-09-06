@@ -76,25 +76,37 @@ export const ROTULO_DOC: Record<TipoDocMot,string> = {
   toxicologico:'Exame toxicológico', aso:'ASO', certificado:'Certificado de curso', contrato:'Contrato', outro:'Outro'
 }
 
+/**
+ * documento_motorista.motorista_id referencia public.motorista(id), que NAO e o
+ * uuid do Auth: a ligacao e motorista.perfil_id = auth.uid(), a mesma que
+ * meu_motorista_id() usa nas policies (0002_rls.sql) e no prefixo do storage.
+ */
+async function meuMotoristaId():Promise<string|null> {
+  const {data:{user}}=await supabase.auth.getUser()
+  if(!user) return null
+  const {data}=await supabase.from('motorista').select('id').eq('perfil_id',user.id).maybeSingle()
+  return (data as {id:string}|null)?.id ?? null
+}
+
 export function useDocumentos() {
   const [docs,setDocs]=useState<DocMot[]>([]); const [loading,setLoading]=useState(true)
   const refresh=useCallback(async()=>{
     setLoading(true)
-    const {data:{user}}=await supabase.auth.getUser()
-    if(!user){setLoading(false);return}
-    const {data}=await supabase.from('documento_motorista').select('id,tipo,nome_arquivo,storage_path,validade,status,observacao,criado_em').eq('motorista_id',user.id).order('criado_em',{ascending:false})
+    const motoristaId=await meuMotoristaId()
+    if(!motoristaId){setLoading(false);return}
+    const {data}=await supabase.from('documento_motorista').select('id,tipo,nome_arquivo,storage_path,validade,status,observacao,criado_em').eq('motorista_id',motoristaId).order('criado_em',{ascending:false})
     setDocs((data as DocMot[])||[]); setLoading(false)
   },[])
   useEffect(()=>{refresh()},[refresh])
 
   const upload=async(tipo:TipoDocMot, arquivo:File, validade?:string)=>{
-    const {data:{user}}=await supabase.auth.getUser()
-    if(!user) throw new Error('Não autenticado')
+    const motoristaId=await meuMotoristaId()
+    if(!motoristaId) throw new Error('Este acesso não está vinculado a um motorista.')
     const ext=arquivo.name.split('.').pop()?.toLowerCase()||'bin'
-    const path=`motorista/${user.id}/${tipo}-${Date.now()}.${ext}`
+    const path=`motorista/${motoristaId}/${tipo}-${Date.now()}.${ext}`
     const {error:upErr}=await supabase.storage.from('documentos').upload(path,arquivo)
     if(upErr) throw new Error(erroMsg(upErr))
-    const {error}=await supabase.from('documento_motorista').insert({ motorista_id:user.id, tipo, nome_arquivo:arquivo.name, storage_path:path, validade:validade||null, status:'pendente' })
+    const {error}=await supabase.from('documento_motorista').insert({ motorista_id:motoristaId, tipo, nome_arquivo:arquivo.name, storage_path:path, validade:validade||null, status:'pendente' })
     if(error) throw new Error(erroMsg(error))
     await refresh()
   }
