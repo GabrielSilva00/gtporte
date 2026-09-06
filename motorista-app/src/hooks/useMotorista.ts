@@ -53,3 +53,77 @@ export function useSolicitacoesVolta(rotaId:string|null) {
 
 export async function atualizarSituacao(rotaId:string, sit:SituacaoOp) { const{error}=await supabase.rpc('atualizar_situacao_rota',{p_rota_id:rotaId,p_situacao:sit}); if(error)throw new Error(erroMsg(error)) }
 export async function registrarGPS(rotaId:string, lat:number, lng:number) { try { await supabase.from('localizacao_rota').insert({rota_id:rotaId,latitude:lat,longitude:lng}) } catch {} }
+
+// ---- Check-in / Check-out ----
+export async function confirmarPresenca(estudanteId:string, trecho:'ida'|'volta', data:string) {
+  const {data:r, error} = await supabase.rpc('confirmar_presenca', { p_estudante_id: estudanteId, p_trecho: trecho, p_data: data })
+  if(error) throw new Error(erroMsg(error))
+  return r as { mensagem:string }
+}
+
+export async function cancelarPresenca(estudanteId:string, trecho:'ida'|'volta', motivo:string, data:string) {
+  const {data:r, error} = await supabase.rpc('cancelar_presenca', { p_estudante_id: estudanteId, p_trecho: trecho, p_motivo: motivo, p_data: data })
+  if(error) throw new Error(erroMsg(error))
+  return r as { mensagem:string }
+}
+
+// ---- Documentos do motorista ----
+export type TipoDocMot = 'cnh_frente'|'cnh_verso'|'residencia'|'toxicologico'|'aso'|'certificado'|'contrato'|'outro'
+export interface DocMot { id:string; tipo:TipoDocMot; nome_arquivo:string; storage_path:string; validade:string|null; status:'pendente'|'aprovado'|'rejeitado'; observacao:string|null; criado_em:string }
+
+export const ROTULO_DOC: Record<TipoDocMot,string> = {
+  cnh_frente:'CNH (frente)', cnh_verso:'CNH (verso)', residencia:'Comprovante de residência',
+  toxicologico:'Exame toxicológico', aso:'ASO', certificado:'Certificado de curso', contrato:'Contrato', outro:'Outro'
+}
+
+export function useDocumentos() {
+  const [docs,setDocs]=useState<DocMot[]>([]); const [loading,setLoading]=useState(true)
+  const refresh=useCallback(async()=>{
+    setLoading(true)
+    const {data:{user}}=await supabase.auth.getUser()
+    if(!user){setLoading(false);return}
+    const {data}=await supabase.from('documento_motorista').select('id,tipo,nome_arquivo,storage_path,validade,status,observacao,criado_em').eq('motorista_id',user.id).order('criado_em',{ascending:false})
+    setDocs((data as DocMot[])||[]); setLoading(false)
+  },[])
+  useEffect(()=>{refresh()},[refresh])
+
+  const upload=async(tipo:TipoDocMot, arquivo:File, validade?:string)=>{
+    const {data:{user}}=await supabase.auth.getUser()
+    if(!user) throw new Error('Não autenticado')
+    const ext=arquivo.name.split('.').pop()?.toLowerCase()||'bin'
+    const path=`motorista/${user.id}/${tipo}-${Date.now()}.${ext}`
+    const {error:upErr}=await supabase.storage.from('documentos').upload(path,arquivo)
+    if(upErr) throw new Error(erroMsg(upErr))
+    const {error}=await supabase.from('documento_motorista').insert({ motorista_id:user.id, tipo, nome_arquivo:arquivo.name, storage_path:path, validade:validade||null, status:'pendente' })
+    if(error) throw new Error(erroMsg(error))
+    await refresh()
+  }
+
+  return {docs,loading,refresh,upload}
+}
+
+// ---- Histórico de viagens ----
+export interface HistViagem { data:string; rota_codigo:string; rota_nome:string; situacao:string; total_ida:number; total_volta:number }
+
+export function useHistorico() {
+  const [hist,setHist]=useState<HistViagem[]>([]); const [loading,setLoading]=useState(true)
+  const refresh=useCallback(async()=>{
+    setLoading(true)
+    const {data:{user}}=await supabase.auth.getUser()
+    if(!user){setLoading(false);return}
+    // Get presença records grouped by date from the last 30 days
+    const desde = new Date(); desde.setDate(desde.getDate()-30)
+    const {data}=await supabase.from('presenca').select('data,trecho,alocacao:alocacao_id(rota:rota_id(codigo,nome))').gte('data',desde.toISOString().slice(0,10)).order('data',{ascending:false}).limit(200)
+    // Group by date
+    const map=new Map<string,HistViagem>()
+    if(data) for(const p of data as any[]) {
+      const key=p.data; const r=p.alocacao?.rota
+      const cur=map.get(key)||{data:key,rota_codigo:r?.codigo||'',rota_nome:r?.nome||'',situacao:'concluida',total_ida:0,total_volta:0}
+      if(p.trecho==='ida') cur.total_ida++; else cur.total_volta++
+      map.set(key,cur)
+    }
+    setHist([...map.values()].sort((a,b)=>b.data.localeCompare(a.data))); setLoading(false)
+  },[])
+  useEffect(()=>{refresh()},[refresh])
+  return {hist,loading}
+}
