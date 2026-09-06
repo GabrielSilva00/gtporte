@@ -14,3 +14,5 @@ dist-ssr
 
 # Documentos do relatorio academico, mantidos apenas localmente
 uploads/
+motorista-app/node_modules
+motorista-app/dist

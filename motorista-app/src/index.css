@@ -1,0 +1,15 @@
+@tailwind base;@tailwind components;@tailwind utilities;
+@layer base { *{-webkit-tap-highlight-color:transparent} html{height:-webkit-fill-available} body{min-height:100vh;min-height:-webkit-fill-available;overscroll-behavior:none} ::-webkit-scrollbar{width:0;height:0} input,select,textarea{font-size:16px !important} }
+@layer components {
+  .safe-b{padding-bottom:max(1rem,env(safe-area-inset-bottom))}
+  .btn-gold{@apply w-full rounded-2xl bg-gold-500 px-6 py-4 text-center text-sm font-bold uppercase tracking-widest text-navy-900 transition-all active:scale-[0.97]}
+  .btn-outline{@apply w-full rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center text-sm font-semibold text-white transition-all active:scale-[0.97]}
+  .btn-red{@apply w-full rounded-2xl bg-rose-500/20 px-6 py-4 text-center text-sm font-bold text-rose-400 transition-all active:scale-[0.97]}
+  .card{@apply rounded-2xl border border-white/[0.06] bg-navy-800/80 p-4 backdrop-blur}
+  .chip{@apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold}
+  .input-dark{@apply w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 text-white placeholder-white/25 outline-none focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/30}
+}
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulseGold{0%,100%{box-shadow:0 0 0 0 rgba(234,179,8,.4)}50%{box-shadow:0 0 0 10px rgba(234,179,8,0)}}
+.anim-in{animation:fadeIn .4s ease-out both}
+.anim-pulse{animation:pulseGold 2s infinite}
