@@ -15,6 +15,7 @@ import {
   type MapaGrade,
 } from '../../components/GradeSemanal'
 import { ROTULO_PERFIL_USO, type Estudante, type PerfilUso } from '../../lib/types'
+import { QrEmbarque } from '../../components/QrEmbarque'
 
 interface LinhaGrade {
   dia_semana: number
@@ -132,6 +133,8 @@ export default function MeuPerfil() {
           Mantenha seu horário de aulas atualizado, é o que define sua rota.
         </div>
       </div>
+
+      <QrEmbarque prontuario={e.prontuario} nome={e.nome} />
 
       <div className="card mb-4 p-5">
         <div className="eyebrow mb-3.5">Dados fixos</div>

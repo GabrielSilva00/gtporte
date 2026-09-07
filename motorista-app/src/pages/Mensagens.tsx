@@ -17,10 +17,10 @@ export function Mensagens(){
       </div></div>}
     {loading?<div className="flex justify-center py-12"><Spinner/></div>:msgs.length===0?
       <div className="flex flex-col items-center py-12 text-center"><MessageCircle className="h-12 w-12 text-white/10 mb-3"/><p className="text-sm text-white/40">Nenhuma mensagem</p></div>:
-      <div className="space-y-2">{msgs.map((m,i)=><button key={m.id} onClick={()=>{setAberta(aberta===m.id?null:m.id);if(!m.lida)marcarLida(m.id)}}
-        className={`card w-full text-left anim-in ${!m.lida?'border-gold-500/30':''}`} style={{animationDelay:`${i*30}ms`}}>
-        <div className="flex items-center justify-between gap-2"><p className={`truncate text-sm ${!m.lida?'font-bold':'font-medium'}`}>{m.assunto}</p>
-          {!m.lida&&<span className="h-2 w-2 flex-shrink-0 rounded-full bg-gold-500"/>}</div>
+      <div className="space-y-2">{msgs.map((m,i)=><button key={m.id} onClick={()=>{setAberta(aberta===m.id?null:m.id);if(!m.lida_em)marcarLida(m.id)}}
+        className={`card w-full text-left anim-in ${!m.lida_em?'border-gold-500/30':''}`} style={{animationDelay:`${i*30}ms`}}>
+        <div className="flex items-center justify-between gap-2"><p className={`truncate text-sm ${!m.lida_em?'font-bold':'font-medium'}`}>{m.assunto}</p>
+          {!m.lida_em&&<span className="h-2 w-2 flex-shrink-0 rounded-full bg-gold-500"/>}</div>
         <p className="mt-0.5 text-[10px] text-white/30">{m.remetente?.nome||'Você'} · {fmt(m.criado_em)}</p>
         {aberta===m.id&&<p className="mt-3 rounded-xl bg-white/5 p-3 text-sm leading-relaxed text-white/70">{m.corpo}</p>}
       </button>)}</div>}

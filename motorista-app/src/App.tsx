@@ -7,9 +7,9 @@ import { ToastContainer } from '@/components/Toast'
 import { Spinner } from '@/components/Spinner'
 import { Login } from '@/pages/Login'
 import { Viagem } from '@/pages/Viagem'
+import { CheckIn } from '@/pages/CheckIn'
 import { Avisos } from '@/pages/Avisos'
 import { Documentos } from '@/pages/Documentos'
-import { Historico } from '@/pages/Historico'
 import { Perfil } from '@/pages/Perfil'
 
 function Aviso({titulo,texto,acao}:{titulo:string;texto:string;acao?:{label:string;onClick:()=>void}}) {
@@ -25,11 +25,11 @@ function AppAutenticado({perfil,logout}:{perfil:TipoPerfil;logout:()=>void}) {
   const [tab, setTab] = useState<Tab>('viagem')
 
   return (
-    <div className="min-h-screen">
-      {tab === 'viagem' && <Viagem />}
+    <div className="mx-auto min-h-screen max-w-lg">
+      {tab === 'viagem' && <Viagem onIrParaCheckIn={()=>setTab('checkin')} />}
+      {tab === 'checkin' && <CheckIn />}
       {tab === 'avisos' && <Avisos />}
       {tab === 'documentos' && <Documentos />}
-      {tab === 'historico' && <Historico />}
       {tab === 'perfil' && <Perfil perfil={perfil} onLogout={logout} />}
       <BottomNav active={tab} onChange={setTab} />
     </div>
