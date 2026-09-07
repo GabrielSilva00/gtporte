@@ -81,9 +81,32 @@ Sem o `.env` a aplicação abre em uma tela de configuração explicando o que f
 
 São três portões: os testes unitários, o compilador e o CI.
 
-Os testes cobrem as funções puras dos dois projetos — formatação e mensagens de erro no painel
-(`src/lib/*.test.ts`), leitura do QR e busca de aluno no app do motorista
-(`motorista-app/src/lib/qr.test.ts`). Rode com `npm test` na raiz e dentro de `motorista-app/`.
+Os testes rodam em [Vitest](https://vitest.dev) e cobrem as funções puras dos dois projetos — 37
+casos ao todo. Não exigem banco nem rede: as regras de negócio moram em PL/pgSQL e são garantidas
+pelas policies e pelas funções do Postgres.
+
+| Arquivo | Casos | O que verifica |
+|---|---|---|
+| `src/lib/format.test.ts` | 18 | Iniciais do avatar e cor estável por nome; formatação de hora e data; percentual de ocupação, inclusive divisão por zero; faixas de cor verde/âmbar/vermelho; dias até o vencimento de um documento |
+| `src/lib/supabase.test.ts` | 8 | `emailDeAcesso`, que traduz login em e-mail no cadastro de acesso; tradução das mensagens de erro do Postgres (campo único, bloqueio de RLS); caminho do arquivo do motorista no storage, cuja segunda pasta é o que a policy verifica |
+| `motorista-app/src/lib/qr.test.ts` | 11 | Leitura do prontuário no QR do aluno — código puro, dentro de uma URL ou com ruído em volta; busca do passageiro por código ou por nome, sem exigir acentuação |
+
+Rode com `npm test`, na raiz e dentro de `motorista-app/`:
+
+```
+$ npm test
+
+ RUN  v2.1.9 C:/Gabriel/Facul/GTPorte
+
+ ✓ src/lib/format.test.ts (18 tests) 239ms
+ ✓ src/lib/supabase.test.ts (8 tests) 18ms
+
+ Test Files  2 passed (2)
+      Tests  26 passed (26)
+```
+
+Para ver caso a caso, `npx vitest run --reporter=verbose` lista o nome de cada teste. O mesmo
+relatório aparece no GitHub, em **Actions › CI › Executar testes**.
 
 A cada push e pull request na `main`, o workflow `.github/workflows/ci.yml` instala as
 dependências, roda os testes e faz o build dos dois projetos — é o badge no topo deste arquivo.
