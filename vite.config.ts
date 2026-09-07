@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { fileURLToPath, URL } from 'node:url'
@@ -10,6 +11,9 @@ export default defineConfig({
     },
   },
   server: { port: 5173 },
+  // O app do motorista tem o proprio vitest e a propria config de alias;
+  // sem este exclude os testes dele rodariam duas vezes, aqui e la.
+  test: { exclude: ['**/node_modules/**', 'motorista-app/**'] },
   build: {
     rollupOptions: {
       output: {

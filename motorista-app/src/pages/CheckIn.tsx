@@ -1,21 +1,10 @@
 import { useCallback, useMemo, useState } from 'react'
 import { Bus, Check, ChevronDown, QrCode, RefreshCw, Search, Undo2, UserCheck, X } from 'lucide-react'
 import { useRotas, usePassageiros, confirmarPresenca, cancelarPresenca, hoje, type Pax, type Trecho } from '@/hooks/useMotorista'
+import { combina, prontuarioDoQR } from '@/lib/qr'
 import { LeitorQR } from '@/components/LeitorQR'
 import { Spinner } from '@/components/Spinner'
 import { toast } from '@/components/Toast'
-
-/** Remove acentos para que "jose" encontre "José". */
-const normalizar=(s:string)=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
-
-/**
- * O QR do aluno carrega o prontuario. Alguns geradores embutem o codigo numa
- * URL ou num prefixo, entao ficamos com a maior sequencia de digitos lida.
- */
-function prontuarioDoQR(texto:string):string {
-  const numeros=texto.match(/\d{4,}/g)
-  return numeros ? numeros.sort((a,b)=>b.length-a.length)[0] : texto.trim()
-}
 
 export function CheckIn() {
   const {rotas,loading:lr}=useRotas()
@@ -62,9 +51,8 @@ export function CheckIn() {
   },[pax,confirmou,trecho,checar])
 
   const filtrados=useMemo(()=>{
-    const termo=normalizar(busca.trim())
-    if(!termo) return pax
-    return pax.filter(p=>normalizar(p.nome).includes(termo)||p.prontuario.includes(termo))
+    if(!busca.trim()) return pax
+    return pax.filter(p=>combina(busca,p.nome,p.prontuario))
   },[pax,busca])
 
   // O codigo digitado bate exatamente com um aluno: oferece o check-in direto.

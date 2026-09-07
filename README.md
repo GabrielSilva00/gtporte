@@ -1,5 +1,7 @@
 # GTPORTE
 
+[![CI](https://github.com/GabrielSilva00/gtporte/actions/workflows/ci.yml/badge.svg)](https://github.com/GabrielSilva00/gtporte/actions/workflows/ci.yml)
+
 Sistema de gestão do transporte acadêmico municipal de Araçatuba/SP.
 Implementação do relatório técnico **RT-TDS-2026-008 v0.3**, com os três perfis previstos:
 **administrador**, **estudante** e **motorista**.
@@ -77,8 +79,17 @@ Sem o `.env` a aplicação abre em uma tela de configuração explicando o que f
 
 ## 4. Portão de qualidade
 
-O projeto não tem suíte de testes: o único portão automático é o compilador. Para que ele rode
-sozinho antes de cada commit, ative o hook versionado — **uma vez por clone**:
+São três portões: os testes unitários, o compilador e o CI.
+
+Os testes cobrem as funções puras dos dois projetos — formatação e mensagens de erro no painel
+(`src/lib/*.test.ts`), leitura do QR e busca de aluno no app do motorista
+(`motorista-app/src/lib/qr.test.ts`). Rode com `npm test` na raiz e dentro de `motorista-app/`.
+
+A cada push e pull request na `main`, o workflow `.github/workflows/ci.yml` instala as
+dependências, roda os testes e faz o build dos dois projetos — é o badge no topo deste arquivo.
+
+Para que o compilador rode sozinho antes de cada commit, ative o hook versionado — **uma vez por
+clone**:
 
 ```bash
 git config core.hooksPath .githooks
