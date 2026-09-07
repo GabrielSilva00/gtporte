@@ -15,7 +15,9 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # 22+: o cliente do Supabase e criado no import de src/lib/supabase.ts
+          # e o realtime-js exige WebSocket nativo, que o Node 20 nao tem.
+          node-version: '22'
           cache: npm
 
       - name: Instalar dependências
@@ -43,7 +45,9 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # 22+: o cliente do Supabase e criado no import de src/lib/supabase.ts
+          # e o realtime-js exige WebSocket nativo, que o Node 20 nao tem.
+          node-version: '22'
           cache: npm
           cache-dependency-path: motorista-app/package-lock.json
 
