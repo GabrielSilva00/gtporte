@@ -1,0 +1,14 @@
+@tailwind base;@tailwind components;@tailwind utilities;
+@layer base{*{-webkit-tap-highlight-color:transparent}html{height:-webkit-fill-available}body{min-height:100vh;min-height:-webkit-fill-available;overscroll-behavior:none}::-webkit-scrollbar{width:0;height:0}input,select,textarea{font-size:16px!important}}
+@layer components{
+.safe-b{padding-bottom:max(1rem,env(safe-area-inset-bottom))}
+.btn-primary{@apply w-full rounded-2xl bg-brand-600 px-6 py-4 text-center text-sm font-bold text-white transition-all active:scale-[0.97]}
+.btn-outline{@apply w-full rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center text-sm font-semibold text-white transition-all active:scale-[0.97]}
+.btn-danger{@apply w-full rounded-2xl bg-rose-500/20 px-6 py-4 text-center text-sm font-bold text-rose-400 transition-all active:scale-[0.97]}
+.btn-success{@apply w-full rounded-2xl bg-emerald-500/20 px-6 py-4 text-center text-sm font-bold text-emerald-400 transition-all active:scale-[0.97]}
+.card{@apply rounded-2xl border border-white/[0.06] bg-navy-800/80 p-4 backdrop-blur}
+.chip{@apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold}
+.input-dark{@apply w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 text-white placeholder-white/25 outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/30}
+}
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.anim-in{animation:fadeIn .4s ease-out both}
