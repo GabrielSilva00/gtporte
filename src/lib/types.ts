@@ -356,6 +356,27 @@ export interface Presenca {
 export type TipoMensagem = 'mensagem' | 'solicitacao'
 export type StatusMensagem = 'aberta' | 'respondida' | 'encerrada'
 
+export type MotivoMensagem =
+  | 'atraso'
+  | 'ausencia'
+  | 'troca_rota'
+  | 'horario'
+  | 'documentacao'
+  | 'veiculo'
+  | 'comportamento'
+  | 'outro'
+
+export const ROTULO_MOTIVO_MENSAGEM: Record<MotivoMensagem, string> = {
+  atraso: 'Atraso do ônibus',
+  ausencia: 'Vou faltar',
+  troca_rota: 'Troca de rota',
+  horario: 'Mudança de horário',
+  documentacao: 'Documentação',
+  veiculo: 'Problema no veículo',
+  comportamento: 'Conduta',
+  outro: 'Outro assunto',
+}
+
 export interface Mensagem {
   id: string
   remetente_id: string | null
@@ -368,6 +389,10 @@ export interface Mensagem {
   corpo: string
   lida_em: string | null
   criado_em: string
+  /** Assunto escolhido pelo estudante no app (migration 0017). */
+  motivo: MotivoMensagem | null
+  /** A mensagem encerra 24h depois de criada; continua visível para o autor. */
+  expira_em: string | null
   remetente?: Pick<Perfil, 'id' | 'nome' | 'tipo'> | null
   destinatario?: Pick<Perfil, 'id' | 'nome' | 'tipo'> | null
 }

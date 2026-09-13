@@ -9,6 +9,7 @@ import { CarregandoTabela, ErroCarregamento, Vazio } from '../components/ui/Esta
 import { useToast } from '../components/ui/Toast'
 import { IconeEnviar } from '../components/icons'
 import {
+  ROTULO_MOTIVO_MENSAGEM,
   ROTULO_TIPO_PERFIL,
   type Mensagem,
   type MensagemModelo,
@@ -47,6 +48,8 @@ export default function Mensagens({ tipo = 'mensagem' }: { tipo?: TipoMensagem }
   const { data: mensagens, isLoading, error } = useQuery({
     queryKey: ['mensagens', tipo],
     queryFn: async () => {
+      // Fecha o que passou das 24h para a lista mostrar o status real.
+      await supabase.rpc('encerrar_mensagens_vencidas')
       const { data, error: err } = await supabase
         .from('mensagem')
         .select(SELECT_MENSAGEM)
@@ -226,7 +229,9 @@ export default function Mensagens({ tipo = 'mensagem' }: { tipo?: TipoMensagem }
                   </div>
                   <div className="mt-0.5 flex items-center gap-1.5">
                     {!m.lida_em && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />}
-                    <span className="truncate text-[12.5px]">{m.assunto}</span>
+                    <span className="truncate text-[12.5px]">
+                      {m.motivo ? ROTULO_MOTIVO_MENSAGEM[m.motivo] : m.assunto}
+                    </span>
                   </div>
                   <div className="mt-1 truncate text-[11.5px] text-muted">{m.corpo}</div>
                 </div>

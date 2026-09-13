@@ -25,10 +25,12 @@ export type ChavePagina =
   | 'motoristas'
   | 'universidades'
   | 'documentos'
+  | 'alteracoes'
   | 'relatorios'
   | 'funcionarios'
   | 'solicitacoes'
   | 'mensagens'
+  | 'comunicados'
   | 'configuracoes'
 
 export interface Pagina {
@@ -59,8 +61,10 @@ export const PAGINAS: Pagina[] = [
 
   { chave: 'solicitacoes', rotulo: 'Solicitações', caminho: '/solicitacoes', categoria: 'Comunicação', Icone: IconeSolicitacao },
   { chave: 'mensagens', rotulo: 'Mensagens', caminho: '/mensagens', categoria: 'Comunicação', Icone: IconeMensagem },
+  { chave: 'comunicados', rotulo: 'Comunicados', caminho: '/comunicados', categoria: 'Comunicação', Icone: IconeMensagem },
 
   { chave: 'documentos', rotulo: 'Documentos', caminho: '/documentos', categoria: 'Administração', Icone: IconeDocumento },
+  { chave: 'alteracoes', rotulo: 'Alterações cadastrais', caminho: '/alteracoes', categoria: 'Administração', Icone: IconeEstudante },
   { chave: 'relatorios', rotulo: 'Relatórios', caminho: '/relatorios', categoria: 'Administração', Icone: IconeRelatorio },
   { chave: 'funcionarios', rotulo: 'Funcionários', caminho: '/funcionarios', categoria: 'Administração', Icone: IconeEquipe, somenteAdmin: true },
   { chave: 'configuracoes', rotulo: 'Configurações', caminho: '/configuracoes', categoria: 'Administração', Icone: IconeEngrenagem },
