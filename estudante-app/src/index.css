@@ -1,14 +1,99 @@
-@tailwind base;@tailwind components;@tailwind utilities;
-@layer base{*{-webkit-tap-highlight-color:transparent}html{height:-webkit-fill-available}body{min-height:100vh;min-height:-webkit-fill-available;overscroll-behavior:none}::-webkit-scrollbar{width:0;height:0}input,select,textarea{font-size:16px!important}}
-@layer components{
-.safe-b{padding-bottom:max(1rem,env(safe-area-inset-bottom))}
-.btn-primary{@apply w-full rounded-2xl bg-brand-600 px-6 py-4 text-center text-sm font-bold text-white transition-all active:scale-[0.97]}
-.btn-outline{@apply w-full rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center text-sm font-semibold text-white transition-all active:scale-[0.97]}
-.btn-danger{@apply w-full rounded-2xl bg-rose-500/20 px-6 py-4 text-center text-sm font-bold text-rose-400 transition-all active:scale-[0.97]}
-.btn-success{@apply w-full rounded-2xl bg-emerald-500/20 px-6 py-4 text-center text-sm font-bold text-emerald-400 transition-all active:scale-[0.97]}
-.card{@apply rounded-2xl border border-white/[0.06] bg-navy-800/80 p-4 backdrop-blur}
-.chip{@apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold}
-.input-dark{@apply w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 text-white placeholder-white/25 outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/30}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------
+ * Tokens de cor. O tema claro e o padrao do :root; o escuro entra pela
+ * classe .dark no <html>, aplicada por src/hooks/useTema.ts.
+ * Valores em RGB separados por espaco para o Tailwind poder aplicar alfa.
+ * ------------------------------------------------------------------- */
+@layer base {
+  :root {
+    --c-base: 248 250 252;
+    --c-surface: 255 255 255;
+    --c-raised: 241 245 249;
+    --c-line: 226 232 240;
+    --c-ink: 15 23 42;
+    --c-muted: 100 116 139;
+    --c-faint: 148 163 184;
+    --c-brand: 37 99 235;
+    --c-brand-strong: 29 78 216;
+    --c-ok: 5 150 105;
+    --c-warn: 180 83 9;
+    --c-err: 225 29 72;
+    --c-info: 2 132 199;
+    --c-shadow: 15 23 42;
+  }
+
+  .dark {
+    --c-base: 15 23 42;
+    --c-surface: 30 41 59;
+    --c-raised: 51 65 85;
+    --c-line: 71 85 105;
+    --c-ink: 248 250 252;
+    --c-muted: 148 163 184;
+    --c-faint: 100 116 139;
+    --c-brand: 59 130 246;
+    --c-brand-strong: 37 99 235;
+    --c-ok: 52 211 153;
+    --c-warn: 251 191 36;
+    --c-err: 251 113 133;
+    --c-info: 56 189 248;
+    --c-shadow: 0 0 0;
+  }
+
+  * { -webkit-tap-highlight-color: transparent; }
+  html { height: -webkit-fill-available; }
+  body {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    overscroll-behavior: none;
+    @apply bg-base text-ink antialiased font-sans;
+    transition: background-color .2s ease, color .2s ease;
+  }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+  /* iOS da zoom em campo com fonte menor que 16px */
+  input, select, textarea { font-size: 16px !important; }
 }
-@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-.anim-in{animation:fadeIn .4s ease-out both}
+
+@layer components {
+  .safe-b { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+  .safe-t { padding-top: max(0.5rem, env(safe-area-inset-top)); }
+
+  .card { @apply rounded-xl border border-line/60 bg-surface p-3.5 shadow-card; }
+  .card-flat { @apply rounded-2xl bg-raised/60 p-4; }
+
+  .btn-primary { @apply w-full rounded-xl bg-brand-600 px-5 py-2.5 text-center text-sm font-bold text-white shadow-card transition-all active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100; }
+  .btn-outline { @apply w-full rounded-xl border border-line bg-surface px-5 py-2.5 text-center text-sm font-semibold text-ink transition-all active:scale-[0.97] disabled:opacity-40; }
+  .btn-danger  { @apply w-full rounded-xl bg-err/10 px-5 py-2.5 text-center text-sm font-bold text-err transition-all active:scale-[0.97] disabled:opacity-40; }
+  .btn-success { @apply w-full rounded-xl bg-ok/10 px-5 py-2.5 text-center text-sm font-bold text-ok transition-all active:scale-[0.97] disabled:opacity-40; }
+
+  .chip { @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold; }
+  .chip-ok   { @apply chip bg-ok/10 text-ok; }
+  .chip-warn { @apply chip bg-warn/10 text-warn; }
+  .chip-err  { @apply chip bg-err/10 text-err; }
+  .chip-info { @apply chip bg-info/10 text-info; }
+
+  .field {
+    @apply w-full rounded-lg border border-line bg-surface px-3 py-2 text-ink outline-none transition-colors;
+    @apply placeholder:text-faint focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20;
+  }
+  /* Nome antigo mantido para nao quebrar telas ainda nao migradas */
+  .input-dark { @apply field; }
+
+  .aviso { @apply flex items-start gap-3 rounded-2xl border p-4; }
+  .aviso-warn { @apply aviso border-warn/20 bg-warn/10; }
+  .aviso-err  { @apply aviso border-err/20 bg-err/10; }
+  .aviso-info { @apply aviso border-info/20 bg-info/10; }
+}
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.anim-in { animation: fadeIn .4s ease-out both; }
+
+@keyframes pulseSoft { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+.anim-pulse { animation: pulseSoft 1.6s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-in, .anim-pulse { animation: none; }
+  * { transition-duration: .01ms !important; }
+}

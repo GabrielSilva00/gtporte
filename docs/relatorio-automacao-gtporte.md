@@ -1,420 +1,236 @@
-# Automação de desenvolvimento com agente de IA no GTPorte
+# Skills, Hooks e Agentes de IA no desenvolvimento
 
-**Trabalho de Conclusão de Curso 2026 — Grupo TDS-2026-008**
-Tecnologia em Desenvolvimento de Sistemas · 5º termo
-Relatório de processo e aprendizados · 24/08/2026
-
----
-
-## 1. Contexto
-
-O GTPorte é um sistema de gestão de transporte acadêmico municipal, construído em React 18 com
-TypeScript, Vite e Tailwind sobre Supabase (PostgreSQL, autenticação, armazenamento de arquivos e
-Row Level Security). Ele atende três públicos em painéis separados: o setor de transporte, o
-estudante e o motorista.
-
-Depois de uma rodada de validação com o cliente, surgiram dezesseis solicitações de mudança. Elas
-iam de ajustes visuais simples — remover dois textos da tela de entrada, reduzir o tamanho de uns
-cards — a mudanças estruturais de verdade: um fluxo de aprovação entre estudante e motorista, um
-cadastro de motorista com os campos exigidos pela legislação de transporte escolar, e um bloco
-institucional de configuração com cerca de setenta campos.
-
-Este relatório registra **como** essas mudanças foram executadas com o apoio de um agente de IA
-(Claude Code), o que foi automatizado, o que deu certo, o que não deu, e o que faríamos diferente.
-O objetivo não é descrever o produto — isso está no README e no relatório técnico — e sim o
-processo de trabalho.
+**Relatório de experiência e aprendizados**
+Trabalho de Conclusão de Curso 2026 — Grupo TDS-2026-008
+Tecnologia em Desenvolvimento de Sistemas · 5º termo · 24/08/2026
 
 ---
 
-## 2. O que foi entregue
+## 1. Objetivo e contexto
 
-| Indicador | Valor |
-|---|---|
-| Commits na branch de trabalho | 12 |
-| Arquivos alterados | 49 |
-| Linhas adicionadas / removidas | 8.071 / 601 |
-| Arquivos novos | 26 |
-| Migrations de banco novas | 6 (`0008` a `0012`, mais `0014` de correções) |
-| Tabelas no banco | 15 → 22 |
-| Telas do painel do motorista | 4 → 6 |
-| Relatórios gerenciais | 6 → 10 |
+Este relatório documenta a criação e o uso de três mecanismos de automação com agente de IA —
+**Skill**, **Hooks** e **agentes especializados** — durante uma rodada de manutenção do GTPorte,
+sistema de transporte acadêmico do nosso TCC (React + TypeScript sobre Supabase).
 
-As dezesseis solicitações foram atendidas. As mudanças de banco ficaram versionadas como migrations
-idempotentes no repositório, para serem aplicadas no painel do Supabase — o agente não teve acesso
-ao banco de produção, o que foi uma decisão consciente do grupo.
+O foco aqui é o **processo e o resultado da automação**, não as funcionalidades entregues.
+
+**Agente de IA utilizado:** Claude Code, da Anthropic, executando o modelo **Claude Opus 5**, em
+terminal, com acesso ao sistema de arquivos e ao Git do projeto.
+
+Um dado importante do contexto: o projeto **não possui testes automatizados**. O único portão de
+qualidade existente era o comando `npm run lint`, que na prática é apenas `tsc --noEmit` — ele
+garante que o código compila, não que funciona. Toda a automação foi desenhada em torno dessa
+limitação.
 
 ---
 
-## 3. Como o trabalho foi organizado
+## 2. A Skill criada
 
-### 3.1 Planejamento antes da execução
+**`/testar-site`** — arquivo `.claude/skills/testar-site/SKILL.md`, com o checklist de apoio em
+`checklist.md`.
 
-O primeiro passo não foi escrever código, e sim mapear o sistema. Três agentes de exploração
-percorreram o repositório em paralelo com escopos diferentes — telas administrativas principais,
-telas administrativas restantes, e infraestrutura mais modelo de dados — e devolveram um retrato do
-que já existia, com caminho de arquivo e número de linha.
+Uma Skill é um conjunto de instruções empacotado que o agente carrega quando a tarefa corresponde
+ao que ela cobre. Esta descreve um roteiro de verificação do sistema rodando no navegador: sobe o
+servidor, percorre 45 itens nos três painéis (administrativo, estudante e motorista), lê o console
+em busca de erros e devolve uma tabela de aprovado, reprovado ou bloqueado por item.
 
-Isso mudou o resultado de forma concreta. O levantamento mostrou que:
+Três decisões de projeto que valeram a pena:
 
-- não existia componente de abas: cada tela que precisava reimplementava com botões soltos, em duas
-  variações visuais diferentes;
-- a paleta de cores estava duplicada em sete lugares;
-- a tabela `documento` só tinha `estudante_id`, então "documentos do motorista" não era um ajuste de
-  tela, era modelagem nova;
-- `src/lib/paginas.ts` espelha à mão uma função do banco, sem nada garantindo que as duas listas
-  concordem.
+- **Distinguir "bloqueado" de "reprovado".** Como as mudanças de banco são aplicadas à mão, uma
+  tela pode falhar só porque a tabela ainda não existe. Tratar isso como defeito produziria um
+  relatório enganoso, então a Skill primeiro verifica se as estruturas existem.
+- **Limite de duas tentativas por item.** Sem esse limite, o agente insiste indefinidamente no
+  mesmo botão que não responde.
+- **Destacar a regressão mais provável.** Uma função central do banco havia sido reescrita e
+  precisava continuar funcionando para dois públicos diferentes. O checklist trata isso como item
+  em destaque, não como mais uma linha no meio de 45.
 
-Nenhuma dessas informações estava no enunciado das solicitações. Todas mudaram o plano.
+> **Resultado alcançado:** a Skill foi criada, versionada e revisada, mas **não chegou a ser
+> executada de ponta a ponta**, porque as mudanças de banco ainda não foram aplicadas no ambiente
+> do projeto. O que temos hoje é o roteiro pronto, não a evidência de execução. Registramos isso
+> como pendência real, e não como entrega concluída.
 
-### 3.2 Decisões que precisaram de gente
+---
 
-Quatro pontos foram levados ao usuário antes de executar, porque interpretações diferentes levariam
-a trabalhos diferentes:
+## 3. Os Hooks criados
 
-1. **Ambiguidade real no enunciado.** Os itens 1 e 2 falavam em "página inicial" e "página de
-   login" como se fossem telas distintas, mas o layout descrito (imagem à esquerda, campo estreito à
-   direita) e os dois textos a remover estavam ambos na tela de login. Os itens 3 e 4, por sua vez,
-   falavam de "página inicial" querendo dizer o painel pós-login. Executar sem perguntar teria
-   produzido metade do trabalho no lugar errado.
-2. **Formato do link de acesso** (item 16): link com token de convite ou link simples copiável.
-3. **Estratégia de banco**: gerar as migrations no repositório ou dar acesso ao Supabase ao agente.
-4. **Onde a automação deveria viver**: versionada no repositório ou apenas na máquina de um
-   integrante.
+Hooks são comandos que o agente executa automaticamente em momentos definidos do seu ciclo de
+trabalho. Criamos três, todos versionados no repositório.
 
-### 3.3 Execução em fases
-
-O trabalho foi dividido em fases, com um commit ao fim de cada uma:
-
-| Fase | Conteúdo | Commits |
+| Hook | Quando dispara | O que faz |
 |---|---|---|
-| 0 | Componentes base reutilizáveis (`Tabs`, `Campo`, `UploadFoto`) | 1 |
-| 1 | Ajustes visuais rápidos (itens 1, 2, 3, 4, 7, 11) | 1 |
-| 2 | Seis migrations de banco | 1 |
-| 3 | Telas que consomem as migrations (itens 5, 6, 8, 9, 12, 13, 14, 15, 16) | 6 |
-| 4 | Skill, hooks e agente revisor | 1 |
-| 5 | Tarefa delegada e correções da revisão | 1 |
-| 6 | Documentação | 1 |
+| `checar-tipos.cjs` | Após cada edição de arquivo | Roda a verificação de tipos e devolve os erros ao agente |
+| `antes-do-commit.cjs` | Antes de um comando `git commit` | Bloqueia o commit se o projeto não compilar ou se houver `console.log` novo |
+| `.githooks/pre-commit` | Hook nativo do Git | A mesma checagem, para quem commita fora do agente |
 
-A fase 0 existir foi uma escolha deliberada. Três das mudanças pediam formulários em abas, e duas
-somavam cerca de cento e dez campos. Sem extrair antes um componente de abas e um renderizador de
-campo declarativo, as telas de motorista e de configurações teriam passado de mil linhas de JSX
-repetido cada uma. Com eles, os campos viraram dados: `src/lib/motorista.ts` e
-`src/lib/organizacao.ts` descrevem os formulários como listas de objetos, e as telas apenas
-percorrem essas listas.
+O segundo é o hook atrelado a uma tarefa do Git. Ele respeita `--no-verify` para casos
+excepcionais. O terceiro existe porque um hook que só funciona dentro do agente é hábito pessoal;
+em `.githooks/`, vira regra do projeto — basta ativar uma vez por clone com
+`git config core.hooksPath .githooks`.
 
----
+**Resultado alcançado.** Os dois hooks do agente foram testados nos dois caminhos antes de serem
+versionados: com o código limpo (passam em silêncio) e com um defeito inserido de propósito e
+depois revertido (bloqueiam com a mensagem correta). O hook de commit efetivamente barrou um
+`console.log` de teste que colocamos no índice.
 
-## 4. A automação criada
+**Duas correções durante a construção**, que só apareceram porque testamos:
 
-Toda a automação ficou versionada no repositório, em `.claude/` e `.githooks/`, para valer para o
-grupo inteiro e não apenas para quem estivesse com o agente aberto.
-
-### 4.1 Skill de teste — `/testar-site`
-
-`.claude/skills/testar-site/` é um roteiro de verificação ponta a ponta no navegador. O projeto não
-tem suíte de testes automatizados; `tsc --noEmit` garante que o código compila, não que funciona.
-A skill cobre essa diferença.
-
-Ela sobe o servidor de desenvolvimento, percorre um checklist de 45 itens nos três painéis, lê o
-console do navegador filtrando por erros, e devolve uma tabela de aprovado, reprovado ou bloqueado
-por item.
-
-Três detalhes que valeram a pena:
-
-- **"Bloqueado" é diferente de "reprovado".** Como as migrations são aplicadas manualmente, uma tela
-  pode falhar simplesmente porque a tabela ainda não existe. Tratar isso como defeito produziria um
-  relatório enganoso, então a skill primeiro confere se as tabelas existem e classifica de acordo.
-- **Limite de duas tentativas por item.** Sem esse limite, um agente insiste no mesmo botão
-  indefinidamente.
-- **Uma seção dedicada à regressão mais provável.** A migration `0012` reescreveu
-  `confirmar_presenca`, que é usada tanto pelo aluno quanto pelo balcão. O caminho do balcão
-  precisava continuar idêntico. O checklist trata isso como item destacado, não como mais uma linha.
-
-### 4.2 Hooks de qualidade
-
-| Hook | Evento | O que faz |
-|---|---|---|
-| `checar-tipos.cjs` | `PostToolUse` em `Edit\|Write` | Roda `tsc --noEmit` após cada alteração em `src/` e devolve os erros ao agente |
-| `antes-do-commit.cjs` | `PreToolUse` em `Bash` | Intercepta `git commit`: barra se o projeto não compilar ou se houver `console.log` novo no índice |
-| `.githooks/pre-commit` | Hook nativo do git | A mesma checagem fora do agente, para quem commita pelo terminal ou pelo editor |
-
-O segundo é o hook atrelado a uma tarefa do git. Ele respeita `--no-verify` para o caso excepcional,
-e o hook nativo garante que o portão vale para o grupo todo — basta rodar uma vez por clone:
-
-```
-git config core.hooksPath .githooks
-```
-
-**Uma decisão técnica que mudou o resultado:** a primeira versão dos hooks foi escrita em shell,
-usando `jq` para ler o JSON de entrada. Ao testar, descobrimos que `jq` não está instalado na
-máquina de desenvolvimento. Reescrevemos em Node — que o projeto já exige — e o hook passou a
-funcionar igual no Git Bash, no PowerShell e no Linux, sem dependência nova. Depois disso, uma
-segunda correção: a chamada usava `npx` com `shell: true`, o que gerava um aviso de depreciação do
-Node em toda execução; passamos a invocar o compilador local direto (`node_modules/typescript/bin/tsc`).
-
-Ambos os hooks foram testados nos dois caminhos antes de serem versionados: com o código limpo, e
-com um defeito proposital inserido e depois revertido.
-
-### 4.3 Agente revisor
-
-`.claude/agents/revisor-gtporte.md` define um subagente especializado no que o compilador não pega:
-função `security definer` sem validação de autor, componentes de `ui/` reimplementados à mão, cor
-fora da paleta do Tailwind, e divergência entre `src/lib/paginas.ts` e a função `paginas_do_sistema()`
-do banco.
-
-A escolha do escopo foi deliberada: um revisor genérico repetiria o que o `tsc` já faz. O valor está
-em codificar o conhecimento específico deste projeto — sobretudo o fato de que toda RPC do Supabase
-roda como `security definer` e, portanto, ignora a Row Level Security por definição. Uma função nova
-que esqueça de checar quem está chamando é uma falha de segurança que nenhuma ferramenta genérica
-apontaria.
+1. A primeira versão foi escrita em shell, usando `jq` para ler os dados de entrada. `jq` não está
+   instalado na máquina de desenvolvimento. Reescrevemos em Node — que o projeto já exige — e
+   passaram a funcionar igual no Git Bash, no PowerShell e no Linux.
+2. A chamada ao compilador usava `npx`, o que gerava um aviso de depreciação em toda execução.
+   Passamos a invocar o compilador local diretamente.
 
 ---
 
-## 5. Tarefa de desenvolvimento delegada a um agente
+## 4. Os agentes utilizados
 
-Para exercitar a delegação de uma unidade fechada de trabalho, escolhemos um problema real
-encontrado no levantamento da fase de planejamento.
+Além do agente principal, usamos subagentes — instâncias com escopo próprio, que trabalham em
+paralelo e devolvem apenas a conclusão.
 
-### 5.1 O problema
+### 4.1 Agentes de exploração (3, em paralelo)
 
-O mapa de cores da situação operacional da rota estava duplicado **literalmente**, com os mesmos
-seis valores hexadecimais, em três arquivos:
+Antes de planejar qualquer coisa, três agentes percorreram o repositório com escopos diferentes e
+devolveram um retrato do que existia, com caminho de arquivo e número de linha.
 
-- `src/pages/Dashboard.tsx`
-- `src/pages/estudante/MinhaRota.tsx`
-- `src/pages/motorista/MinhasRotas.tsx`
+**Resultado:** revelaram quatro problemas estruturais que não estavam no enunciado das tarefas —
+entre eles, que uma funcionalidade pedida como "ajuste de tela" exigia, na verdade, modelagem de
+dados nova. Descobrir isso antes de começar evitou retrabalho.
 
-### 5.2 Por que esta tarefa
+### 4.2 Agente de planejamento (1)
 
-Ela tem as três características que tornam uma tarefa boa para delegar: **escopo fechado** (três
-arquivos nomeados), **critério de sucesso objetivo** (`tsc --noEmit` limpo e build passando), e
-**resultado verificável sem julgamento subjetivo** (a aparência não pode mudar).
+Recebeu o resultado da exploração e desenhou a estratégia de implementação, avaliando alternativas
+de modelagem antes de escolher.
 
-### 5.3 O prompt
+### 4.3 Agente de desenvolvimento (1) — tarefa delegada
 
-O prompt entregue ao agente continha, além do problema:
+Delegamos uma unidade fechada de trabalho: eliminar uma constante de cores duplicada literalmente
+em três arquivos, substituindo-a por uma função única.
 
-- os caminhos e as linhas aproximadas das três duplicatas;
-- a função canônica já criada (`badgeSituacaoOperacional` em `src/lib/format.ts`) e seu tipo de
-  retorno;
-- **uma armadilha explícita**: os arquivos usam `ROTULO_SITUACAO_OPERACIONAL` para o texto e
-  `COR_SITUACAO` para a cor; a função nova traz as duas coisas, então o import antigo pode ou não
-  ficar sem uso, e isso precisa ser verificado caso a caso;
-- o comando exato de verificação, com a observação de **não usar `npx`** por ser lento nesta
-  máquina;
-- limites: não commitar, não tocar em outros arquivos, manter os comentários em português.
+A tarefa foi escolhida por ter as três características que tornam uma delegação viável: **escopo
+fechado** (três arquivos nomeados), **critério de sucesso objetivo** (compilar e construir sem
+erro) e **resultado verificável sem julgamento subjetivo** (a aparência não podia mudar).
 
-Nomear a armadilha antecipadamente foi o que mais rendeu. É exatamente o tipo de detalhe que produz
-um erro de compilação silencioso — variável importada e não usada — e que custa uma ida e volta
-inteira quando não é dito.
+No prompt, além do objetivo, incluímos **uma armadilha nomeada antecipadamente**: um import podia
+ou não ficar sem uso após a mudança, dependendo do arquivo, e isso precisava ser conferido caso a
+caso. Foi o detalhe que mais rendeu — é exatamente o tipo de coisa que gera erro silencioso.
 
-### 5.4 Resultado
+**Resultado:** o agente concluiu em uma passagem, sem correção de rumo, e verificou o próprio
+trabalho. Conferimos de forma independente e estava correto. Ainda assim, **ajustamos um ponto**:
+ele usou uma solução que enfraquece a checagem de tipos para contornar um detalhe de escopo.
+Registramos como aprendizado — revisar a entrega do agente continua necessário **mesmo quando ela
+passa em todos os critérios objetivos**.
 
-O agente executou a tarefa em uma passagem, sem precisar de correção de rumo. O que ele entregou:
+### 4.4 Agente revisor (1) — criado por nós
 
-- removeu as três constantes duplicadas;
-- ajustou os imports caso a caso — em dois arquivos `ROTULO_SITUACAO_OPERACIONAL` ficou sem uso e
-  foi removido, no terceiro continuou sendo usado em outro ponto e foi mantido, que era exatamente
-  a armadilha apontada no prompt;
-- adaptou cada ponto de uso ao formato do JSX local: onde havia o componente `<Badge>`, passou a
-  função direto; onde o JSX aplicava cor via `style`, leu `.bg` e `.fg`;
-- preservou o `.toUpperCase()` que já existia, para o texto exibido não mudar;
-- verificou com `tsc --noEmit` limpo e `npm run build` completo.
+Definimos um subagente especializado nas regras deste projeto
+(`.claude/agents/revisor-gtporte.md`), focado no que o compilador não vê: funções de banco que
+ignoram as regras de acesso, componentes reimplementados à mão, cores fora da paleta e divergência
+entre listas mantidas em dois lugares.
 
-**Conferência independente.** Confirmamos por conta própria que nenhuma ocorrência de
-`COR_SITUACAO` restou no código, que os rótulos de `badgeSituacaoOperacional` são idênticos aos de
-`ROTULO_SITUACAO_OPERACIONAL`, e que o build passa.
+A escolha do escopo foi deliberada — um revisor genérico repetiria o que a verificação de tipos já
+faz.
 
-Uma ressalva: em `MinhaRota.tsx` o agente derivou o valor fora do bloco condicional e precisou de
-asserção não-nula (`badgeSituacao!`) em três lugares. É seguro — o trecho só renderiza sob
-`rota &&` — mas é o tipo de solução que enfraquece a checagem para contornar um detalhe de escopo.
-Movemos o cálculo para dentro do bloco, o que dispensou a asserção. Vale como registro de que
-**revisar a entrega do agente continua sendo necessário mesmo quando ela passa em todos os testes**:
-o critério objetivo estava satisfeito, e ainda assim havia o que melhorar.
+**Resultado, e foi o mais relevante de toda a automação:** o revisor analisou a entrega inteira e
+encontrou **onze problemas, quatro deles graves**, com a verificação de tipos passando limpa. Os
+principais:
 
----
+- **Dados pessoais expostos.** Acrescentamos CPF, RG e endereço a uma tabela cuja regra de leitura
+  era "qualquer usuário autenticado" — regra escrita quando a tabela só tinha nome e telefone.
+  Qualquer estudante passava a ler o CPF de toda a equipe de motoristas.
+- **Auto-aprovação de documento.** Faltava validar um campo na regra de inserção, permitindo que o
+  motorista aprovasse o próprio documento por chamada direta à API.
+- **Função de banco contornando as regras de acesso**, desfazendo uma decisão de segurança tomada
+  meses antes.
+- **Indicadores da tela inicial zerados em silêncio**, por incompatibilidade entre a consulta usada
+  e os campos esperados pela tela — sem nenhum erro de compilação.
 
-## 6. Revisão automatizada da branch
+Todos foram corrigidos.
 
-Depois de fechar as dezesseis solicitações, rodamos o agente revisor sobre a branch inteira
-comparada com `main` — 44 arquivos, 7.227 linhas adicionadas até aquele ponto. O `tsc --noEmit` passava limpo, então
-tudo o que ele encontrou é, por definição, o que o compilador não vê.
-
-Foram **onze achados**, quatro deles graves. Os mais relevantes:
-
-**1. Dados pessoais do motorista expostos.** A migration `0011` acrescentou CPF, RG, data de
-nascimento, endereço residencial completo e e-mail pessoal à tabela `motorista`. Essa tabela tinha,
-desde o início do projeto, uma policy de leitura `auth.role() = 'authenticated'` — escrita quando ela
-continha apenas nome, telefone e CNH, para que o estudante pudesse ver quem dirige a rota dele.
-Ninguém revisou a policy ao ampliar a tabela. O resultado: qualquer estudante logado conseguia ler
-o CPF e o endereço de toda a equipe de motoristas.
-
-**2. Motorista podia aprovar o próprio documento.** A policy de inserção em `documento_motorista`
-validava o `motorista_id`, mas não o `status`. Como existe um gatilho que recalcula a situação
-documental na hora, bastava inserir um documento já com `status = 'aprovado'` por chamada direta à
-API para se auto-aprovar, contornando a regra de que só o administrador aprova. A tela enviava
-`'pendente'` por convenção, não por obrigação. A mesma falha existia no lado do estudante desde o
-início do projeto.
-
-**3. Uma RPC contornando a Row Level Security.** A função `ocupacao_por_data`, criada na migration
-`0008`, repete o trabalho de uma view que havia sido declarada `security_invoker = true`
-justamente para que a RLS valesse. A função nova, sendo `security definer` e sem checar quem chama,
-desfazia essa decisão.
-
-**4. Indicadores da Visão geral zerados em silêncio.** Este é o achado mais instrutivo. A RPC
-`ocupacao_por_data` devolve seis colunas; o hook a tipava como `OcupacaoRota`, que tem quinze. O
-Dashboard filtrava por `o.status`, campo que a RPC não devolve — então "Rotas em operação" mostrava
-zero, "em revisão" mostrava zero e a "Ocupação média" somava capacidade zero. **Sem nenhum erro de
-compilação**, porque a conversão de tipo forçada (`as OcupacaoRota[]`) mentia para o compilador.
-
-Os demais achados: salvar um bloco em Configurações apagava o que estava digitado nos outros blocos
-ainda não salvos; os filtros de relatório vazavam de um relatório para o outro, produzindo recorte
-fantasma em documento de prestação de contas; o `UploadFoto` criava um object URL por render sem
-revogar; um checkbox usava hexadecimal cru divergindo do token da paleta; e o cancelamento de
-solicitação não era registrado no log de auditoria.
-
-O revisor também informou explicitamente o que **não** encontrou: nenhum componente de `ui/`
-reimplementado à mão nas telas novas, RLS completa nas sete tabelas criadas, listas de páginas do
-front e do banco em sincronia, e o retorno jsonb de `minha_rota()` batendo campo a campo com o tipo
-TypeScript.
-
-**Todos os achados acionáveis foram corrigidos** na migration `0014_correcoes_revisao.sql` e no
-commit `f5bae1f`. O seed de demonstração, que estava dentro de `supabase/migrations/` e seria
-aplicado por um `supabase db push` em produção, foi movido para `supabase/seed/`.
-
-**O que isso ensina.** Os três primeiros achados são falhas de segurança que passariam despercebidas
-em revisão humana por serem *invisíveis no diff*: em nenhum deles o código errado foi escrito nesta
-branch. O que a branch fez foi **acrescentar colunas a uma tabela cuja policy já existia** — e a
-policy, que não aparece no diff, deixou de ser adequada. Revisar só o que mudou não bastava; era
-preciso revisar o que o que mudou *afetou*.
-
-O quarto mostra o custo de uma conversão de tipo forçada: `as OcupacaoRota[]` transformou um erro
-que o compilador teria pego numa tela que mostra zero sem reclamar.
+**Uma limitação encontrada.** A definição do agente revisor é lida pelo Claude Code ao iniciar uma
+sessão. Como a criamos no meio da sessão em andamento, ela ainda não estava registrada, e a
+execução foi feita apontando um agente genérico para o arquivo de definição. O resultado foi o
+mesmo, mas vale registrar: **agentes personalizados passam a valer a partir da próxima sessão**.
 
 ---
 
-## 7. O que funcionou
+## 5. O que pode ser melhorado
 
-**Explorar antes de planejar.** Os três agentes de exploração custaram alguns minutos e evitaram
-retrabalho em pelo menos quatro pontos — o mais caro deles seria descobrir só na hora de codificar
-que "documentos do motorista" exigia modelagem nova, e não um filtro de tela.
+### Na Skill
 
-**Perguntar quando a ambiguidade é real.** Quatro perguntas no início pouparam metade de uma fase de
-trabalho no lugar errado. O critério aplicado foi: perguntar quando leituras diferentes levariam a
-trabalhos diferentes; decidir sozinho quando existe um padrão óbvio.
+- **Executá-la.** É a pendência óbvia. O roteiro existe; a evidência de execução, não.
+- **Saída legível por máquina.** Hoje devolve uma tabela em texto. Em JSON, daria para acompanhar a
+  evolução dos itens entre execuções e detectar regressão.
+- **Preparar os próprios dados.** A Skill exige que o usuário informe credenciais dos três perfis e
+  que exista um estudante em condições específicas. Se ela mesma criasse esse cenário, rodaria
+  sozinha.
+- **Registrar evidência visual.** Capturar imagem de cada item reprovado transformaria o relatório
+  em algo que a banca consegue conferir sem repetir o teste.
+- **Reduzir o checklist.** 45 itens escritos à mão são conhecimento que envelhece junto com o
+  código. Boa parte poderia virar teste automatizado; a Skill ficaria só com o que faz sentido
+  verificar visualmente.
 
-**Fazer a base antes das telas.** A fase 0, que não entregou nenhuma funcionalidade visível, foi o
-que permitiu que as três telas de formulário grandes ficassem legíveis.
+### Nos Hooks
 
-**Commit por fase, com mensagem explicando o porquê.** As mensagens registram as decisões de projeto
-— por que uma tabela irmã em vez de generalizar `documento`, por que uma coluna `situacao` nova em
-vez de estender o enum existente. Isso vale mais para o relatório técnico do que qualquer comentário
-no código.
-
-**Testar o hook antes de versionar.** Foi o que revelou a ausência do `jq`. Um hook quebrado é pior
-que hook nenhum, porque falha em silêncio.
-
----
-
-## 8. O que não funcionou
-
-**Heredoc de shell com conteúdo grande.** Editar arquivos passando blocos extensos de código por
-heredoc falhou duas vezes com erro de sintaxe do shell. A solução foi escrever scripts de edição em
-Node e executá-los — mais previsível, e com a vantagem de o script ficar disponível para reexecutar.
-
-**Codificação de caracteres no Windows.** Duas ocorrências. A saída do Python quebrava ao imprimir
-caracteres combinantes no console (cp1252), e a correção da faixa de diacríticos em `exportar.ts`
-precisou ser feita via Node para escrever `̀-ͯ` escapado — tanto o editor quanto o Python
-inseriam os caracteres crus, invisíveis no fonte, que era exatamente o defeito original.
-
-**Fim de linha CRLF.** As primeiras edições por script falhavam ao procurar trechos de várias linhas,
-porque os arquivos do repositório usam CRLF e os padrões de busca usavam LF. Resolvido com um
-utilitário que normaliza ao ler e restaura ao gravar. É o tipo de atrito que consome tempo sem
-produzir nada.
-
-**Confiar em ferramenta não verificada.** Escrever os hooks assumindo `jq` instalado foi otimismo.
-Custou uma reescrita completa.
-
-**Um laço infinito no próprio gerador deste relatório.** O conversor de Markdown para `.docx`
-tratava linhas iniciadas por `*` como lista. Um parágrafo que começa com `**Negrito**` casa com
-esse padrão sem ser lista: o laço recusava a linha, não avançava o índice, e o script travava. Só
-apareceu porque o texto deste relatório usa negrito no início de vários parágrafos. É um lembrete de
-que código auxiliar — script de build, gerador, ferramenta de apoio — merece o mesmo cuidado que o
-código do produto, e frequentemente não recebe.
+- **Verificação incremental.** Hoje o hook roda a checagem do projeto inteiro a cada arquivo salvo,
+  o que leva dezenas de segundos. Em edições em série, é tempo desperdiçado — deveria aguardar uma
+  pausa antes de rodar, ou checar apenas o que mudou.
+- **A busca por `console.log` é ingênua.** Usa expressão regular simples: não detecta variações com
+  espaçamento diferente e sinalizaria uma linha comentada. Uma ferramenta de análise estática
+  resolveria melhor.
+- **O hook de commit não constrói o projeto.** Verifica tipos, mas não roda a construção — existem
+  erros que só aparecem nessa etapa.
+- **Ativação manual.** O hook nativo do Git exige um comando por clone. Poderia ser configurado
+  automaticamente na instalação das dependências.
+- **Falham em silêncio sem dependências.** Se as bibliotecas não estiverem instaladas, os hooks
+  simplesmente não checam nada. Deveriam avisar, em vez de passar batido.
+- **A limitação de fundo:** os hooks só conseguem verificar tipos porque **não existe suíte de
+  testes**. Com testes, o mesmo mecanismo teria muito mais valor.
 
 ---
 
-## 9. Como o processo pode melhorar
+## 6. Aprendizados
 
-**1. Testes automatizados de verdade.** É a lacuna maior. Hoje `npm run lint` é apenas
-`tsc --noEmit`: garante que o código compila, não que funciona. Vitest com Testing Library nas
-funções puras de `src/lib/` (`format.ts`, `exportar.ts`) e Playwright no fluxo de presença dariam
-uma rede de segurança real, e o hook de pré-commit passaria a rodá-los.
+**O agente rende mais em preparação e verificação do que em digitação.** As etapas que produziram
+mais valor foram a exploração inicial — que revelou problemas não previstos — e a revisão final,
+que encontrou falhas de segurança reais. Escrever o código foi a parte mais rápida e menos
+arriscada.
 
-**2. Verificar automaticamente a sincronia front/banco.** `src/lib/paginas.ts` espelha à mão a função
-`paginas_do_sistema()` da migration `0007`. Uma página adicionada em um lado e esquecida no outro
-falha em silêncio. Um teste que compare as duas listas resolveria em poucas linhas.
+**Automação só vale quando está versionada.** Um hook na máquina de um integrante é hábito pessoal.
+No repositório, é regra do projeto.
 
-**3. Tipos gerados a partir do banco.** O Supabase CLI gera tipos TypeScript a partir do schema real
-(`supabase gen types typescript`). Hoje `src/lib/types.ts` é mantido à mão, e o retorno jsonb de
-`minha_rota()` é tipado por confiança: um campo adicionado no TypeScript mas esquecido no SQL chega
-como `undefined` sem nenhum erro de compilação.
+**Ferramenta não verificada é aposta.** Escrever os hooks assumindo que `jq` estava instalado
+custou uma reescrita completa. Testar antes de versionar foi o que revelou isso.
 
-**4. Ambiente de banco descartável.** As migrations foram escritas sem poder executá-las — só foi
-possível conferir estruturalmente o balanceamento das marcações de citação. Um Postgres local ou um
-projeto Supabase de teste permitiria aplicar e reverter cada migration antes de versioná-la.
+**Nomear as armadilhas melhora o resultado da delegação.** O que mais ajudou o agente de
+desenvolvimento não foi descrever o objetivo, e sim apontar antecipadamente onde ele erraria, dar o
+comando exato de verificação e declarar os limites.
 
-**5. Paleta em um lugar só.** As cores estão em `tailwind.config.js`, em `src/lib/format.ts` e
-espalhadas em hexadecimal cru por várias telas. Consolidar em tokens CSS eliminaria uma classe
-inteira de inconsistência.
+**O limite do agente está no que ele consegue verificar, não no que sabe escrever.** Onde havia
+critério objetivo — compila, constrói, aparência inalterada — o resultado foi confiável. Onde não
+havia, continua dependendo de conferência humana.
 
-**6. Escrever o prompt da tarefa delegada como se fosse para um colega novo.** O que mais melhorou o
-resultado da delegação não foi descrever o objetivo — foi nomear a armadilha, dar o comando exato de
-verificação e declarar os limites. Vale como padrão para as próximas.
+**Revisar o que mudou não basta; é preciso revisar o que a mudança afetou.** As três falhas de
+segurança mais graves eram invisíveis no comparativo de versões: em nenhuma delas o código errado
+foi escrito nesta rodada. Acrescentamos campos a uma tabela cuja regra de acesso já existia — e a
+regra, que não aparecia na comparação, deixou de ser adequada.
 
 ---
 
-## 10. Conclusão
-
-As dezesseis solicitações foram atendidas, o repositório passou a carregar sua própria automação de
-qualidade, e o processo ficou documentado.
-
-O aprendizado que atravessa todo o trabalho é que o agente de IA rende muito mais em **preparação e
-verificação** do que em digitação. As horas que produziram mais valor foram as de exploração inicial
-— que revelaram quatro problemas estruturais não previstos no enunciado — e as de teste dos hooks —
-que revelaram uma dependência inexistente antes de ela quebrar na máquina de outro integrante.
-Escrever o código foi a parte mais rápida e menos arriscada.
-
-O segundo aprendizado é que automação só vale quando está versionada. Um hook na máquina de um
-integrante é um hábito pessoal; um hook em `.githooks/` é uma regra do projeto.
-
-E o terceiro, que aparece nas seções 7 e 8 em partes iguais: o limite do agente não está no que ele
-sabe escrever, e sim no que ele consegue **verificar**. Onde havia critério objetivo — compila, o
-build passa, a aparência não mudou — o resultado foi confiável. Onde não havia — as migrations, que
-não puderam ser executadas — o resultado continua dependendo de conferência humana, e o relatório
-diz isso explicitamente em vez de fingir o contrário.
-
----
-
-## Anexo · Estrutura da automação no repositório
+## Anexo · Arquivos da automação
 
 ```
 .claude/
-  settings.json                   hooks e permissões do projeto
+  settings.json                   configuração dos hooks
   agents/
-    revisor-gtporte.md            subagente de revisão
+    revisor-gtporte.md            agente revisor
   hooks/
-    checar-tipos.cjs              type-check após cada edição em src/
-    antes-do-commit.cjs           portão antes do git commit
+    checar-tipos.cjs              verificação após cada edição
+    antes-do-commit.cjs           portão antes do commit
   skills/
     testar-site/
-      SKILL.md                    roteiro de teste no navegador
+      SKILL.md                    roteiro de verificação
       checklist.md                45 itens nos três painéis
 .githooks/
   pre-commit                      mesma checagem fora do agente
-docs/
-  relatorio-automacao-gtporte.md  fonte deste documento
-  relatorio-automacao-gtporte.docx
-scripts/
-  gerar-relatorio.py              converte o Markdown em .docx
 ```

@@ -12,6 +12,8 @@ import AppShell from './layouts/AppShell'
 import Dashboard from './pages/Dashboard'
 import Estudantes from './pages/Estudantes'
 import Documentos from './pages/Documentos'
+import AlteracoesCadastrais from './pages/AlteracoesCadastrais'
+import Comunicados from './pages/Comunicados'
 import Alocacao from './pages/Alocacao'
 import Rotas from './pages/Rotas'
 import Veiculos from './pages/Veiculos'
@@ -124,6 +126,22 @@ export default function App() {
           element={
             <RotaProtegida perfis={[...STAFF]} pagina="universidades">
               <Universidades />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="alteracoes"
+          element={
+            <RotaProtegida perfis={[...STAFF]} pagina="alteracoes">
+              <AlteracoesCadastrais />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="comunicados"
+          element={
+            <RotaProtegida perfis={[...STAFF]} pagina="comunicados">
+              <Comunicados />
             </RotaProtegida>
           }
         />

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Session } from '@supabase/supabase-js'
 
-export interface Perfil { id:string; nome:string; tipo:string; login:string|null; telefone?:string|null }
+export interface Perfil { id:string; nome:string; tipo:string; login:string|null; email?:string|null; telefone?:string|null }
 
 export function useAuth() {
   const [session, setSession] = useState<Session|null>(null)
@@ -11,7 +11,7 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
 
   const fetchPerfil = useCallback(async(uid:string)=>{
-    const {data}=await supabase.from('perfil').select('id,nome,tipo,login,telefone').eq('id',uid).maybeSingle()
+    const {data}=await supabase.from('perfil').select('id,nome,tipo,login,email,telefone').eq('id',uid).maybeSingle()
     setPerfil(data)
     if(data?.tipo==='estudante'){
       const {data:est}=await supabase.from('estudante').select('id').eq('perfil_id',uid).maybeSingle()
