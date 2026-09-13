@@ -2,48 +2,28 @@ import { useState } from 'react'
 import { CloudOff, Eye, EyeOff, GraduationCap, LogIn, UserPlus } from 'lucide-react'
 import { Spinner } from '@/components/Spinner'
 import { useConexao } from '@/hooks/useConexao'
-import { REGRAS_SENHA, validarSenha } from '@/lib/validarSenha'
 
 type Props = {
   onLogin: (e: string, p: string) => Promise<void>
-  onCadastrar: (n: string, e: string, t: string, p: string) => Promise<unknown>
+  /** Abre o cadastro em passos; a conta so e criada no fim dele. */
+  onCriarConta: () => void
 }
 
-export function Login({ onLogin, onCadastrar }: Props) {
-  const [tab, setTab] = useState<'login' | 'cadastro'>('login')
+export function Login({ onLogin, onCriarConta }: Props) {
   const [email, setEmail] = useState('')
   const [pw, setPw] = useState('')
   const [show, setShow] = useState(false)
-  const [nome, setNome] = useState('')
-  const [tel, setTel] = useState('')
-  const [pw2, setPw2] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
   const { situacao } = useConexao()
   const offline = situacao === 'offline'
 
-  // Fonte unica da regra: o mesmo modulo usado na validacao final.
-  const resultado = validarSenha(pw)
-
-  const goLogin = async () => {
+  const entrar = async () => {
     if (!email || !pw) return
     setErr('')
     setBusy(true)
     try {
       await onLogin(email.trim(), pw)
-    } catch (e) {
-      setErr((e as Error).message)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const goCadastro = async () => {
-    if (!nome || !email || !resultado.valida || pw !== pw2) return
-    setErr('')
-    setBusy(true)
-    try {
-      await onCadastrar(nome, email, tel, pw)
     } catch (e) {
       setErr((e as Error).message)
     } finally {
@@ -67,174 +47,85 @@ export function Login({ onLogin, onCadastrar }: Props) {
         <p className="text-sm text-muted">Portal do Estudante</p>
       </div>
 
-      <div className="anim-in relative w-full max-w-sm" style={{ animationDelay: '.15s' }}>
+      <div className="anim-in relative w-full max-w-sm space-y-3" style={{ animationDelay: '.15s' }}>
         {offline && (
-          <div className="aviso-err mb-4">
+          <div className="aviso-err">
             <CloudOff className="mt-0.5 h-5 w-5 shrink-0 text-err" />
             <div>
-              <p className="text-sm font-semibold text-err">Sem conexao</p>
-              <p className="mt-0.5 text-xs text-muted">Conecte-se a internet para entrar.</p>
+              <p className="text-sm font-semibold text-err">Sem conexão</p>
+              <p className="mt-0.5 text-xs text-muted">Conecte-se à internet para entrar.</p>
             </div>
           </div>
         )}
 
-        <div className="mb-6 flex rounded-xl bg-raised/70 p-1">
-          {(['login', 'cadastro'] as const).map((t) => (
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-muted">E-mail</span>
+          <input
+            className="field"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && entrar()}
+            placeholder="seu@email.com"
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-muted">Senha</span>
+          <div className="relative">
+            <input
+              className="field pr-11"
+              type={show ? 'text' : 'password'}
+              autoComplete="current-password"
+              value={pw}
+              onChange={(e) => setPw(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && entrar()}
+              placeholder="Sua senha"
+            />
             <button
-              key={t}
-              onClick={() => {
-                setTab(t)
-                setErr('')
-              }}
-              className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all ${
-                tab === t ? 'bg-brand-600 text-white shadow-card' : 'text-muted'
-              }`}
+              type="button"
+              onClick={() => setShow((s) => !s)}
+              aria-label={show ? 'Ocultar senha' : 'Mostrar senha'}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-faint"
             >
-              {t === 'login' ? 'Entrar' : 'Cadastrar'}
+              {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
-          ))}
+          </div>
+        </label>
+
+        {err && <p className="rounded-lg bg-err/10 px-3 py-2.5 text-sm text-err">{err}</p>}
+
+        <button
+          onClick={entrar}
+          disabled={busy || offline}
+          className="btn-primary flex items-center justify-center gap-2"
+        >
+          {busy ? <Spinner /> : (
+            <>
+              <LogIn className="h-4 w-4" />
+              Entrar
+            </>
+          )}
+        </button>
+
+        <div className="flex items-center gap-3 py-1">
+          <span className="h-px flex-1 bg-line" />
+          <span className="text-[11px] text-faint">ou</span>
+          <span className="h-px flex-1 bg-line" />
         </div>
 
-        {tab === 'login' ? (
-          <div className="space-y-4">
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-muted">E-mail</span>
-              <input
-                className="field"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && goLogin()}
-                placeholder="seu@email.com"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-muted">Senha</span>
-              <div className="relative">
-                <input
-                  className="field pr-12"
-                  type={show ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  value={pw}
-                  onChange={(e) => setPw(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && goLogin()}
-                  placeholder="Sua senha"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShow((s) => !s)}
-                  aria-label={show ? 'Ocultar senha' : 'Mostrar senha'}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-faint"
-                >
-                  {show ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
-            </label>
-            {err && <p className="rounded-xl bg-err/10 px-4 py-3 text-sm text-err">{err}</p>}
-            <button
-              onClick={goLogin}
-              disabled={busy || offline}
-              className="btn-primary flex items-center justify-center gap-2"
-            >
-              {busy ? <Spinner /> : (
-                <>
-                  <LogIn className="h-4 w-4" />
-                  Entrar
-                </>
-              )}
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-muted">Nome completo</span>
-              <input
-                className="field"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                placeholder="Como esta no RG"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-muted">E-mail</span>
-              <input
-                className="field"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="seu@email.com"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-muted">Telefone</span>
-              <input
-                className="field"
-                value={tel}
-                onChange={(e) => setTel(e.target.value)}
-                placeholder="(18) 9 0000-0000"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-muted">Senha</span>
-              <input
-                className="field"
-                type="password"
-                value={pw}
-                onChange={(e) => setPw(e.target.value)}
-                placeholder="Crie uma senha"
-              />
-            </label>
-
-            {pw.length > 0 && (
-              <ul className="grid grid-cols-2 gap-1 rounded-xl bg-raised/50 p-3">
-                {REGRAS_SENHA.map((r) => {
-                  const ok = r.ok(pw)
-                  return (
-                    <li
-                      key={r.id}
-                      className={`flex items-center gap-1.5 text-[11px] ${ok ? 'text-ok' : 'text-muted'}`}
-                    >
-                      <span className={`h-1.5 w-1.5 rounded-full ${ok ? 'bg-ok' : 'bg-faint'}`} />
-                      {r.rotulo}
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
-
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-muted">Confirmar senha</span>
-              <input
-                className="field"
-                type="password"
-                value={pw2}
-                onChange={(e) => setPw2(e.target.value)}
-                placeholder="Repita a senha"
-              />
-              {pw2.length > 0 && pw !== pw2 && (
-                <span className="mt-1 block text-[11px] text-err">As senhas nao coincidem.</span>
-              )}
-            </label>
-
-            {err && <p className="rounded-xl bg-err/10 px-4 py-3 text-sm text-err">{err}</p>}
-            <button
-              onClick={goCadastro}
-              disabled={busy || offline || !nome || !email || !resultado.valida || pw !== pw2}
-              className="btn-primary flex items-center justify-center gap-2"
-            >
-              {busy ? <Spinner /> : (
-                <>
-                  <UserPlus className="h-4 w-4" />
-                  Criar conta
-                </>
-              )}
-            </button>
-          </div>
-        )}
+        <button
+          onClick={onCriarConta}
+          disabled={offline}
+          className="btn-outline flex items-center justify-center gap-2"
+        >
+          <UserPlus className="h-4 w-4" />
+          Criar conta de estudante
+        </button>
       </div>
 
-      <p className="relative mt-10 text-[10px] text-faint">Transporte Academico Municipal</p>
+      <p className="relative mt-10 text-[10px] text-faint">Transporte Acadêmico Municipal</p>
     </div>
   )
 }

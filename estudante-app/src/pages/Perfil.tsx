@@ -23,6 +23,7 @@ const EDITAVEIS: CampoEditavel[] = [
   'universidade_id',
   'cidade_id',
   'perfil_uso',
+  'ano_semestre',
 ]
 
 interface Cadastro {
@@ -37,6 +38,7 @@ interface Cadastro {
   universidade_id: string
   cidade_id: string
   perfil_uso: 'ida_volta' | 'somente_ida' | 'somente_volta'
+  ano_semestre: string | null
   status_documental: string
   criado_em: string
 }
@@ -66,7 +68,7 @@ export function Perfil({
       const { data: est } = await supabase
         .from('estudante')
         .select(
-          'nome,prontuario,cpf,email,telefone,curso,endereco,data_nascimento,universidade_id,cidade_id,perfil_uso,status_documental,criado_em',
+          'nome,prontuario,cpf,email,telefone,curso,endereco,data_nascimento,universidade_id,cidade_id,ano_semestre,perfil_uso,status_documental,criado_em',
         )
         .eq('id', estudanteId)
         .maybeSingle()
@@ -83,6 +85,7 @@ export function Perfil({
         universidade_id: c.universidade_id ?? '',
         cidade_id: c.cidade_id ?? '',
         perfil_uso: c.perfil_uso,
+        ano_semestre: c.ano_semestre ?? '',
       })
     })()
     return () => {
@@ -252,6 +255,19 @@ export function Perfil({
                 <input className="field" value={form.curso ?? ''} onChange={(e) => mudar('curso', e.target.value)} />
               ) : (
                 <p className="text-sm font-medium">{cadastro.curso ?? '—'}</p>
+              )}
+            </CampoCadastro>
+
+            <CampoCadastro rotulo="Ano/Semestre" pendente={pendenteLegivel('ano_semestre')} recusa={recusaDe('ano_semestre')}>
+              {editando ? (
+                <input
+                  className="field"
+                  placeholder="2026/1"
+                  value={form.ano_semestre ?? ''}
+                  onChange={(e) => mudar('ano_semestre', e.target.value)}
+                />
+              ) : (
+                <p className="text-sm font-medium">{cadastro.ano_semestre ?? '—'}</p>
               )}
             </CampoCadastro>
 

@@ -1,4 +1,4 @@
-import { Bus, FileText, History, Home, MessageCircle, User } from 'lucide-react'
+import { Bus, FileText, History, Home, Lock, MessageCircle, User } from 'lucide-react'
 
 const tabs = [
   { id: 'inicio', icon: Home, label: 'Início' },
@@ -11,12 +11,22 @@ const tabs = [
 
 export type Tab = (typeof tabs)[number]['id']
 
-export function BottomNav({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
+export function BottomNav({
+  active,
+  onChange,
+  bloqueadas = [],
+}: {
+  active: Tab
+  onChange: (t: Tab) => void
+  /** Abas que dependem de validacao da secretaria: seguem clicaveis, mas marcadas. */
+  bloqueadas?: Tab[]
+}) {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-line/60 bg-surface/95 backdrop-blur-xl safe-b">
       <div className="mx-auto flex max-w-lg">
         {tabs.map((t) => {
           const sel = active === t.id
+          const travada = bloqueadas.includes(t.id)
           return (
             <button
               key={t.id}
@@ -25,7 +35,12 @@ export function BottomNav({ active, onChange }: { active: Tab; onChange: (t: Tab
               className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 transition-colors ${sel ? 'text-brand-500' : 'text-muted'}`}
             >
               {sel && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-brand-500" />}
-              <t.icon className="h-5 w-5" strokeWidth={sel ? 2.2 : 1.6} />
+              <span className="relative">
+                <t.icon className="h-5 w-5" strokeWidth={sel ? 2.2 : 1.6} />
+                {travada && (
+                  <Lock className="absolute -right-1.5 -top-1 h-2.5 w-2.5 text-warn" strokeWidth={3} />
+                )}
+              </span>
               <span className="text-[9px] font-medium">{t.label}</span>
             </button>
           )

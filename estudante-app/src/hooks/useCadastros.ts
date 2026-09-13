@@ -10,6 +10,7 @@ export interface Cidade {
 export interface Universidade {
   id: string
   nome: string
+  cidade_id: string
 }
 
 /**
@@ -26,7 +27,7 @@ export function useCadastros() {
     ;(async () => {
       const [c, u] = await Promise.all([
         supabase.from('cidade').select('id,nome,uf').order('nome'),
-        supabase.from('universidade').select('id,nome').order('nome'),
+        supabase.from('universidade').select('id,nome,cidade_id').eq('ativa', true).order('nome'),
       ])
       if (!vivo) return
       setCidades((c.data as Cidade[]) ?? [])

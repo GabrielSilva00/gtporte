@@ -60,13 +60,13 @@
   .safe-b { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
   .safe-t { padding-top: max(0.5rem, env(safe-area-inset-top)); }
 
-  .card { @apply rounded-2xl border border-line/60 bg-surface p-4 shadow-card; }
+  .card { @apply rounded-xl border border-line/60 bg-surface p-3.5 shadow-card; }
   .card-flat { @apply rounded-2xl bg-raised/60 p-4; }
 
-  .btn-primary { @apply w-full rounded-2xl bg-brand-600 px-6 py-4 text-center text-sm font-bold text-white shadow-card transition-all active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100; }
-  .btn-outline { @apply w-full rounded-2xl border border-line bg-surface px-6 py-4 text-center text-sm font-semibold text-ink transition-all active:scale-[0.97] disabled:opacity-40; }
-  .btn-danger  { @apply w-full rounded-2xl bg-err/10 px-6 py-4 text-center text-sm font-bold text-err transition-all active:scale-[0.97] disabled:opacity-40; }
-  .btn-success { @apply w-full rounded-2xl bg-ok/10 px-6 py-4 text-center text-sm font-bold text-ok transition-all active:scale-[0.97] disabled:opacity-40; }
+  .btn-primary { @apply w-full rounded-xl bg-brand-600 px-5 py-2.5 text-center text-sm font-bold text-white shadow-card transition-all active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100; }
+  .btn-outline { @apply w-full rounded-xl border border-line bg-surface px-5 py-2.5 text-center text-sm font-semibold text-ink transition-all active:scale-[0.97] disabled:opacity-40; }
+  .btn-danger  { @apply w-full rounded-xl bg-err/10 px-5 py-2.5 text-center text-sm font-bold text-err transition-all active:scale-[0.97] disabled:opacity-40; }
+  .btn-success { @apply w-full rounded-xl bg-ok/10 px-5 py-2.5 text-center text-sm font-bold text-ok transition-all active:scale-[0.97] disabled:opacity-40; }
 
   .chip { @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold; }
   .chip-ok   { @apply chip bg-ok/10 text-ok; }
@@ -75,7 +75,7 @@
   .chip-info { @apply chip bg-info/10 text-info; }
 
   .field {
-    @apply w-full rounded-xl border border-line bg-surface px-4 py-3.5 text-ink outline-none transition-colors;
+    @apply w-full rounded-lg border border-line bg-surface px-3 py-2 text-ink outline-none transition-colors;
     @apply placeholder:text-faint focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20;
   }
   /* Nome antigo mantido para nao quebrar telas ainda nao migradas */
