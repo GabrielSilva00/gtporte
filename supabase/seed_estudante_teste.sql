@@ -50,7 +50,13 @@ begin
     insert into auth.users (
       id, instance_id, aud, role, email, encrypted_password,
       email_confirmed_at, created_at, updated_at,
-      raw_app_meta_data, raw_user_meta_data
+      raw_app_meta_data, raw_user_meta_data,
+      -- O GoTrue le estas colunas como texto simples. Deixadas nulas, o
+      -- login falha com "Database error querying schema" antes mesmo de
+      -- conferir a senha. Precisam ser string vazia, nao NULL.
+      confirmation_token, recovery_token,
+      email_change, email_change_token_new, email_change_token_current,
+      phone_change, phone_change_token, reauthentication_token
     ) values (
       v_user_id,
       '00000000-0000-0000-0000-000000000000',
@@ -59,14 +65,24 @@ begin
       crypt(v_senha, gen_salt('bf')),
       now(), now(), now(),
       '{"provider":"email","providers":["email"]}'::jsonb,
-      jsonb_build_object('nome', v_nome, 'tipo', 'estudante')
+      jsonb_build_object('nome', v_nome, 'tipo', 'estudante'),
+      '', '', '', '', '', '', '', ''
     );
     -- o trigger on_auth_user_created cria o perfil correspondente
   else
     update auth.users
        set encrypted_password = crypt(v_senha, gen_salt('bf')),
            email_confirmed_at = coalesce(email_confirmed_at, now()),
-           updated_at = now()
+           updated_at = now(),
+           -- conserta linhas criadas por versoes anteriores deste script
+           confirmation_token         = coalesce(confirmation_token, ''),
+           recovery_token             = coalesce(recovery_token, ''),
+           email_change               = coalesce(email_change, ''),
+           email_change_token_new     = coalesce(email_change_token_new, ''),
+           email_change_token_current = coalesce(email_change_token_current, ''),
+           phone_change               = coalesce(phone_change, ''),
+           phone_change_token         = coalesce(phone_change_token, ''),
+           reauthentication_token     = coalesce(reauthentication_token, '')
      where id = v_user_id;
   end if;
 
