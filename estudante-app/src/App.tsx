@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { ArrowLeft, Lock, Menu } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useAcesso } from '@/hooks/useAcesso'
-import { BottomNav, type Tab } from '@/components/BottomNav'
+import { TITULO_SECAO, type Tab } from '@/lib/navegacao'
 import { ToastContainer } from '@/components/Toast'
 import { BarraConexao } from '@/components/StatusConexao'
 import { SinoNotificacoes } from '@/components/SinoNotificacoes'
@@ -88,15 +88,6 @@ function AppAutenticado() {
 
   const bloqueada = ABAS_RESTRITAS.includes(tab) && !situacao.acesso_liberado
 
-  const TITULO: Record<Tab, string> = {
-    inicio: 'Início',
-    rota: 'Minha Rota',
-    documentos: 'Documentos',
-    historico: 'Histórico',
-    feedback: 'Mensagens',
-    perfil: 'Perfil',
-  }
-
   return (
     <div className="min-h-screen">
       <SinoNotificacoes estudanteId={estudanteId} onIr={setTab} />
@@ -116,7 +107,7 @@ function AppAutenticado() {
             <ArrowLeft className="h-5 w-5 text-ink" />
           </button>
         )}
-        <span className="text-sm font-bold">{TITULO[tab]}</span>
+        <span className="text-sm font-bold">{TITULO_SECAO[tab]}</span>
         {tab !== 'inicio' && (
           <button onClick={() => setMenu(true)} aria-label="Abrir menu" className="ml-auto mr-12 p-1.5">
             <Menu className="h-5 w-5 text-muted" />
@@ -151,11 +142,6 @@ function AppAutenticado() {
           {tab === 'perfil' && <Perfil perfil={perfil} estudanteId={estudanteId} onLogout={logout} />}
         </>
       )}
-      <BottomNav
-        active={tab}
-        onChange={setTab}
-        bloqueadas={situacao.acesso_liberado ? [] : ABAS_RESTRITAS}
-      />
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Bell, FileWarning, Megaphone, MessageCircle, UserCog, X } from 'lucide-react'
 import { useNotificacoes, type TipoNotificacao } from '@/hooks/useNotificacoes'
-import type { Tab } from '@/components/BottomNav'
+import type { Tab } from '@/lib/navegacao'
 
 const ICONE: Record<TipoNotificacao, typeof Bell> = {
   comunicado: Megaphone,

@@ -149,7 +149,7 @@ export function Perfil({
   const mudar = (campo: CampoEditavel, valor: string) => setForm((f) => ({ ...f, [campo]: valor }))
 
   return (
-    <div className="space-y-4 px-4 pb-24 pt-16">
+    <div className="space-y-4 px-4 pb-10 pt-16">
       <div className="card anim-in flex flex-col items-center py-8">
         <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-brand-500/10 text-3xl font-bold text-brand-500">
           {perfil.nome.charAt(0)}

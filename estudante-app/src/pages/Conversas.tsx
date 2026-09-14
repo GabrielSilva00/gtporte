@@ -189,7 +189,7 @@ export function Conversas() {
   const lista = aba === 'direta' ? diretas : grupos
 
   return (
-    <div className="space-y-3 px-4 pb-24 pt-16">
+    <div className="space-y-3 px-4 pb-10 pt-16">
       <h2 className="text-lg font-bold">Mensagens</h2>
 
       <div className="flex rounded-xl bg-raised/70 p-1">

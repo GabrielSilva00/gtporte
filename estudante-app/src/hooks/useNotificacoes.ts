@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { useComunicados } from '@/hooks/useComunicados'
 import { useDocumentos, ROTULO_DOC, type Documento } from '@/hooks/useEstudante'
 import { useAlteracoes } from '@/hooks/useAlteracoes'
-import type { Tab } from '@/components/BottomNav'
+import type { Tab } from '@/lib/navegacao'
 
 export type TipoNotificacao = 'comunicado' | 'documento' | 'mensagem' | 'cadastro'
 

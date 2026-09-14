@@ -1,15 +1,8 @@
 import { useEffect } from 'react'
-import { Bus, FileText, History, Home, Lock, LogOut, MessageCircle, User, X } from 'lucide-react'
-import type { Tab } from '@/components/BottomNav'
+import { Lock, LogOut, X } from 'lucide-react'
+import { SECOES, type Tab } from '@/lib/navegacao'
 
-const ITENS: { id: Tab; icon: typeof Home; label: string }[] = [
-  { id: 'inicio', icon: Home, label: 'Início' },
-  { id: 'rota', icon: Bus, label: 'Minha Rota' },
-  { id: 'documentos', icon: FileText, label: 'Documentos' },
-  { id: 'historico', icon: History, label: 'Histórico' },
-  { id: 'feedback', icon: MessageCircle, label: 'Mensagens' },
-  { id: 'perfil', icon: User, label: 'Perfil' },
-]
+
 
 /**
  * Menu lateral das telas internas. A tela inicial usa os cards; daqui
@@ -71,7 +64,7 @@ export function MenuLateral({
         </div>
 
         <div className="flex-1 overflow-y-auto py-2">
-          {ITENS.map((item) => {
+          {SECOES.map((item) => {
             const sel = ativa === item.id
             const travada = bloqueadas.includes(item.id)
             return (

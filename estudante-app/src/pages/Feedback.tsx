@@ -140,7 +140,7 @@ export function Feedback() {
     destinos.find((d) => (d.id ?? null) === id)?.nome ?? (id === null ? 'Secretaria' : 'Secretaria')
 
   return (
-    <div className="space-y-4 px-4 pb-24 pt-16">
+    <div className="space-y-4 px-4 pb-10 pt-16">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold">Mensagens</h2>

@@ -17,7 +17,7 @@ import { useGrade } from '@/hooks/useGrade'
 import { Spinner } from '@/components/Spinner'
 import { ModalQr } from '@/components/QrEmbarque'
 import { toast } from '@/components/Toast'
-import type { Tab } from '@/components/BottomNav'
+import type { Tab } from '@/lib/navegacao'
 
 /** Situacao operacional no ponto de vista de quem espera o onibus. */
 const SITUACAO: Record<string, { texto: string; cls: string }> = {
@@ -109,7 +109,7 @@ export function Inicio({ estudanteId, onIr }: { estudanteId: string; onIr: (t: T
   const fmtHora = (h: string | null) => (h ? h.slice(0, 5) : '')
 
   return (
-    <div className="space-y-4 px-4 pb-24 pt-16">
+    <div className="space-y-4 px-4 pb-10 pt-16">
       <div className="anim-in">
         <p className="text-sm text-muted">{saudacao},</p>
         <h1 className="text-2xl font-bold tracking-tight">

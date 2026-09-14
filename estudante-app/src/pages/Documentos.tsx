@@ -118,7 +118,7 @@ export function Documentos({ estudanteId }: { estudanteId: string }) {
   }
 
   return (
-    <div className="space-y-4 px-4 pb-24 pt-16">
+    <div className="space-y-4 px-4 pb-10 pt-16">
       <div>
         <h2 className="text-lg font-bold">Meus Documentos</h2>
         <p className="text-xs text-muted">

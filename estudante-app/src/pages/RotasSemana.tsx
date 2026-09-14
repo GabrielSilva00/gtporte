@@ -31,7 +31,7 @@ export function RotasSemana({ onAbrir }: { onAbrir: (dia: RotaDoDia) => void }) 
   const lista = soHoje ? dias.filter((d) => d.eh_hoje) : dias.filter((d) => d.hora_inicio_aula || d.rota_id)
 
   return (
-    <div className="space-y-3 px-4 pb-24 pt-16">
+    <div className="space-y-3 px-4 pb-10 pt-16">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold">Minhas rotas</h2>

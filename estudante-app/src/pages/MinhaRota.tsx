@@ -39,7 +39,7 @@ export function MinhaRota(){
 
   const fmtHora=(h:string|null)=>h?h.slice(0,5):''
 
-  return <div className="px-4 pb-24 pt-16 space-y-4">
+  return <div className="px-4 pb-10 pt-16 space-y-4">
     {/* Status documental */}
     {est.status_documental!=='aprovado'&&<div className="rounded-2xl bg-warn/10 border border-warn/20 p-4 flex items-start gap-3">
       <AlertTriangle className="h-5 w-5 text-warn flex-shrink-0 mt-0.5"/>
