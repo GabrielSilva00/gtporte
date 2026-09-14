@@ -5,6 +5,7 @@ import { useAcesso } from '@/hooks/useAcesso'
 import { BottomNav, type Tab } from '@/components/BottomNav'
 import { ToastContainer } from '@/components/Toast'
 import { BarraConexao } from '@/components/StatusConexao'
+import { SinoNotificacoes } from '@/components/SinoNotificacoes'
 import { Spinner } from '@/components/Spinner'
 import { Login } from '@/pages/Login'
 import { Inicio } from '@/pages/Inicio'
@@ -84,6 +85,7 @@ function AppAutenticado() {
 
   return (
     <div className="min-h-screen">
+      <SinoNotificacoes estudanteId={estudanteId} onIr={setTab} />
       {bloqueada ? (
         <AguardandoValidacao documentos={situacao.documentos_enviados} onIr={setTab} />
       ) : (

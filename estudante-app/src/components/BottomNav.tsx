@@ -32,7 +32,7 @@ export function BottomNav({
               key={t.id}
               onClick={() => onChange(t.id)}
               aria-current={sel ? 'page' : undefined}
-              className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 transition-colors ${sel ? 'text-brand-500' : 'text-muted'}`}
+              className={`relative flex flex-1 flex-col items-center gap-1 py-2.5 transition-colors ${sel ? 'text-brand-500' : 'text-muted'}`}
             >
               {sel && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-brand-500" />}
               <span className="relative">
@@ -41,7 +41,7 @@ export function BottomNav({
                   <Lock className="absolute -right-1.5 -top-1 h-2.5 w-2.5 text-warn" strokeWidth={3} />
                 )}
               </span>
-              <span className="text-[9px] font-medium">{t.label}</span>
+              <span className="text-[10px] font-medium">{t.label}</span>
             </button>
           )
         })}

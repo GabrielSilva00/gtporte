@@ -17,7 +17,7 @@ export function Historico({estudanteId}:{estudanteId:string}){
 
   if(loading)return <div className="flex justify-center py-12"><Spinner/></div>
 
-  return <div className="px-4 pb-24 pt-4 space-y-4">
+  return <div className="px-4 pb-24 pt-16 space-y-4">
     <h2 className="text-lg font-bold">Historico de Presenca</h2>
     <p className="text-xs text-muted">Ultimos 30 dias</p>
     {hist.length===0?<div className="flex flex-col items-center py-12 text-center"><History className="h-12 w-12 text-faint/40 mb-3"/><p className="text-sm text-muted">Nenhum registro</p></div>:

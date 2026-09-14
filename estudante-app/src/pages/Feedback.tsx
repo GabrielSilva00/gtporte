@@ -140,7 +140,7 @@ export function Feedback() {
     destinos.find((d) => (d.id ?? null) === id)?.nome ?? (id === null ? 'Secretaria' : 'Secretaria')
 
   return (
-    <div className="space-y-4 px-4 pb-24 pt-4">
+    <div className="space-y-4 px-4 pb-24 pt-16">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold">Mensagens</h2>
@@ -275,7 +275,7 @@ export function Feedback() {
                   )}
                 </div>
 
-                <p className="mt-0.5 flex items-center gap-1 text-[10px] text-muted">
+                <p className="mt-0.5 flex items-center gap-1 text-[11px] text-muted">
                   <User className="h-3 w-3" />
                   {minha ? `Você → ${nomeDe(m.destinatario_id)}` : `${nomeDe(m.remetente_id)} → você`}
                   <span className="text-faint">· {fmt(m.criado_em)}</span>

@@ -18,7 +18,7 @@ export function Documentos({estudanteId}:{estudanteId:string}){
 
   if(loading)return <div className="flex justify-center py-12"><Spinner/></div>
 
-  return <div className="px-4 pb-24 pt-4 space-y-4">
+  return <div className="px-4 pb-24 pt-16 space-y-4">
     <h2 className="text-lg font-bold">Meus Documentos</h2>
     {faltando.length>0&&<div className="rounded-xl bg-warn/10 border border-warn/20 p-3"><div className="flex items-center gap-2 text-warn text-sm font-semibold mb-1"><AlertTriangle className="h-4 w-4"/>Documentos pendentes</div>
       <p className="text-xs text-muted">{faltando.map(t=>ROTULO_DOC[t]).join(', ')}</p></div>}
@@ -31,9 +31,9 @@ export function Documentos({estudanteId}:{estudanteId:string}){
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${doc?'bg-brand-500/10 text-brand-500':'bg-raised/60 text-faint'}`}><FileText className="h-5 w-5"/></div>
             <div><p className="text-sm font-semibold">{ROTULO_DOC[tipo]}</p>
-              {doc?<p className="text-[10px] text-faint">{doc.nome_arquivo}</p>:<p className="text-[10px] text-faint">Nao enviado</p>}
+              {doc?<p className="text-[11px] text-faint">{doc.nome_arquivo}</p>:<p className="text-[11px] text-faint">Nao enviado</p>}
             </div></div>
-          {st&&<div className={`flex items-center gap-1 ${st.cls}`}><StIcon className="h-4 w-4"/><span className="text-[10px] font-semibold">{st.label}</span></div>}
+          {st&&<div className={`flex items-center gap-1 ${st.cls}`}><StIcon className="h-4 w-4"/><span className="text-[11px] font-semibold">{st.label}</span></div>}
         </div>
         {doc?.status==='rejeitado'&&doc.observacao&&<div className="mt-2 rounded-lg bg-err/10 p-2 text-xs text-err">{doc.observacao}</div>}
         {podeEnviar&&<div className="mt-3">

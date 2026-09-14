@@ -41,7 +41,7 @@ export function CampoCadastro({
 
         {pendente && (
           <>
-            <span className="chip-warn px-2 py-0.5 text-[10px]">Pendente</span>
+            <span className="chip-warn px-2 py-0.5 text-[11px]">Pendente</span>
             <button
               type="button"
               onClick={() => setAberto(true)}

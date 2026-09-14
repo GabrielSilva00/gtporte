@@ -13,6 +13,8 @@ import {
 import { useMinhaRota, useDocumentos, confirmarPresenca, ROTULO_DOC } from '@/hooks/useEstudante'
 import { useComunicados, type Prioridade } from '@/hooks/useComunicados'
 import { Spinner } from '@/components/Spinner'
+import { ModalQr } from '@/components/QrEmbarque'
+import { QrCode } from 'lucide-react'
 import { toast } from '@/components/Toast'
 import type { Tab } from '@/components/BottomNav'
 
@@ -52,6 +54,7 @@ export function Inicio({ estudanteId, onIr }: { estudanteId: string; onIr: (t: T
   const { comunicados, loading: carregandoAvisos } = useComunicados()
   const [busy, setBusy] = useState<string | null>(null)
   const [aberto, setAberto] = useState<string | null>(null)
+  const [qr, setQr] = useState<'ida' | 'volta' | null>(null)
 
   if (loading) {
     return (
@@ -80,6 +83,8 @@ export function Inicio({ estudanteId, onIr }: { estudanteId: string; onIr: (t: T
       await confirmarPresenca(trecho)
       toast('Presença confirmada!')
       await refresh()
+      // O aluno precisa do codigo na mao logo depois de confirmar.
+      if (est?.prontuario) setQr(trecho)
     } catch (e) {
       toast((e as Error).message, 'err')
     } finally {
@@ -90,7 +95,7 @@ export function Inicio({ estudanteId, onIr }: { estudanteId: string; onIr: (t: T
   const fmtHora = (h: string | null) => (h ? h.slice(0, 5) : '')
 
   return (
-    <div className="space-y-4 px-4 pb-24 pt-4">
+    <div className="space-y-4 px-4 pb-24 pt-16">
       {/* Identificacao */}
       <div className="anim-in">
         <p className="text-sm text-muted">{saudacao},</p>
@@ -167,10 +172,17 @@ export function Inicio({ estudanteId, onIr }: { estudanteId: string; onIr: (t: T
           {/* Atalho: confirmar presenca sem sair da visao geral */}
           <div className="flex gap-2">
             {pres?.confirmou_ida ? (
-              <div className="flex-1 rounded-xl bg-ok/10 py-2.5 text-center">
+              <button
+                onClick={() => est?.prontuario && setQr('ida')}
+                className="flex-1 rounded-xl bg-ok/10 py-2.5 text-center transition-transform active:scale-[0.98]"
+              >
                 <Check className="mx-auto h-4 w-4 text-ok" />
                 <p className="mt-0.5 text-[11px] font-semibold text-ok">Ida confirmada</p>
-              </div>
+                <p className="mt-0.5 flex items-center justify-center gap-1 text-[11px] text-muted">
+                  <QrCode className="h-3 w-3" />
+                  ver código
+                </p>
+              </button>
             ) : (
               <button
                 onClick={() => confirmar('ida')}
@@ -182,10 +194,17 @@ export function Inicio({ estudanteId, onIr }: { estudanteId: string; onIr: (t: T
             )}
 
             {pres?.confirmou_volta ? (
-              <div className="flex-1 rounded-xl bg-info/10 py-2.5 text-center">
+              <button
+                onClick={() => est?.prontuario && setQr('volta')}
+                className="flex-1 rounded-xl bg-info/10 py-2.5 text-center transition-transform active:scale-[0.98]"
+              >
                 <Check className="mx-auto h-4 w-4 text-info" />
                 <p className="mt-0.5 text-[11px] font-semibold text-info">Volta confirmada</p>
-              </div>
+                <p className="mt-0.5 flex items-center justify-center gap-1 text-[11px] text-muted">
+                  <QrCode className="h-3 w-3" />
+                  ver código
+                </p>
+              </button>
             ) : (
               <button
                 onClick={() => confirmar('volta')}
@@ -251,7 +270,7 @@ export function Inicio({ estudanteId, onIr }: { estudanteId: string; onIr: (t: T
               <p className={`mt-1 text-xs text-muted ${aberto === c.id ? '' : 'line-clamp-2'}`}>
                 {c.corpo}
               </p>
-              <p className="mt-1.5 text-[10px] text-faint">
+              <p className="mt-1.5 text-[11px] text-faint">
                 {new Date(c.publicado_em).toLocaleDateString('pt-BR', {
                   day: '2-digit',
                   month: '2-digit',
@@ -263,6 +282,10 @@ export function Inicio({ estudanteId, onIr }: { estudanteId: string; onIr: (t: T
           ))
         )}
       </div>
+
+      {qr && est?.prontuario && (
+        <ModalQr prontuario={est.prontuario} trecho={qr} onFechar={() => setQr(null)} />
+      )}
     </div>
   )
 }

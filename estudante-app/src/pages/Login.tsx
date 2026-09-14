@@ -125,7 +125,7 @@ export function Login({ onLogin, onCriarConta }: Props) {
         </button>
       </div>
 
-      <p className="relative mt-10 text-[10px] text-faint">Transporte Acadêmico Municipal</p>
+      <p className="relative mt-10 text-[11px] text-faint">Transporte Acadêmico Municipal</p>
     </div>
   )
 }
