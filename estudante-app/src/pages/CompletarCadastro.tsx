@@ -96,7 +96,7 @@ export function CompletarCadastro({
   const passo1Ok = form.nome.trim().length > 2 && cpfOk && form.cidade_id !== ''
   // Grade horaria deixou de travar o avanco: so nao pode ficar pela metade.
   const passo2Ok = form.universidade_id !== '' && invalidos.length === 0
-  const passo3Ok = enviados >= 1
+  const passo3Ok = true // documentos podem ficar para depois
   const passo4Ok =
     form.email.trim() !== '' && senhaOk.valida && form.senha === form.senha2
 
@@ -213,7 +213,9 @@ export function CompletarCadastro({
       toast(
         enviados === 4
           ? 'Cadastro enviado! Aguarde a validação dos documentos.'
-          : 'Cadastro enviado! Envie os documentos restantes na aba Docs.',
+          : enviados === 0
+            ? 'Cadastro criado! Envie seus documentos na aba Docs.'
+            : 'Cadastro enviado! Envie os documentos restantes na aba Docs.',
       )
       onPronto()
     } catch (e) {
@@ -433,8 +435,8 @@ export function CompletarCadastro({
         <section className="card anim-in space-y-2.5">
           <h2 className="text-sm font-semibold">Documentos</h2>
           <p className="text-xs text-muted">
-            Envie ao menos um documento para concluir. Os demais podem ser enviados depois, na aba
-            Docs — a alocação em uma rota acontece quando todos forem aprovados.
+            Você pode enviar agora ou depois, na aba Docs. A alocação em uma rota só acontece
+            quando os quatro forem aprovados pela secretaria.
           </p>
 
           <div className="space-y-2">
@@ -478,7 +480,7 @@ export function CompletarCadastro({
             <FileText className="mt-0.5 h-4 w-4 shrink-0 text-info" />
             <p className="text-xs text-muted">
               {enviados === 0
-                ? 'Nenhum documento anexado ainda.'
+                ? 'Nenhum documento anexado. Você poderá enviá-los na aba Docs.'
                 : `${enviados} de 4 anexado(s). Faltam ${4 - enviados}.`}
             </p>
           </div>
@@ -555,14 +557,14 @@ export function CompletarCadastro({
           </button>
         )}
 
-        {passo === 2 && enviados >= 1 && enviados < 4 && (
+        {passo === 2 && enviados < 4 && (
           <button
             onClick={() => (modo === 'novo' ? setPasso(3) : concluir())}
             disabled={enviando}
             className="btn-outline flex items-center justify-center gap-2"
           >
             <SkipForward className="h-4 w-4" />
-            Pular os demais
+            {enviados === 0 ? 'Enviar depois' : 'Pular os demais'}
           </button>
         )}
 

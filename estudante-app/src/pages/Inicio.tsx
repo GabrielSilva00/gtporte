@@ -12,9 +12,10 @@ import {
 } from 'lucide-react'
 import { useMinhaRota, useDocumentos, confirmarPresenca, ROTULO_DOC } from '@/hooks/useEstudante'
 import { useComunicados, type Prioridade } from '@/hooks/useComunicados'
+import { useGrade } from '@/hooks/useGrade'
 import { Spinner } from '@/components/Spinner'
 import { ModalQr } from '@/components/QrEmbarque'
-import { QrCode } from 'lucide-react'
+import { CalendarClock, QrCode } from 'lucide-react'
 import { toast } from '@/components/Toast'
 import type { Tab } from '@/components/BottomNav'
 
@@ -52,6 +53,7 @@ export function Inicio({ estudanteId, onIr }: { estudanteId: string; onIr: (t: T
   const { rota: data, loading, refresh } = useMinhaRota()
   const { docs, loading: carregandoDocs } = useDocumentos(estudanteId)
   const { comunicados, loading: carregandoAvisos } = useComunicados()
+  const { vazia: gradeVaziaAgora, loading: carregandoGrade } = useGrade(estudanteId)
   const [busy, setBusy] = useState<string | null>(null)
   const [aberto, setAberto] = useState<string | null>(null)
   const [qr, setQr] = useState<'ida' | 'volta' | null>(null)
@@ -121,6 +123,20 @@ export function Inicio({ estudanteId, onIr }: { estudanteId: string; onIr: (t: T
                 : faltando.length > 0
                   ? `Falta enviar: ${faltando.map((t) => ROTULO_DOC[t]).join(', ')}.`
                   : 'Sua alocação depende da aprovação dos documentos.'}
+            </p>
+          </div>
+          <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-warn" />
+        </button>
+      )}
+
+      {!carregandoGrade && gradeVaziaAgora && (
+        <button onClick={() => onIr('perfil')} className="aviso-warn w-full text-left anim-in">
+          <CalendarClock className="mt-0.5 h-5 w-5 shrink-0 text-warn" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-warn">Grade de aulas não informada</p>
+            <p className="mt-0.5 text-xs text-muted">
+              Sem seus horários o sistema não consegue achar um ônibus compatível. Toque para
+              preencher no Perfil.
             </p>
           </div>
           <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-warn" />

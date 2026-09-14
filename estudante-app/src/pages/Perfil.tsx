@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { GraduationCap, LogOut, Palette, Pencil, Save, Smartphone, X } from 'lucide-react'
+import { CalendarClock, GraduationCap, LogOut, Palette, Pencil, Save, Smartphone, X } from 'lucide-react'
 import { useMinhaRota, ROTULO_PERFIL } from '@/hooks/useEstudante'
 import { useAlteracoes, ROTULO_CAMPO, type CampoEditavel } from '@/hooks/useAlteracoes'
 import { useCadastros } from '@/hooks/useCadastros'
@@ -9,6 +9,8 @@ import { ContatosSecretaria } from '@/components/ContatosSecretaria'
 import { IndicadorConexao } from '@/components/StatusConexao'
 import { SeletorTema } from '@/components/SeletorTema'
 import { CampoCadastro } from '@/components/CampoCadastro'
+import { GradeSemanal } from '@/components/GradeSemanal'
+import { useGrade } from '@/hooks/useGrade'
 import { Spinner } from '@/components/Spinner'
 import { toast } from '@/components/Toast'
 
@@ -62,6 +64,8 @@ export function Perfil({
   const [editando, setEditando] = useState(false)
   const [form, setForm] = useState<Partial<Record<CampoEditavel, string>>>({})
   const [salvando, setSalvando] = useState(false)
+  const [salvandoGrade, setSalvandoGrade] = useState(false)
+  const grade = useGrade(estudanteId)
 
   useEffect(() => {
     if (!estudanteId) return
@@ -379,6 +383,62 @@ export function Perfil({
           <p className="mt-1 text-xs text-muted">
             {data.rota.origem} &rarr; {data.rota.destino}
           </p>
+        </div>
+      )}
+
+      {estudanteId && (
+        <div className="card anim-in space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <CalendarClock className="h-4 w-4 text-brand-500" />
+              <h3 className="text-sm font-semibold">Grade de aulas</h3>
+            </div>
+            {!grade.vazia && (
+              <span className="text-[11px] text-muted">{grade.diasPreenchidos} dia(s)</span>
+            )}
+          </div>
+
+          {grade.vazia ? (
+            <div className="aviso-warn">
+              <p className="text-xs text-muted">
+                <b className="text-warn">Sua grade não está informada.</b> É por ela que o sistema
+                encontra um ônibus compatível com o seu horário — sem ela, a alocação depende da
+                secretaria fazer manualmente.
+              </p>
+            </div>
+          ) : (
+            <p className="text-[11px] text-muted">
+              Marque os dias em que você tem aula e informe os horários. Mudou de semestre? Atualize
+              aqui.
+            </p>
+          )}
+
+          <GradeSemanal grade={grade.grade} onChange={grade.setGrade} />
+
+          {grade.alterada && (
+            <button
+              onClick={async () => {
+                setSalvandoGrade(true)
+                try {
+                  await grade.salvar()
+                  toast('Grade de aulas atualizada.')
+                } catch (e) {
+                  toast((e as Error).message, 'err')
+                } finally {
+                  setSalvandoGrade(false)
+                }
+              }}
+              disabled={salvandoGrade}
+              className="btn-primary flex items-center justify-center gap-2"
+            >
+              {salvandoGrade ? <Spinner /> : (
+                <>
+                  <Save className="h-4 w-4" />
+                  Salvar grade
+                </>
+              )}
+            </button>
+          )}
         </div>
       )}
 
