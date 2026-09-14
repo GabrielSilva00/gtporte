@@ -5,6 +5,7 @@ import { Spinner } from '@/components/Spinner'
 import { toast } from '@/components/Toast'
 import { ModalQr } from '@/components/QrEmbarque'
 import { CancelarPresenca } from '@/components/CancelarPresenca'
+import { MapaRota } from '@/components/MapaRota'
 
 export function MinhaRota(){
   const {rota:data,loading,refresh}=useMinhaRota()
@@ -59,6 +60,12 @@ export function MinhaRota(){
         {rota.veiculo&&<div className="flex items-center gap-2 text-muted"><Bus className="h-4 w-4 text-brand-500/60"/><span>{rota.veiculo} ({rota.veiculo_modelo})</span></div>}
       </div>
     </div>:<div className="card text-center py-8"><Bus className="h-12 w-12 text-faint/40 mx-auto mb-3"/><p className="text-sm text-muted">{aloc?.situacao==='fila_espera'?'Voce esta na fila de espera. Aguarde uma vaga.':'Aguardando alocacao em uma rota.'}</p></div>}
+
+    {/* Mapa do trajeto: paradas e, em viagem, a posicao do onibus */}
+    {rota&&<div className="card space-y-2 anim-in">
+      <h3 className="text-sm font-semibold">Trajeto</h3>
+      <MapaRota rotaId={rota.id} emRota={sit==='em_rota'}/>
+    </div>}
 
     {/* Presenca */}
     {rota&&<div className="space-y-2">

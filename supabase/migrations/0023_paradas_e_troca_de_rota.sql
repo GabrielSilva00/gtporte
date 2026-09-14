@@ -461,3 +461,26 @@ end;
 $fn$;
 
 grant execute on function public.cancelar_presenca(uuid, text, text, date, motivo_cancelamento) to authenticated;
+
+-- ---------------------------------------------------------------------
+-- Pagina de cadastro das paradas no painel administrativo.
+-- Espelha src/lib/paginas.ts (chave 'paradas').
+-- ---------------------------------------------------------------------
+create or replace function public.paginas_do_sistema()
+returns text[]
+language sql
+immutable
+as $$
+  select array[
+    'dashboard', 'alocacao', 'presenca', 'rotas', 'paradas',
+    'estudantes', 'veiculos', 'motoristas', 'universidades',
+    'documentos', 'alteracoes', 'relatorios', 'funcionarios',
+    'solicitacoes', 'mensagens', 'comunicados', 'configuracoes'
+  ];
+$$;
+
+insert into public.permissao_pagina (perfil_id, pagina)
+select pp.perfil_id, 'paradas'
+  from public.permissao_pagina pp
+ where pp.pagina = 'rotas'
+on conflict do nothing;

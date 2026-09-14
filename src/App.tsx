@@ -14,6 +14,7 @@ import Estudantes from './pages/Estudantes'
 import Documentos from './pages/Documentos'
 import AlteracoesCadastrais from './pages/AlteracoesCadastrais'
 import Comunicados from './pages/Comunicados'
+import Paradas from './pages/Paradas'
 import Alocacao from './pages/Alocacao'
 import Rotas from './pages/Rotas'
 import Veiculos from './pages/Veiculos'
@@ -102,6 +103,14 @@ export default function App() {
           element={
             <RotaProtegida perfis={[...STAFF]} pagina="rotas">
               <Rotas />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="paradas"
+          element={
+            <RotaProtegida perfis={[...STAFF]} pagina="paradas">
+              <Paradas />
             </RotaProtegida>
           }
         />

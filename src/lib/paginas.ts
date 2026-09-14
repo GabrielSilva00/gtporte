@@ -20,6 +20,7 @@ export type ChavePagina =
   | 'alocacao'
   | 'presenca'
   | 'rotas'
+  | 'paradas'
   | 'estudantes'
   | 'veiculos'
   | 'motoristas'
@@ -53,6 +54,7 @@ export const PAGINAS: Pagina[] = [
   { chave: 'alocacao', rotulo: 'Alocação', caminho: '/alocacao', categoria: 'Operação', Icone: IconeAlocacao },
   { chave: 'presenca', rotulo: 'Presença', caminho: '/presenca', categoria: 'Operação', Icone: IconePresenca },
   { chave: 'rotas', rotulo: 'Rotas', caminho: '/rotas', categoria: 'Operação', Icone: IconeRota },
+  { chave: 'paradas', rotulo: 'Pontos de parada', caminho: '/paradas', categoria: 'Operação', Icone: IconeRota },
 
   { chave: 'estudantes', rotulo: 'Estudantes', caminho: '/estudantes', categoria: 'Cadastros', Icone: IconeEstudante },
   { chave: 'veiculos', rotulo: 'Veículos', caminho: '/veiculos', categoria: 'Cadastros', Icone: IconeVeiculo },

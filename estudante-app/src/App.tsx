@@ -14,7 +14,7 @@ import { MinhaRota } from '@/pages/MinhaRota'
 import { RotasSemana } from '@/pages/RotasSemana'
 import { Documentos } from '@/pages/Documentos'
 import { Historico } from '@/pages/Historico'
-import { Feedback } from '@/pages/Feedback'
+import { Conversas } from '@/pages/Conversas'
 import { Perfil } from '@/pages/Perfil'
 import { CompletarCadastro } from '@/pages/CompletarCadastro'
 
@@ -147,7 +147,7 @@ function AppAutenticado() {
         ))}
           {tab === 'documentos' && <Documentos estudanteId={estudanteId} />}
           {tab === 'historico' && <Historico estudanteId={estudanteId} />}
-          {tab === 'feedback' && <Feedback />}
+          {tab === 'feedback' && <Conversas />}
           {tab === 'perfil' && <Perfil perfil={perfil} estudanteId={estudanteId} onLogout={logout} />}
         </>
       )}
