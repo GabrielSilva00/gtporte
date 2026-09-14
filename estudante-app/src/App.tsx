@@ -11,6 +11,7 @@ import { Spinner } from '@/components/Spinner'
 import { Login } from '@/pages/Login'
 import { Inicio } from '@/pages/Inicio'
 import { MinhaRota } from '@/pages/MinhaRota'
+import { RotasSemana } from '@/pages/RotasSemana'
 import { Documentos } from '@/pages/Documentos'
 import { Historico } from '@/pages/Historico'
 import { Feedback } from '@/pages/Feedback'
@@ -53,6 +54,8 @@ function AppAutenticado() {
   const { situacao, loading: carregandoAcesso } = useAcesso(estudanteId)
   const [tab, setTab] = useState<Tab>('inicio')
   const [menu, setMenu] = useState(false)
+  // dentro da aba Rota: lista da semana ou detalhe do dia
+  const [rotaAberta, setRotaAberta] = useState(false)
 
   if (!perfil) {
     return (
@@ -105,7 +108,11 @@ function AppAutenticado() {
             <Menu className="h-5 w-5 text-ink" />
           </button>
         ) : (
-          <button onClick={() => setTab('inicio')} aria-label="Voltar ao início" className="p-1.5">
+          <button
+            onClick={() => (tab === 'rota' && rotaAberta ? setRotaAberta(false) : setTab('inicio'))}
+            aria-label="Voltar"
+            className="p-1.5"
+          >
             <ArrowLeft className="h-5 w-5 text-ink" />
           </button>
         )}
@@ -132,7 +139,12 @@ function AppAutenticado() {
       ) : (
         <>
           {tab === 'inicio' && <Inicio estudanteId={estudanteId} onIr={setTab} />}
-          {tab === 'rota' && <MinhaRota />}
+          {tab === 'rota' &&
+        (rotaAberta ? (
+          <MinhaRota />
+        ) : (
+          <RotasSemana onAbrir={() => setRotaAberta(true)} />
+        ))}
           {tab === 'documentos' && <Documentos estudanteId={estudanteId} />}
           {tab === 'historico' && <Historico estudanteId={estudanteId} />}
           {tab === 'feedback' && <Feedback />}
