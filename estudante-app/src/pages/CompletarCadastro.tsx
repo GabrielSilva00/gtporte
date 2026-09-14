@@ -4,6 +4,7 @@ import { erroMsg, supabase } from '@/lib/supabase'
 import { useCadastros } from '@/hooks/useCadastros'
 import { ROTULO_DOC, TIPOS_DOC, type TipoDoc } from '@/hooks/useEstudante'
 import { REGRAS_SENHA, validarSenha } from '@/lib/validarSenha'
+import { cpfValido, mascaraCPF } from '@/lib/cpf'
 import {
   GradeSemanal,
   diasInvalidos,
@@ -17,13 +18,9 @@ import type { Perfil } from '@/hooks/useAuth'
 
 type PerfilUso = 'ida_volta' | 'somente_ida' | 'somente_volta'
 
-/** Periodos letivos oferecidos: do ano passado ao proximo, dois semestres cada. */
-function periodosLetivos() {
-  const ano = new Date().getFullYear()
-  const lista: string[] = []
-  for (let a = ano + 1; a >= ano - 1; a--) for (const s of [2, 1]) lista.push(`${a}/${s}`)
-  return lista
-}
+/** Ano vai ate 6 (medicina), semestre ate 12 — o mesmo limite do banco. */
+const LIMITE_PERIODO = { ano: 6, semestre: 12 } as const
+type TipoPeriodo = keyof typeof LIMITE_PERIODO
 
 /**
  * RF01 + RF02 — cadastro do estudante.
@@ -68,7 +65,8 @@ export function CompletarCadastro({
     endereco: '',
     cidade_universidade_id: '',
     universidade_id: '',
-    ano_semestre: '',
+    periodo_tipo: 'semestre' as TipoPeriodo,
+    periodo_numero: '',
     cidade_id: '',
     perfil_uso: 'ida_volta' as PerfilUso,
     email: perfil?.email ?? '',
@@ -94,7 +92,8 @@ export function CompletarCadastro({
   const enviados = TIPOS_DOC.filter((t) => arquivos[t]).length
   const senhaOk = validarSenha(form.senha)
 
-  const passo1Ok = form.nome.trim().length > 2 && form.cpf.trim() !== '' && form.cidade_id !== ''
+  const cpfOk = cpfValido(form.cpf)
+  const passo1Ok = form.nome.trim().length > 2 && cpfOk && form.cidade_id !== ''
   // Grade horaria deixou de travar o avanco: so nao pode ficar pela metade.
   const passo2Ok = form.universidade_id !== '' && invalidos.length === 0
   const passo3Ok = enviados >= 1
@@ -103,8 +102,26 @@ export function CompletarCadastro({
 
   const podeAvancar = passo === 0 ? passo1Ok : passo === 1 ? passo2Ok : passo3Ok
 
-  /** Grava estudante, grade e documentos. Assume sessao ativa. */
+  /**
+   * Grava estudante, grade e documentos. Assume sessao ativa.
+   *
+   * Se uma tentativa anterior criou o estudante e parou no meio (upload
+   * falhou, conexao caiu), o registro ficou la: repetir o insert bateria
+   * em `cpf` e `perfil_id`, que sao unique, e o aluno ficaria travado
+   * sem entender. Entao reaproveitamos o cadastro existente.
+   */
   const gravarCadastro = async (perfilId: string, email: string | null) => {
+    const { data: existente } = await supabase
+      .from('estudante')
+      .select('id')
+      .eq('perfil_id', perfilId)
+      .maybeSingle()
+
+    if (existente) {
+      await enviarDocumentos(existente.id)
+      return
+    }
+
     const { data: estudante, error: erroEstudante } = await supabase
       .from('estudante')
       .insert({
@@ -118,7 +135,8 @@ export function CompletarCadastro({
         endereco: form.endereco.trim() || null,
         universidade_id: form.universidade_id,
         cidade_id: form.cidade_id,
-        ano_semestre: form.ano_semestre || null,
+        periodo_tipo: form.periodo_numero ? form.periodo_tipo : null,
+        periodo_numero: form.periodo_numero ? Number(form.periodo_numero) : null,
         perfil_uso: form.perfil_uso,
       })
       .select('id')
@@ -131,26 +149,34 @@ export function CompletarCadastro({
       if (error) throw error
     }
 
-    // RF02 — bucket privado, uma pasta por estudante.
+    await enviarDocumentos(estudante.id)
+  }
+
+  /** RF02 — bucket privado, uma pasta por estudante. */
+  const enviarDocumentos = async (estudanteId: string) => {
     for (const tipo of TIPOS_DOC) {
       const arquivo = arquivos[tipo]
       if (!arquivo) continue
 
       const extensao = arquivo.name.split('.').pop()?.toLowerCase() ?? 'pdf'
-      const caminho = `${estudante.id}/${tipo}-${Date.now()}.${extensao}`
+      const caminho = `${estudanteId}/${tipo}-${Date.now()}.${extensao}`
 
       const { error: erroUpload } = await supabase.storage
         .from('documentos')
         .upload(caminho, arquivo, { upsert: true })
       if (erroUpload) throw erroUpload
 
-      const { error: erroDoc } = await supabase.from('documento').insert({
-        estudante_id: estudante.id,
-        tipo,
-        nome_arquivo: arquivo.name,
-        storage_path: caminho,
-        status: 'pendente',
-      })
+      // upsert: reenviar o mesmo tipo substitui, nao duplica
+      const { error: erroDoc } = await supabase.from('documento').upsert(
+        {
+          estudante_id: estudanteId,
+          tipo,
+          nome_arquivo: arquivo.name,
+          storage_path: caminho,
+          status: 'pendente',
+        },
+        { onConflict: 'estudante_id,tipo' },
+      )
       if (erroDoc) throw erroDoc
     }
   }
@@ -248,8 +274,13 @@ export function CompletarCadastro({
               inputMode="numeric"
               placeholder="000.000.000-00"
               value={form.cpf}
-              onChange={(e) => mudar('cpf', e.target.value)}
+              onChange={(e) => mudar('cpf', mascaraCPF(e.target.value))}
             />
+            {form.cpf.length >= 14 && !cpfOk && (
+              <span className="mt-1 block text-[11px] text-err">
+                CPF inválido. Confira os números digitados.
+              </span>
+            )}
           </Campo>
           <div className="grid grid-cols-2 gap-2.5">
             <Campo rotulo="Nascimento">
@@ -341,16 +372,32 @@ export function CompletarCadastro({
                 onChange={(e) => mudar('curso', e.target.value)}
               />
             </Campo>
-            <Campo rotulo="Ano/Semestre">
+            <Campo rotulo="Você conta por">
               <select
                 className="field"
-                value={form.ano_semestre}
-                onChange={(e) => mudar('ano_semestre', e.target.value)}
+                value={form.periodo_tipo}
+                onChange={(e) => {
+                  mudar('periodo_tipo', e.target.value)
+                  mudar('periodo_numero', '') // 8o semestre nao existe em anos
+                }}
+              >
+                <option value="semestre">Semestre</option>
+                <option value="ano">Ano</option>
+              </select>
+            </Campo>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <Campo rotulo={form.periodo_tipo === 'ano' ? 'Ano do curso' : 'Semestre do curso'}>
+              <select
+                className="field"
+                value={form.periodo_numero}
+                onChange={(e) => mudar('periodo_numero', e.target.value)}
               >
                 <option value="">Selecione…</option>
-                {periodosLetivos().map((p) => (
-                  <option key={p} value={p}>
-                    {p}
+                {Array.from({ length: LIMITE_PERIODO[form.periodo_tipo] }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={String(n)}>
+                    {n}º {form.periodo_tipo}
                   </option>
                 ))}
               </select>

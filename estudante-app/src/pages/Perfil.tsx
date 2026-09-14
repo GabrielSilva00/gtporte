@@ -23,7 +23,8 @@ const EDITAVEIS: CampoEditavel[] = [
   'universidade_id',
   'cidade_id',
   'perfil_uso',
-  'ano_semestre',
+  'periodo_tipo',
+  'periodo_numero',
 ]
 
 interface Cadastro {
@@ -38,7 +39,8 @@ interface Cadastro {
   universidade_id: string
   cidade_id: string
   perfil_uso: 'ida_volta' | 'somente_ida' | 'somente_volta'
-  ano_semestre: string | null
+  periodo_tipo: 'ano' | 'semestre' | null
+  periodo_numero: number | null
   status_documental: string
   criado_em: string
 }
@@ -68,7 +70,7 @@ export function Perfil({
       const { data: est } = await supabase
         .from('estudante')
         .select(
-          'nome,prontuario,cpf,email,telefone,curso,endereco,data_nascimento,universidade_id,cidade_id,ano_semestre,perfil_uso,status_documental,criado_em',
+          'nome,prontuario,cpf,email,telefone,curso,endereco,data_nascimento,universidade_id,cidade_id,periodo_tipo,periodo_numero,perfil_uso,status_documental,criado_em',
         )
         .eq('id', estudanteId)
         .maybeSingle()
@@ -85,7 +87,8 @@ export function Perfil({
         universidade_id: c.universidade_id ?? '',
         cidade_id: c.cidade_id ?? '',
         perfil_uso: c.perfil_uso,
-        ano_semestre: c.ano_semestre ?? '',
+        periodo_tipo: c.periodo_tipo ?? 'semestre',
+        periodo_numero: c.periodo_numero ? String(c.periodo_numero) : '',
       })
     })()
     return () => {
@@ -258,16 +261,46 @@ export function Perfil({
               )}
             </CampoCadastro>
 
-            <CampoCadastro rotulo="Ano/Semestre" pendente={pendenteLegivel('ano_semestre')} recusa={recusaDe('ano_semestre')}>
+            <CampoCadastro
+              rotulo="Período do curso"
+              pendente={pendenteLegivel('periodo_numero')}
+              recusa={recusaDe('periodo_numero')}
+            >
               {editando ? (
-                <input
-                  className="field"
-                  placeholder="2026/1"
-                  value={form.ano_semestre ?? ''}
-                  onChange={(e) => mudar('ano_semestre', e.target.value)}
-                />
+                <div className="flex gap-2">
+                  <select
+                    className="field"
+                    value={form.periodo_tipo ?? 'semestre'}
+                    onChange={(e) => {
+                      mudar('periodo_tipo', e.target.value)
+                      mudar('periodo_numero', '')
+                    }}
+                  >
+                    <option value="semestre">Semestre</option>
+                    <option value="ano">Ano</option>
+                  </select>
+                  <select
+                    className="field"
+                    value={form.periodo_numero ?? ''}
+                    onChange={(e) => mudar('periodo_numero', e.target.value)}
+                  >
+                    <option value="">—</option>
+                    {Array.from(
+                      { length: (form.periodo_tipo ?? 'semestre') === 'ano' ? 6 : 12 },
+                      (_, i) => i + 1,
+                    ).map((n) => (
+                      <option key={n} value={String(n)}>
+                        {n}º
+                      </option>
+                    ))}
+                  </select>
+                </div>
               ) : (
-                <p className="text-sm font-medium">{cadastro.ano_semestre ?? '—'}</p>
+                <p className="text-sm font-medium">
+                  {cadastro.periodo_numero
+                    ? `${cadastro.periodo_numero}º ${cadastro.periodo_tipo === 'ano' ? 'ano' : 'semestre'}`
+                    : '—'}
+                </p>
               )}
             </CampoCadastro>
 

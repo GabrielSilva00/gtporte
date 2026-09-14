@@ -15,6 +15,8 @@ export type CampoEditavel =
   | 'cidade_id'
   | 'perfil_uso'
   | 'ano_semestre'
+  | 'periodo_tipo'
+  | 'periodo_numero'
 
 export interface Alteracao {
   id: string
@@ -36,7 +38,9 @@ export const ROTULO_CAMPO: Record<CampoEditavel, string> = {
   universidade_id: 'Universidade',
   cidade_id: 'Cidade',
   perfil_uso: 'Perfil de uso',
-  ano_semestre: 'Ano/Semestre',
+  ano_semestre: 'Período letivo',
+  periodo_tipo: 'Contagem do curso',
+  periodo_numero: 'Ano/semestre do curso',
 }
 
 /**
