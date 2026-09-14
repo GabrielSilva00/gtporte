@@ -17,11 +17,15 @@ export function ToastContainer() {
   }, [])
 
   return (
-    <div className="fixed inset-x-4 top-[env(safe-area-inset-top,12px)] z-[100] flex flex-col gap-2 pt-8" role="status" aria-live="polite">
+    <div // pointer-events-none: o container ocupa a faixa do topo mesmo vazio e
+      // estava interceptando o clique do sino de notificacoes
+      className="pointer-events-none fixed inset-x-4 top-[env(safe-area-inset-top,12px)] z-[100] flex flex-col gap-2 pt-8"
+      role="status"
+      aria-live="polite">
       {q.map((x) => (
         <div
           key={x.id}
-          className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white shadow-lift anim-in ${x.t === 'ok' ? 'bg-ok' : 'bg-err'}`}
+          className={`pointer-events-auto flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-white shadow-lift anim-in ${x.t === 'ok' ? 'bg-ok' : 'bg-err'}`}
         >
           {x.t === 'ok' ? <CheckCircle className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
           <span className="flex-1">{x.m}</span>

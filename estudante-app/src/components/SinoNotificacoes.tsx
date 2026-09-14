@@ -47,7 +47,7 @@ export function SinoNotificacoes({
       <button
         onClick={abrir}
         aria-label={naoLidas > 0 ? `Notificações, ${naoLidas} não lidas` : 'Notificações'}
-        className="fixed right-4 top-[max(0.75rem,env(safe-area-inset-top))] z-[70] flex h-10 w-10 items-center justify-center rounded-full border border-line/60 bg-surface/90 shadow-card backdrop-blur transition-transform active:scale-95"
+        className="fixed right-4 top-[max(0.75rem,env(safe-area-inset-top))] z-[101] flex h-10 w-10 items-center justify-center rounded-full border border-line/60 bg-surface/90 shadow-card backdrop-blur transition-transform active:scale-95"
       >
         <Bell className="h-[18px] w-[18px] text-ink" />
         {naoLidas > 0 && (

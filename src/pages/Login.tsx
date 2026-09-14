@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { rotaInicial, useAuth } from '../auth/AuthProvider'
 import { IconeOnibus } from '../components/icons'
 import heroLogin from '../assets/home-hero.jpg'
@@ -8,8 +8,10 @@ import { useToast } from '../components/ui/Toast'
 
 /** Público declarado no formulário. Não concede acesso: serve para orientar a
  *  interface e barrar quem escolheu a opção errada. Quem manda é o tipo gravado
- *  em public.perfil, respaldado pelas policies de RLS. */
-type Publico = 'estudante' | 'servidor' | 'motorista'
+ *  em public.perfil, respaldado pelas policies de RLS.
+ *
+ *  O estudante saiu daqui: entra e se cadastra pelo aplicativo próprio. */
+type Publico = 'servidor' | 'motorista'
 
 const NOME_TIPO: Record<string, string> = {
   admin: 'servidor (administrador)',
@@ -21,9 +23,10 @@ const NOME_TIPO: Record<string, string> = {
 /** O tipo do perfil corresponde ao público escolhido?
  *  Motorista entra pelo acesso de servidor, que é como ele consta na prefeitura. */
 function corresponde(publico: Publico, tipo: string): boolean {
+  // Conta de estudante nao entra por aqui: cai na mensagem de tipo incorreto,
+  // que orienta a usar o aplicativo do estudante.
   if (publico === 'servidor') return tipo === 'admin' || tipo === 'operador' || tipo === 'motorista'
-  if (publico === 'motorista') return tipo === 'motorista'
-  return tipo === 'estudante'
+  return tipo === 'motorista'
 }
 
 /**
@@ -52,11 +55,9 @@ export default function Login() {
   // pré-seleciona a interface — quem autoriza continua sendo a RLS.
   const [params] = useSearchParams()
   const publicoDaUrl = params.get('publico')
-  const [publico, setPublico] = useState<Publico>(
-    publicoDaUrl === 'servidor' || publicoDaUrl === 'motorista' ? publicoDaUrl : 'estudante',
-  )
-  /** Estudante entra por e-mail; servidor e motorista entram por login. */
-  const usaLogin = publico !== 'estudante'
+  const [publico] = useState<Publico>(publicoDaUrl === 'motorista' ? 'motorista' : 'servidor')
+  /** Servidor e motorista entram por login; não há mais acesso por e-mail aqui. */
+  const usaLogin = true
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -86,7 +87,7 @@ export default function Login() {
         await sair()
         setErro(
           `Esta conta é de ${NOME_TIPO[tipo] ?? tipo}, e você escolheu entrar como ` +
-            `${publico === 'estudante' ? 'estudante' : publico}. ` +
+            `${publico}. ` +
             'A senha está certa; use a outra opção de acesso.',
         )
         return
@@ -176,13 +177,7 @@ export default function Login() {
           </div>
 
           <div className="eyebrow mb-2">Entrar</div>
-          <h2
-            className={`text-[26px] font-semibold tracking-[-0.01em] ${
-              publico === 'estudante' ? 'mb-5' : 'mb-1.5'
-            }`}
-          >
-            Acesse sua conta
-          </h2>
+          <h2 className="mb-1.5 text-[26px] font-semibold tracking-[-0.01em]">Acesse sua conta</h2>
           {publico === 'servidor' && (
             <p className="mb-5 text-[13.5px] text-muted">Acesso restrito ao Setor de Transporte.</p>
           )}
@@ -196,16 +191,6 @@ export default function Login() {
               <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted">
                 {publico === 'motorista' ? 'Acesso do motorista' : 'Acesso de servidor'}
               </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setPublico('estudante')
-                  setErro(null)
-                }}
-                className="text-[12px] text-primary hover:text-primary-hover"
-              >
-                Sou estudante
-              </button>
             </div>
           )}
 
@@ -259,34 +244,14 @@ export default function Login() {
               {enviando ? 'Entrando…' : 'Entrar'}
             </button>
 
-            {publico === 'estudante' ? (
-              <>
-                <div className="mt-3 text-center text-[12.5px] text-muted">
-                  Ainda não tem cadastro?{' '}
-                  <Link to="/cadastro" className="font-medium text-primary hover:text-primary-hover">
-                    Cadastre-se como estudante
-                  </Link>
-                </div>
-                <div className="mt-5 border-t border-line pt-3 text-center">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPublico('servidor')
-                      setErro(null)
-                    }}
-                    className="text-[11.5px] text-soft hover:text-muted"
-                  >
-                    Acesso de servidor
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="mt-3 text-center text-[12.5px] text-muted">
-                {publico === 'motorista'
-                  ? 'Seu acesso é criado pelo Setor de Transporte.'
-                  : 'A conta de servidor é criada pelo Setor de Transporte.'}
-              </div>
-            )}
+            <div className="mt-3 text-center text-[12.5px] text-muted">
+              {publico === 'motorista'
+                ? 'Seu acesso é criado pelo Setor de Transporte.'
+                : 'A conta de servidor é criada pelo Setor de Transporte.'}
+            </div>
+            <div className="mt-4 border-t border-line pt-3 text-center text-[11.5px] text-soft">
+              É estudante? O acesso e o cadastro acontecem pelo aplicativo do estudante.
+            </div>
           </div>
         </form>
       </div>

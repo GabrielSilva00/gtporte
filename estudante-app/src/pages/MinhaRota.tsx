@@ -95,7 +95,7 @@ export function MinhaRota(){
 
     {/* Modal cancelar presenca */}
     {showCanc&&<div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={()=>{setShowCanc(null);setCancMotivo('')}}>
-      <div className="w-full max-w-lg rounded-t-3xl bg-surface p-6 pb-10 anim-in" onClick={e=>e.stopPropagation()}>
+      <div className="anim-in max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-surface p-6 pb-10" onClick={e=>e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4"><h3 className="text-lg font-bold">Cancelar {showCanc}</h3><button onClick={()=>{setShowCanc(null);setCancMotivo('')}}><X className="h-5 w-5 text-muted"/></button></div>
         <label className="block text-xs font-medium text-muted mb-1.5">Motivo (obrigatorio)</label>
         <textarea className="field min-h-[80px] resize-none" value={cancMotivo} onChange={e=>setCancMotivo(e.target.value)} autoFocus placeholder="Descreva o motivo..."/>
@@ -104,7 +104,7 @@ export function MinhaRota(){
 
     {/* Modal solicitar volta */}
     {showSolVolta&&<div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={()=>setShowSolVolta(false)}>
-      <div className="w-full max-w-lg rounded-t-3xl bg-surface p-6 pb-10 anim-in" onClick={e=>e.stopPropagation()}>
+      <div className="anim-in max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-surface p-6 pb-10" onClick={e=>e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4"><h3 className="text-lg font-bold">Solicitar so a volta</h3><button onClick={()=>setShowSolVolta(false)}><X className="h-5 w-5 text-muted"/></button></div>
         <p className="text-xs text-muted mb-3">Explique por que voce nao embarcou na ida mas precisa da volta. O motorista decidira.</p>
         <textarea className="field min-h-[100px] resize-none" value={justificativa} onChange={e=>setJustificativa(e.target.value)} autoFocus placeholder="Justificativa..."/>

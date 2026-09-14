@@ -66,7 +66,7 @@ export function CampoCadastro({
           onClick={() => setAberto(false)}
         >
           <div
-            className="anim-in w-full max-w-lg rounded-t-3xl bg-surface p-6 pb-10"
+            className="anim-in max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-surface p-6 pb-10"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
