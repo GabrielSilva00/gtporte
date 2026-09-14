@@ -21,10 +21,11 @@ export interface Conversa {
 export interface MensagemConversa {
   id: string
   autor_id: string | null
+  autor_nome: string | null
+  autor_tipo: string | null
   eh_bot: boolean
   corpo: string
   criado_em: string
-  autor_nome?: string | null
 }
 
 /**
@@ -68,6 +69,7 @@ export function useConversas() {
 export function useMensagensConversa(conversaId: string | null) {
   const [msgs, setMsgs] = useState<MensagemConversa[]>([])
   const [loading, setLoading] = useState(true)
+  const [erro, setErro] = useState<string | null>(null)
   const [meuId, setMeuId] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
@@ -81,18 +83,19 @@ export function useMensagensConversa(conversaId: string | null) {
     } = await supabase.auth.getUser()
     setMeuId(user?.id ?? null)
 
-    const { data } = await supabase
-      .from('conversa_mensagem')
-      .select('id,autor_id,eh_bot,corpo,criado_em,autor:autor_id(nome)')
-      .eq('conversa_id', conversaId)
-      .order('criado_em')
-      .limit(200)
-
-    setMsgs(
-      ((data ?? []) as unknown as (MensagemConversa & { autor?: { nome: string } | null })[]).map(
-        (m) => ({ ...m, autor_nome: m.autor?.nome ?? null }),
-      ),
-    )
+    // Pela funcao, e nao por embed em `perfil`: a policy
+    // perfil_select_proprio deixa o estudante ver apenas o proprio
+    // perfil, entao o nome dos outros participantes vinha vazio.
+    const { data, error } = await supabase.rpc('mensagens_da_conversa', {
+      p_conversa_id: conversaId,
+    })
+    if (error) {
+      setErro(erroMsg(error))
+      setMsgs([])
+    } else {
+      setErro(null)
+      setMsgs((data as MensagemConversa[]) ?? [])
+    }
     setLoading(false)
   }, [conversaId])
 
@@ -110,12 +113,10 @@ export function useMensagensConversa(conversaId: string | null) {
   const enviar = useCallback(
     async (corpo: string) => {
       if (!conversaId || !corpo.trim()) return
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      const { error } = await supabase
-        .from('conversa_mensagem')
-        .insert({ conversa_id: conversaId, autor_id: user?.id ?? null, corpo: corpo.trim() })
+      const { error } = await supabase.rpc('enviar_mensagem_conversa', {
+        p_conversa_id: conversaId,
+        p_corpo: corpo.trim(),
+      })
       if (error) throw new Error(erroMsg(error))
       await refresh()
     },
@@ -129,5 +130,5 @@ export function useMensagensConversa(conversaId: string | null) {
     await refresh()
   }, [conversaId, refresh])
 
-  return { msgs, loading, meuId, enviar, escalar, refresh }
+  return { msgs, loading, erro, meuId, enviar, escalar, refresh }
 }

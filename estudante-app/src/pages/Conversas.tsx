@@ -14,7 +14,7 @@ const hora = (iso: string) =>
 
 /** Conversa aberta: bolhas, quem falou e o campo de envio. */
 function Conversa({ conversa, onVoltar }: { conversa: Conversa; onVoltar: () => void }) {
-  const { msgs, loading, meuId, enviar, escalar } = useMensagensConversa(conversa.id)
+  const { msgs, loading, erro, meuId, enviar, escalar } = useMensagensConversa(conversa.id)
   const [texto, setTexto] = useState('')
   const [enviando, setEnviando] = useState(false)
 
@@ -60,6 +60,12 @@ function Conversa({ conversa, onVoltar }: { conversa: Conversa; onVoltar: () => 
         {loading ? (
           <div className="flex justify-center py-8">
             <Spinner />
+          </div>
+        ) : erro ? (
+          <div className="aviso-err mx-2">
+            <p className="text-xs text-muted">
+              <b className="text-err">Não foi possível abrir a conversa.</b> {erro}
+            </p>
           </div>
         ) : (
           msgs.map((m) => {

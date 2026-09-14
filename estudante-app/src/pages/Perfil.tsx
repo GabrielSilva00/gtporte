@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CalendarClock, GraduationCap, LogOut, Palette, Pencil, Save, Smartphone, X } from 'lucide-react'
+import { CalendarClock, FileCheck, GraduationCap, IdCard, LogOut, Palette, Pencil, Save, Smartphone, X } from 'lucide-react'
 import { useMinhaRota, ROTULO_PERFIL } from '@/hooks/useEstudante'
 import { useAlteracoes, ROTULO_CAMPO, type CampoEditavel } from '@/hooks/useAlteracoes'
 import { useCadastros } from '@/hooks/useCadastros'
@@ -181,7 +181,10 @@ export function Perfil({
       ) : (
         <div className="card anim-in space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Meus dados</h3>
+            <div className="flex items-center gap-2">
+              <IdCard className="h-4 w-4 text-brand-500" />
+              <h3 className="text-sm font-semibold">Dados pessoais</h3>
+            </div>
             {editando ? (
               <button
                 onClick={() => setEditando(false)}
@@ -257,6 +260,19 @@ export function Perfil({
               )}
             </CampoCadastro>
 
+          </div>
+        </div>
+      )}
+
+      {/* Dados academicos */}
+      {estudanteId && cadastro && (
+        <div className="card anim-in space-y-3">
+          <div className="flex items-center gap-2">
+            <GraduationCap className="h-4 w-4 text-brand-500" />
+            <h3 className="text-sm font-semibold">Dados acadêmicos</h3>
+          </div>
+
+          <div className="space-y-3">
             <CampoCadastro rotulo="Curso" pendente={pendenteLegivel('curso')} recusa={recusaDe('curso')}>
               {editando ? (
                 <input className="field" value={form.curso ?? ''} onChange={(e) => mudar('curso', e.target.value)} />
@@ -356,14 +372,10 @@ export function Perfil({
               )}
             </CampoCadastro>
 
-            <div className="flex items-center justify-between gap-3 border-t border-line/60 pt-3">
-              <span className="text-xs text-muted">Documentação</span>
-              <span className={corDoc}>{cadastro.status_documental}</span>
-            </div>
           </div>
 
           {editando && (
-            <button onClick={salvar} disabled={salvando} className="btn-primary mt-2 flex items-center justify-center gap-2">
+            <button onClick={salvar} disabled={salvando} className="btn-primary mt-1 flex items-center justify-center gap-2">
               {salvando ? <Spinner /> : (
                 <>
                   <Save className="h-4 w-4" />
@@ -372,6 +384,20 @@ export function Perfil({
               )}
             </button>
           )}
+        </div>
+      )}
+
+      {/* Situacao da documentacao */}
+      {estudanteId && cadastro && (
+        <div className="card anim-in flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <FileCheck className="h-4 w-4 text-brand-500" />
+            <div>
+              <h3 className="text-sm font-semibold">Documentação</h3>
+              <p className="text-[11px] text-muted">Validada pela secretaria</p>
+            </div>
+          </div>
+          <span className={corDoc}>{cadastro.status_documental}</span>
         </div>
       )}
 

@@ -109,7 +109,7 @@ function AppAutenticado() {
         )}
         <span className="text-sm font-bold">{TITULO_SECAO[tab]}</span>
         {tab !== 'inicio' && (
-          <button onClick={() => setMenu(true)} aria-label="Abrir menu" className="ml-auto mr-12 p-1.5">
+          <button onClick={() => setMenu(true)} aria-label="Abrir menu" className="ml-auto p-1.5">
             <Menu className="h-5 w-5 text-muted" />
           </button>
         )}

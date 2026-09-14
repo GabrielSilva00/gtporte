@@ -17,7 +17,7 @@ export function BarraConexao() {
   }[situacao]
 
   return (
-    <div className={`fixed inset-x-0 top-0 z-[90] flex items-center justify-center gap-2 px-4 py-1.5 text-[11px] font-semibold safe-t ${estilo.cls}`}>
+    <div className={`fixed inset-x-0 bottom-0 z-[90] flex items-center justify-center gap-2 px-4 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] text-[11px] font-semibold ${estilo.cls}`}>
       <estilo.Icone className={`h-3.5 w-3.5 ${situacao === 'sincronizando' ? 'animate-spin' : ''}`} />
       <span>{estilo.texto}</span>
     </div>

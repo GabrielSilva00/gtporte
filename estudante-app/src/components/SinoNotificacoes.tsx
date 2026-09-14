@@ -47,11 +47,11 @@ export function SinoNotificacoes({
       <button
         onClick={abrir}
         aria-label={naoLidas > 0 ? `Notificações, ${naoLidas} não lidas` : 'Notificações'}
-        className="fixed right-4 top-[max(0.75rem,env(safe-area-inset-top))] z-[101] flex h-10 w-10 items-center justify-center rounded-full border border-line/60 bg-surface/90 shadow-card backdrop-blur transition-transform active:scale-95"
+        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-4 z-[101] flex h-12 w-12 items-center justify-center rounded-full bg-brand-600 text-white shadow-lift transition-transform active:scale-95"
       >
-        <Bell className="h-[18px] w-[18px] text-ink" />
+        <Bell className="h-5 w-5" />
         {naoLidas > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-err px-1 text-[11px] font-bold text-white">
+          <span className="absolute -right-1 -top-1 flex h-[19px] min-w-[19px] ring-2 ring-surface items-center justify-center rounded-full bg-err px-1 text-[11px] font-bold text-white">
             {naoLidas > 9 ? '9+' : naoLidas}
           </span>
         )}
@@ -59,11 +59,11 @@ export function SinoNotificacoes({
 
       {aberto && (
         <div
-          className="fixed inset-0 z-[96] flex items-start justify-center bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-[96] flex items-end justify-center bg-black/50 backdrop-blur-sm"
           onClick={() => setAberto(false)}
         >
           <div
-            className="anim-in mt-[max(3.5rem,env(safe-area-inset-top))] max-h-[75vh] w-[calc(100%-2rem)] max-w-md overflow-hidden rounded-2xl bg-surface shadow-lift"
+            className="anim-in mb-[max(1rem,env(safe-area-inset-bottom))] max-h-[70vh] w-[calc(100%-2rem)] max-w-md overflow-hidden rounded-2xl bg-surface shadow-lift"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -75,7 +75,7 @@ export function SinoNotificacoes({
               </button>
             </div>
 
-            <div className="max-h-[calc(75vh-3rem)] overflow-y-auto">
+            <div className="max-h-[calc(70vh-3rem)] overflow-y-auto">
               {itens.length === 0 ? (
                 <div className="px-6 py-12 text-center">
                   <Bell className="mx-auto mb-3 h-10 w-10 text-faint/50" />
