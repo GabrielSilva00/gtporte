@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Bus, ChevronDown, Clock, MapPin, Navigation, ScanLine, Users } from 'lucide-react'
-import { useRotas, usePassageiros, useSolicitacoesVolta, atualizarSituacao, registrarGPS, ROTULO_SIT, COR_SIT } from '@/hooks/useMotorista'
+import { useRotas, usePassageiros, useSolicitacoesVolta, useTrocasRota, atualizarSituacao, registrarGPS, ROTULO_SIT, COR_SIT } from '@/hooks/useMotorista'
 import type { SituacaoOp } from '@/hooks/useMotorista'
 import { Spinner } from '@/components/Spinner'
 import { toast } from '@/components/Toast'
@@ -19,6 +19,8 @@ export function Viagem({onIrParaCheckIn}:{onIrParaCheckIn:()=>void}){
   const rid=rota?.rota_id||null
   const {pax}=usePassageiros(rid)
   const {sol,decidir}=useSolicitacoesVolta(rid)
+  const {trocas,decidir:decidirTroca}=useTrocasRota()
+  const [decidindoTroca,setDecidindoTroca]=useState<string|null>(null)
   const [track,setTrack]=useState(false)
   const [busy,setBusy]=useState(false)
   const [decidindo,setDecidindo]=useState<string|null>(null)
@@ -135,6 +137,36 @@ export function Viagem({onIrParaCheckIn}:{onIrParaCheckIn:()=>void}){
             {decidindo===s.id?<Spinner className="h-4 w-4"/>:'Aprovar'}
           </button>
           <button onClick={()=>responder(s.id,false)} disabled={decidindo===s.id} className="flex-1 rounded-xl bg-rose-500/20 py-2.5 text-xs font-semibold text-rose-400">Recusar</button>
+        </div>
+      </div>)}
+    </>}
+
+    {/* Trocas de onibus: o aluno cancelou a volta na rota dele e pediu vaga nesta */}
+    {trocas.length>0&&<>
+      <h3 className="mt-2 text-sm font-semibold text-amber-400">Trocas de ônibus pendentes</h3>
+      {trocas.map(t=><div key={t.id} className="card space-y-3">
+        <div>
+          <p className="text-sm font-semibold">{t.estudante}</p>
+          <p className="text-[11px] text-white/50">
+            Prontuário {t.prontuario}{t.rota_origem?` · vinha da rota ${t.rota_origem}`:''}
+          </p>
+        </div>
+        {t.justificativa&&<p className="text-xs italic text-white/50">"{t.justificativa}"</p>}
+        <div className="flex gap-2">
+          <button
+            onClick={async()=>{setDecidindoTroca(t.id);try{await decidirTroca(t.id,true);toast('Troca aceita. O aluno volta com você.')}catch(e){toast((e as Error).message,'err')}finally{setDecidindoTroca(null)}}}
+            disabled={decidindoTroca===t.id}
+            className="flex flex-1 items-center justify-center rounded-xl bg-emerald-500/20 py-2.5 text-xs font-semibold text-emerald-400"
+          >
+            {decidindoTroca===t.id?<Spinner className="h-4 w-4"/>:'Aceitar'}
+          </button>
+          <button
+            onClick={async()=>{setDecidindoTroca(t.id);try{await decidirTroca(t.id,false,'Sem vaga disponível')}catch(e){toast((e as Error).message,'err')}finally{setDecidindoTroca(null)}}}
+            disabled={decidindoTroca===t.id}
+            className="flex-1 rounded-xl bg-rose-500/20 py-2.5 text-xs font-semibold text-rose-400"
+          >
+            Recusar
+          </button>
         </div>
       </div>)}
     </>}

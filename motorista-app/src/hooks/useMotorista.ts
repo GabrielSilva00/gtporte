@@ -212,3 +212,34 @@ export function useHistorico() {
   useEffect(()=>{refresh()},[refresh])
   return {hist,loading,refresh}
 }
+
+export interface TrocaPendente {
+  id: string
+  estudante_id: string
+  estudante: string
+  prontuario: string
+  rota_origem: string | null
+  justificativa: string | null
+  criado_em: string
+}
+
+/**
+ * Trocas de onibus aguardando decisao (0023_paradas_e_troca_de_rota).
+ * O estudante cancelou a volta na rota dele e pediu para voltar nesta;
+ * quem responde pela lotacao do veiculo e o motorista, entao e ele quem
+ * aceita ou recusa.
+ */
+export function useTrocasRota() {
+  const [trocas,setTrocas]=useState<TrocaPendente[]>([]); const [loading,setLoading]=useState(false)
+  const refresh=useCallback(async()=>{
+    setLoading(true)
+    const {data}=await supabase.rpc('trocas_pendentes_motorista')
+    setTrocas((data as TrocaPendente[])||[]); setLoading(false)
+  },[])
+  useEffect(()=>{refresh()},[refresh])
+  const decidir=async(id:string,aprovar:boolean,motivo?:string)=>{
+    const{error}=await supabase.rpc('decidir_troca_rota',{p_id:id,p_aprovar:aprovar,p_motivo_recusa:motivo??null})
+    if(error)throw new Error(erroMsg(error)); await refresh()
+  }
+  return {trocas,loading,decidir,refresh}
+}

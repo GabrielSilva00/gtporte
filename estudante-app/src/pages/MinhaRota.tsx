@@ -4,13 +4,13 @@ import { useMinhaRota, useAvisos, confirmarPresenca, cancelarPresenca, solicitar
 import { Spinner } from '@/components/Spinner'
 import { toast } from '@/components/Toast'
 import { ModalQr } from '@/components/QrEmbarque'
+import { CancelarPresenca } from '@/components/CancelarPresenca'
 
 export function MinhaRota(){
   const {rota:data,loading,refresh}=useMinhaRota()
   const avisos=useAvisos(data?.rota?.id||null)
   const [busy,setBusy]=useState<string|null>(null)
   const [showCanc,setShowCanc]=useState<'ida'|'volta'|null>(null)
-  const [cancMotivo,setCancMotivo]=useState('')
   const [showSolVolta,setShowSolVolta]=useState(false)
   const [justificativa,setJustificativa]=useState('')
   const [qr,setQr]=useState<'ida'|'volta'|null>(null)
@@ -22,7 +22,18 @@ export function MinhaRota(){
   const sit=rota?.situacao_operacional
 
   const doConfirmar=async(trecho:'ida'|'volta')=>{setBusy(trecho);try{await confirmarPresenca(trecho);toast('Presenca confirmada!');await refresh();if(est.prontuario)setQr(trecho)}catch(e){toast((e as Error).message,'err')}finally{setBusy(null)}}
-  const doCancelar=async()=>{if(!showCanc||!cancMotivo.trim())return;setBusy('canc');try{await cancelarPresenca(showCanc,cancMotivo.trim());toast('Presenca cancelada');setShowCanc(null);setCancMotivo('');await refresh()}catch(e){toast((e as Error).message,'err')}finally{setBusy(null)}}
+  const doCancelar=async(dados:{motivo:string;texto:string;rotaDestinoId?:string})=>{
+    if(!showCanc)return
+    setBusy('canc')
+    try{
+      await cancelarPresenca(showCanc,dados.texto,dados.motivo,dados.rotaDestinoId)
+      toast(dados.rotaDestinoId
+        ? 'Solicitação enviada ao motorista da outra rota.'
+        : 'Presença cancelada.')
+      setShowCanc(null)
+      await refresh()
+    }catch(e){toast((e as Error).message,'err')}finally{setBusy(null)}
+  }
   const doSolVolta=async()=>{if(!justificativa.trim())return;setBusy('sol');try{await solicitarVolta(justificativa.trim());toast('Solicitacao enviada!');setShowSolVolta(false);setJustificativa('');await refresh()}catch(e){toast((e as Error).message,'err')}finally{setBusy(null)}}
 
   const fmtHora=(h:string|null)=>h?h.slice(0,5):''
@@ -93,14 +104,7 @@ export function MinhaRota(){
     {avisos.length>0&&<><h3 className="text-sm font-semibold text-muted flex items-center gap-2"><Bell className="h-4 w-4"/>Avisos do motorista</h3>
       {avisos.map(a=><div key={a.id} className="card anim-in"><p className="text-sm">{a.mensagem}</p><p className="text-[11px] text-faint mt-1">{new Date(a.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</p></div>)}</>}
 
-    {/* Modal cancelar presenca */}
-    {showCanc&&<div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={()=>{setShowCanc(null);setCancMotivo('')}}>
-      <div className="anim-in max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-surface p-6 pb-10" onClick={e=>e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4"><h3 className="text-lg font-bold">Cancelar {showCanc}</h3><button onClick={()=>{setShowCanc(null);setCancMotivo('')}}><X className="h-5 w-5 text-muted"/></button></div>
-        <label className="block text-xs font-medium text-muted mb-1.5">Motivo (obrigatorio)</label>
-        <textarea className="field min-h-[80px] resize-none" value={cancMotivo} onChange={e=>setCancMotivo(e.target.value)} autoFocus placeholder="Descreva o motivo..."/>
-        <button onClick={doCancelar} disabled={!cancMotivo.trim()||!!busy} className="btn-danger mt-4 flex items-center justify-center gap-2">{busy==='canc'?<Spinner/>:<><X className="h-4 w-4"/>Confirmar cancelamento</>}</button>
-      </div></div>}
+    {showCanc&&<CancelarPresenca trecho={showCanc} ocupado={busy==='canc'} onConfirmar={doCancelar} onFechar={()=>setShowCanc(null)}/>}
 
     {/* Modal solicitar volta */}
     {showSolVolta&&<div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={()=>setShowSolVolta(false)}>

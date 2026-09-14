@@ -59,11 +59,25 @@ export async function confirmarPresenca(trecho:'ida'|'volta'){
   const{error}=await supabase.rpc('confirmar_presenca',{p_estudante_id:est.id,p_trecho:trecho,p_data:hoje});if(error)throw new Error(erroMsg(error))
 }
 
-export async function cancelarPresenca(trecho:'ida'|'volta',motivo:string){
+/**
+ * Cancela a presenca com motivo padronizado. Quando o motivo e troca de
+ * onibus, registra tambem a solicitacao para o motorista da outra rota
+ * decidir — a vaga la depende dele.
+ */
+export async function cancelarPresenca(
+  trecho:'ida'|'volta',
+  motivo:string,
+  motivoTipo?:string,
+  rotaDestinoId?:string,
+){
   const hoje=new Date().toISOString().slice(0,10)
   const{data:{user}}=await supabase.auth.getUser();if(!user)throw new Error('Sessao expirada')
   const{data:est}=await supabase.from('estudante').select('id').eq('perfil_id',user.id).maybeSingle();if(!est)throw new Error('Cadastro nao encontrado')
-  const{error}=await supabase.rpc('cancelar_presenca',{p_estudante_id:est.id,p_trecho:trecho,p_motivo:motivo,p_data:hoje});if(error)throw new Error(erroMsg(error))
+  const{error}=await supabase.rpc('cancelar_presenca',{p_estudante_id:est.id,p_trecho:trecho,p_motivo:motivo,p_data:hoje,p_motivo_tipo:motivoTipo??null});if(error)throw new Error(erroMsg(error))
+  if(rotaDestinoId){
+    const{error:erroTroca}=await supabase.rpc('solicitar_troca_rota',{p_rota_destino_id:rotaDestinoId,p_justificativa:motivo,p_data:hoje})
+    if(erroTroca)throw new Error(erroMsg(erroTroca))
+  }
 }
 
 export async function solicitarVolta(justificativa:string){
