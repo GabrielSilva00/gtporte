@@ -11,13 +11,16 @@ import {
 /**
  * Grade horaria do estudante — insumo da distribuicao automatica (RN02).
  *
- * Diferente dos dados cadastrais, a grade nao passa pela fila da
- * secretaria: ela e do proprio aluno e muda a cada semestre, e a policy
- * grade_propria ja permite que ele escreva na sua.
+ * A grade define em que rota o estudante cabe, entao a alteracao nao
+ * entra direto: fica pendente ate a secretaria validar, como os demais
+ * dados cadastrais. O que a tela mostra e a grade vigente; o que foi
+ * proposto aparece como pendencia.
  */
 export function useGrade(estudanteId: string | null) {
   const [grade, setGrade] = useState<MapaGrade>(gradeVazia)
   const [salva, setSalva] = useState<MapaGrade>(gradeVazia)
+  const [pendente, setPendente] = useState<{ id: string; criado_em: string } | null>(null)
+  const [recusa, setRecusa] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   const refresh = useCallback(async () => {
@@ -34,6 +37,17 @@ export function useGrade(estudanteId: string | null) {
     const mapa = gradeDeLinhas(data ?? [])
     setGrade(mapa)
     setSalva(mapa)
+
+    const { data: alt } = await supabase
+      .from('alteracao_grade')
+      .select('id,status,observacao,criado_em')
+      .eq('estudante_id', estudanteId)
+      .order('criado_em', { ascending: false })
+      .limit(1)
+    const ultima = alt?.[0] ?? null
+    setPendente(ultima && ultima.status === 'pendente' ? ultima : null)
+    setRecusa(ultima && ultima.status === 'recusada' ? (ultima.observacao ?? 'Sem motivo informado.') : null)
+
     setLoading(false)
   }, [estudanteId])
 
@@ -53,18 +67,15 @@ export function useGrade(estudanteId: string | null) {
       )
     }
 
-    // A grade e reescrita por inteiro: dia desmarcado deixa de existir.
-    const { error: erroDelete } = await supabase
-      .from('grade_horaria')
-      .delete()
-      .eq('estudante_id', estudanteId)
-    if (erroDelete) throw new Error(erroMsg(erroDelete))
-
-    const linhas = linhasDaGrade(grade, estudanteId)
-    if (linhas.length > 0) {
-      const { error } = await supabase.from('grade_horaria').insert(linhas)
-      if (error) throw new Error(erroMsg(error))
-    }
+    // Envia a grade inteira proposta; quem aplica em grade_horaria e a
+    // secretaria, ao aprovar (revisar_alteracao_grade).
+    const linhas = linhasDaGrade(grade, estudanteId).map((l) => ({
+      dia_semana: l.dia_semana,
+      hora_inicio: l.hora_inicio,
+      hora_fim: l.hora_fim,
+    }))
+    const { error } = await supabase.rpc('solicitar_alteracao_grade', { p_grade: linhas })
+    if (error) throw new Error(erroMsg(error))
     await refresh()
   }, [estudanteId, grade, refresh])
 
@@ -72,5 +83,5 @@ export function useGrade(estudanteId: string | null) {
   const vazia = diasPreenchidos === 0
   const alterada = JSON.stringify(grade) !== JSON.stringify(salva)
 
-  return { grade, setGrade, salvar, refresh, loading, vazia, diasPreenchidos, alterada }
+  return { grade, setGrade, salvar, refresh, loading, vazia, diasPreenchidos, alterada, pendente, recusa }
 }

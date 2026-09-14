@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Lock } from 'lucide-react'
+import { ArrowLeft, Lock, Menu } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useAcesso } from '@/hooks/useAcesso'
 import { BottomNav, type Tab } from '@/components/BottomNav'
 import { ToastContainer } from '@/components/Toast'
 import { BarraConexao } from '@/components/StatusConexao'
 import { SinoNotificacoes } from '@/components/SinoNotificacoes'
+import { MenuLateral } from '@/components/MenuLateral'
 import { Spinner } from '@/components/Spinner'
 import { Login } from '@/pages/Login'
 import { Inicio } from '@/pages/Inicio'
@@ -51,6 +52,7 @@ function AppAutenticado() {
   const { perfil, estudanteId, logout, recarregar } = useAuth()
   const { situacao, loading: carregandoAcesso } = useAcesso(estudanteId)
   const [tab, setTab] = useState<Tab>('inicio')
+  const [menu, setMenu] = useState(false)
 
   if (!perfil) {
     return (
@@ -83,9 +85,48 @@ function AppAutenticado() {
 
   const bloqueada = ABAS_RESTRITAS.includes(tab) && !situacao.acesso_liberado
 
+  const TITULO: Record<Tab, string> = {
+    inicio: 'Início',
+    rota: 'Minha Rota',
+    documentos: 'Documentos',
+    historico: 'Histórico',
+    feedback: 'Mensagens',
+    perfil: 'Perfil',
+  }
+
   return (
     <div className="min-h-screen">
       <SinoNotificacoes estudanteId={estudanteId} onIr={setTab} />
+
+      {/* Cabecalho: na inicial abre o menu; nas demais telas volta para ela. */}
+      <header className="fixed inset-x-0 top-0 z-[80] flex items-center gap-2 border-b border-line/60 bg-surface/95 px-3 py-2 backdrop-blur-xl safe-t">
+        {tab === 'inicio' ? (
+          <button onClick={() => setMenu(true)} aria-label="Abrir menu" className="p-1.5">
+            <Menu className="h-5 w-5 text-ink" />
+          </button>
+        ) : (
+          <button onClick={() => setTab('inicio')} aria-label="Voltar ao início" className="p-1.5">
+            <ArrowLeft className="h-5 w-5 text-ink" />
+          </button>
+        )}
+        <span className="text-sm font-bold">{TITULO[tab]}</span>
+        {tab !== 'inicio' && (
+          <button onClick={() => setMenu(true)} aria-label="Abrir menu" className="ml-auto mr-12 p-1.5">
+            <Menu className="h-5 w-5 text-muted" />
+          </button>
+        )}
+      </header>
+
+      <MenuLateral
+        aberto={menu}
+        ativa={tab}
+        bloqueadas={situacao.acesso_liberado ? [] : ABAS_RESTRITAS}
+        nome={perfil.nome}
+        prontuario={null}
+        onIr={setTab}
+        onFechar={() => setMenu(false)}
+        onSair={logout}
+      />
       {bloqueada ? (
         <AguardandoValidacao documentos={situacao.documentos_enviados} onIr={setTab} />
       ) : (

@@ -398,6 +398,24 @@ export function Perfil({
             )}
           </div>
 
+          {grade.pendente && (
+            <div className="aviso-warn">
+              <p className="text-xs text-muted">
+                <b className="text-warn">Grade aguardando validação.</b> A alteração foi enviada
+                para a secretaria. Até ela ser aprovada, a alocação continua usando a grade
+                anterior.
+              </p>
+            </div>
+          )}
+
+          {grade.recusa && !grade.pendente && (
+            <div className="aviso-err">
+              <p className="text-xs text-muted">
+                <b className="text-err">Última alteração recusada.</b> {grade.recusa}
+              </p>
+            </div>
+          )}
+
           {grade.vazia ? (
             <div className="aviso-warn">
               <p className="text-xs text-muted">
@@ -408,8 +426,8 @@ export function Perfil({
             </div>
           ) : (
             <p className="text-[11px] text-muted">
-              Marque os dias em que você tem aula e informe os horários. Mudou de semestre? Atualize
-              aqui.
+              Marque os dias em que você tem aula e informe os horários. A alteração passa pela
+              validação da secretaria antes de valer.
             </p>
           )}
 
@@ -421,7 +439,7 @@ export function Perfil({
                 setSalvandoGrade(true)
                 try {
                   await grade.salvar()
-                  toast('Grade de aulas atualizada.')
+                  toast('Grade enviada para a secretaria validar.')
                 } catch (e) {
                   toast((e as Error).message, 'err')
                 } finally {
@@ -434,7 +452,7 @@ export function Perfil({
               {salvandoGrade ? <Spinner /> : (
                 <>
                   <Save className="h-4 w-4" />
-                  Salvar grade
+                  Enviar para validação
                 </>
               )}
             </button>
