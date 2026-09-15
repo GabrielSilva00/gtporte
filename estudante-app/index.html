@@ -22,6 +22,30 @@
         } catch (e) {}
       })()
     </script>
+    <script>
+      // Limpa service workers de outros apps que compartilhem a mesma origem.
+      // Sem isso, o SW do painel admin (secretaria) pode servir a pagina errada.
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          regs.forEach(function(reg) {
+            // Se o SW ativo nao pertence ao app estudante, remove
+            if (reg.active && reg.active.scriptURL && !reg.active.scriptURL.includes('/estudante')) {
+              reg.unregister().then(function() {
+                // Limpa cache antigo tambem
+                caches.keys().then(function(names) {
+                  names.forEach(function(name) { caches.delete(name) })
+                })
+                // Recarrega uma vez para garantir que o app certo carregue
+                if (!sessionStorage.getItem('sw-cleaned')) {
+                  sessionStorage.setItem('sw-cleaned', '1')
+                  location.reload()
+                }
+              })
+            }
+          })
+        })
+      }
+    </script>
   </head>
   <body class="antialiased font-sans">
     <div id="root"></div>
