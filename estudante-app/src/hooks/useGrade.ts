@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { erroMsg, supabase } from '@/lib/supabase'
 import {
+  DIAS_SEMANA,
   diasInvalidos,
   gradeDeLinhas,
   gradeVazia,
@@ -14,11 +15,15 @@ import {
  * A grade define em que rota o estudante cabe, entao a alteracao nao
  * entra direto: fica pendente ate a secretaria validar, como os demais
  * dados cadastrais. O que a tela mostra e a grade vigente; o que foi
- * proposto aparece como pendencia.
+ * proposto aparece como pendencia: o editor mostra a proposta enviada e
+ * os dias que mudaram em relacao a grade vigente ficam em laranja.
  */
 export function useGrade(estudanteId: string | null) {
   const [grade, setGrade] = useState<MapaGrade>(gradeVazia)
+  // o que o editor considera "sem alteracao": a proposta pendente, se houver
   const [salva, setSalva] = useState<MapaGrade>(gradeVazia)
+  // a grade que vale hoje, aprovada pela secretaria
+  const [vigente, setVigente] = useState<MapaGrade>(gradeVazia)
   const [pendente, setPendente] = useState<{ id: string; criado_em: string } | null>(null)
   const [recusa, setRecusa] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -35,17 +40,25 @@ export function useGrade(estudanteId: string | null) {
       .order('dia_semana')
 
     const mapa = gradeDeLinhas(data ?? [])
-    setGrade(mapa)
-    setSalva(mapa)
+    setVigente(mapa)
 
     const { data: alt } = await supabase
       .from('alteracao_grade')
-      .select('id,status,observacao,criado_em')
+      .select('id,status,observacao,criado_em,grade')
       .eq('estudante_id', estudanteId)
       .order('criado_em', { ascending: false })
       .limit(1)
     const ultima = alt?.[0] ?? null
-    setPendente(ultima && ultima.status === 'pendente' ? ultima : null)
+    const aguardando = ultima && ultima.status === 'pendente' ? ultima : null
+    // Com pedido pendente, o editor mostra o que foi enviado.
+    const base = aguardando
+      ? gradeDeLinhas(
+          (aguardando.grade as { dia_semana: number; hora_inicio: string; hora_fim: string }[]) ?? [],
+        )
+      : mapa
+    setGrade(base)
+    setSalva(base)
+    setPendente(aguardando ? { id: aguardando.id, criado_em: aguardando.criado_em } : null)
     setRecusa(ultima && ultima.status === 'recusada' ? (ultima.observacao ?? 'Sem motivo informado.') : null)
 
     setLoading(false)
@@ -83,5 +96,28 @@ export function useGrade(estudanteId: string | null) {
   const vazia = diasPreenchidos === 0
   const alterada = JSON.stringify(grade) !== JSON.stringify(salva)
 
-  return { grade, setGrade, salvar, refresh, loading, vazia, diasPreenchidos, alterada, pendente, recusa }
+  // Dias da proposta pendente que diferem da grade vigente: ficam em laranja.
+  const diasPendentes = pendente
+    ? DIAS_SEMANA.map((d) => d.numero).filter((n) => {
+        const a = salva[n]
+        const b = vigente[n]
+        if (!a?.ativo && !b?.ativo) return false
+        return a?.ativo !== b?.ativo || a.inicio !== b.inicio || a.fim !== b.fim
+      })
+    : []
+
+  return {
+    grade,
+    setGrade,
+    salvar,
+    refresh,
+    loading,
+    vazia,
+    diasPreenchidos,
+    alterada,
+    pendente,
+    recusa,
+    vigente,
+    diasPendentes,
+  }
 }

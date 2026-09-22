@@ -69,6 +69,10 @@ export interface Universidade {
   complemento: string | null
   bairro: string | null
   cep: string | null
+  /** Centro e raio do aviso de aproximação do ônibus (migration 0027). */
+  latitude: number | null
+  longitude: number | null
+  raio_aviso_m: number
   cidade?: Cidade | null
 }
 

@@ -31,6 +31,7 @@ export type ChavePagina =
   | 'funcionarios'
   | 'solicitacoes'
   | 'mensagens'
+  | 'conversas'
   | 'comunicados'
   | 'configuracoes'
 
@@ -46,7 +47,8 @@ export interface Pagina {
 
 /**
  * Fonte única do menu, das rotas protegidas e da tela de permissões (RF20).
- * As chaves espelham paginas_do_sistema() em 0007_ajustes_ui.sql — mexer aqui
+ * As chaves espelham paginas_do_sistema() (última versão em
+ * 0027_conversas_motivos_geofence.sql) — mexer aqui
  * exige mexer lá também.
  */
 export const PAGINAS: Pagina[] = [
@@ -63,6 +65,7 @@ export const PAGINAS: Pagina[] = [
 
   { chave: 'solicitacoes', rotulo: 'Solicitações', caminho: '/solicitacoes', categoria: 'Comunicação', Icone: IconeSolicitacao },
   { chave: 'mensagens', rotulo: 'Mensagens', caminho: '/mensagens', categoria: 'Comunicação', Icone: IconeMensagem },
+  { chave: 'conversas', rotulo: 'Conversas do app', caminho: '/conversas', categoria: 'Comunicação', Icone: IconeMensagem },
   { chave: 'comunicados', rotulo: 'Comunicados', caminho: '/comunicados', categoria: 'Comunicação', Icone: IconeMensagem },
 
   { chave: 'documentos', rotulo: 'Documentos', caminho: '/documentos', categoria: 'Administração', Icone: IconeDocumento },

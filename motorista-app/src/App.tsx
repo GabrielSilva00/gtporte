@@ -9,7 +9,7 @@ import { Login } from '@/pages/Login'
 import { Viagem } from '@/pages/Viagem'
 import { CheckIn } from '@/pages/CheckIn'
 import { Avisos } from '@/pages/Avisos'
-import { Documentos } from '@/pages/Documentos'
+import { Conversas } from '@/pages/Conversas'
 import { Perfil } from '@/pages/Perfil'
 
 function Aviso({titulo,texto,acao}:{titulo:string;texto:string;acao?:{label:string;onClick:()=>void}}) {
@@ -29,7 +29,7 @@ function AppAutenticado({perfil,logout}:{perfil:TipoPerfil;logout:()=>void}) {
       {tab === 'viagem' && <Viagem onIrParaCheckIn={()=>setTab('checkin')} />}
       {tab === 'checkin' && <CheckIn />}
       {tab === 'avisos' && <Avisos />}
-      {tab === 'documentos' && <Documentos />}
+      {tab === 'mensagens' && <Conversas />}
       {tab === 'perfil' && <Perfil perfil={perfil} onLogout={logout} />}
       <BottomNav active={tab} onChange={setTab} />
     </div>

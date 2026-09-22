@@ -12,6 +12,8 @@ export interface Conversa {
   situacao: SituacaoConversa
   titulo: string
   subtitulo: string | null
+  /** Motivo escolhido ao abrir a conversa direta. */
+  assunto: string | null
   rota_id: string | null
   ultima_em: string
   ultima_msg: string | null
@@ -22,15 +24,24 @@ export interface MensagemConversa {
   id: string
   autor_id: string | null
   autor_nome: string | null
+  /** perfil.tipo de quem escreveu: estudante, motorista, admin, operador. */
   autor_tipo: string | null
   eh_bot: boolean
   corpo: string
   criado_em: string
 }
 
+export interface MotivoConversa {
+  id: string
+  destino: DestinoConversa
+  titulo: string
+  descricao: string | null
+}
+
 /**
  * Conversas do estudante: os grupos das rotas em que ele viaja e as
- * conversas diretas ja abertas com a secretaria ou com o motorista.
+ * conversas diretas com a secretaria ou com o motorista. Nao ha chatbot:
+ * toda conversa direta comeca com um motivo e fala direto com a pessoa.
  */
 export function useConversas() {
   const [conversas, setConversas] = useState<Conversa[]>([])
@@ -38,7 +49,7 @@ export function useConversas() {
 
   const refresh = useCallback(async () => {
     // Garante o grupo das rotas antes de listar: o aluno entra no grupo
-    // assim que passa a viajar na rota.
+    // assim que passa a viajar na rota (e o cadastro esta validado).
     await supabase.rpc('garantir_grupos_das_rotas')
     const { data } = await supabase.rpc('minhas_conversas')
     setConversas((data as Conversa[]) ?? [])
@@ -50,13 +61,19 @@ export function useConversas() {
   }, [refresh])
 
   const abrirDireta = useCallback(
-    async (destino: DestinoConversa) => {
-      const { data, error } = await supabase.rpc('abrir_conversa_direta', { p_destino: destino })
+    async (destino: DestinoConversa, motivoId: string, mensagem: string) => {
+      const { data, error } = await supabase.rpc('abrir_conversa_direta', {
+        p_destino: destino,
+        p_motivo_id: motivoId,
+        p_mensagem: mensagem.trim(),
+      })
       if (error) throw new Error(erroMsg(error))
-      await refresh()
-      return data as string
+      const { data: lista } = await supabase.rpc('minhas_conversas')
+      const todas = (lista as Conversa[]) ?? []
+      setConversas(todas)
+      return todas.find((c) => c.id === (data as string)) ?? null
     },
-    [refresh],
+    [],
   )
 
   const diretas = conversas.filter((c) => c.tipo === 'direta')
@@ -65,7 +82,33 @@ export function useConversas() {
   return { conversas, diretas, grupos, loading, refresh, abrirDireta }
 }
 
-/** Mensagens de uma conversa, com envio. */
+/** Motivos de contato cadastrados pela secretaria, por destino. */
+export function useMotivos() {
+  const [motivos, setMotivos] = useState<MotivoConversa[]>([])
+
+  useEffect(() => {
+    let vivo = true
+    supabase
+      .from('motivo_conversa')
+      .select('id,destino,titulo,descricao')
+      .eq('ativo', true)
+      .order('ordem')
+      .order('titulo')
+      .then(({ data }) => {
+        if (vivo) setMotivos((data as MotivoConversa[]) ?? [])
+      })
+    return () => {
+      vivo = false
+    }
+  }, [])
+
+  return motivos
+}
+
+/**
+ * Mensagens de uma conversa, com envio. Mensagem nova chega pelo
+ * Realtime; a consulta a cada 30s cobre o caso de a conexao cair.
+ */
 export function useMensagensConversa(conversaId: string | null) {
   const [msgs, setMsgs] = useState<MensagemConversa[]>([])
   const [loading, setLoading] = useState(true)
@@ -103,11 +146,27 @@ export function useMensagensConversa(conversaId: string | null) {
     refresh()
   }, [refresh])
 
-  // Sem realtime configurado: a conversa aberta recarrega a cada 10s.
   useEffect(() => {
     if (!conversaId) return
-    const t = setInterval(refresh, 10000)
-    return () => clearInterval(t)
+    // O payload do Realtime nao traz o nome do autor: recarrega pela funcao.
+    const canal = supabase
+      .channel(`conversa:${conversaId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'conversa_mensagem',
+          filter: `conversa_id=eq.${conversaId}`,
+        },
+        () => refresh(),
+      )
+      .subscribe()
+    const t = setInterval(refresh, 30000)
+    return () => {
+      clearInterval(t)
+      supabase.removeChannel(canal)
+    }
   }, [conversaId, refresh])
 
   const enviar = useCallback(
@@ -123,12 +182,11 @@ export function useMensagensConversa(conversaId: string | null) {
     [conversaId, refresh],
   )
 
-  const escalar = useCallback(async () => {
+  const encerrar = useCallback(async () => {
     if (!conversaId) return
-    const { error } = await supabase.rpc('escalar_conversa', { p_conversa_id: conversaId })
+    const { error } = await supabase.rpc('encerrar_conversa', { p_conversa_id: conversaId })
     if (error) throw new Error(erroMsg(error))
-    await refresh()
-  }, [conversaId, refresh])
+  }, [conversaId])
 
-  return { msgs, loading, erro, meuId, enviar, escalar, refresh }
+  return { msgs, loading, erro, meuId, enviar, encerrar, refresh }
 }
