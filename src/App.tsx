@@ -24,6 +24,7 @@ import Presenca from './pages/Presenca'
 import Relatorios from './pages/Relatorios'
 import Funcionarios from './pages/Funcionarios'
 import Mensagens from './pages/Mensagens'
+import Conversas from './pages/Conversas'
 import Configuracoes from './pages/Configuracoes'
 
 // Estudante
@@ -183,6 +184,14 @@ export default function App() {
           element={
             <RotaProtegida perfis={[...STAFF]} pagina="mensagens">
               <Mensagens tipo="mensagem" />
+            </RotaProtegida>
+          }
+        />
+        <Route
+          path="conversas"
+          element={
+            <RotaProtegida perfis={[...STAFF]} pagina="conversas">
+              <Conversas />
             </RotaProtegida>
           }
         />

@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { Bus, ChevronLeft, ChevronRight, Clock, History, LogOut, MapPin, MessageCircle, Shield, Smartphone } from 'lucide-react'
+import { Bus, ChevronLeft, ChevronRight, Clock, FileText, History, LogOut, MapPin, Shield, Smartphone } from 'lucide-react'
 import { useRotas } from '@/hooks/useMotorista'
 import type { Perfil as P } from '@/hooks/useAuth'
 import { Historico } from '@/pages/Historico'
-import { Mensagens } from '@/pages/Mensagens'
+import { Documentos } from '@/pages/Documentos'
 import { Spinner } from '@/components/Spinner'
 
-type Sub='historico'|'mensagens'|null
+type Sub='historico'|'documentos'|null
 
 export function Perfil({perfil,onLogout}:{perfil:P;onLogout:()=>void}){
   const {rotas,loading}=useRotas()
@@ -18,7 +18,7 @@ export function Perfil({perfil,onLogout}:{perfil:P;onLogout:()=>void}){
         <ChevronLeft className="h-5 w-5"/>Perfil
       </button>
     </div>
-    {sub==='historico'?<Historico/>:<Mensagens/>}
+    {sub==='historico'?<Historico/>:<Documentos/>}
   </div>
 
   return <div className="px-4 pb-24 pt-4 space-y-4">
@@ -30,7 +30,7 @@ export function Perfil({perfil,onLogout}:{perfil:P;onLogout:()=>void}){
     </div>
 
     <div className="space-y-2">
-      {([['historico',History,'Histórico de viagens'],['mensagens',MessageCircle,'Mensagens']] as const).map(([id,Icone,rotulo])=>
+      {([['historico',History,'Histórico de viagens'],['documentos',FileText,'Meus documentos']] as const).map(([id,Icone,rotulo])=>
         <button key={id} onClick={()=>setSub(id)} className="card flex w-full items-center gap-3 text-left active:bg-white/[0.03]">
           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gold-500/10 text-gold-500"><Icone className="h-5 w-5"/></div>
           <span className="flex-1 text-sm font-semibold">{rotulo}</span>

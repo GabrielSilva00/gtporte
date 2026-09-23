@@ -3,9 +3,25 @@ import { supabase } from '@/lib/supabase'
 import { useComunicados } from '@/hooks/useComunicados'
 import { useDocumentos, ROTULO_DOC, type Documento } from '@/hooks/useEstudante'
 import { useAlteracoes } from '@/hooks/useAlteracoes'
-import type { Tab } from '@/lib/navegacao'
+import { SECOES, type Tab } from '@/lib/navegacao'
+import { mostrarNoAparelho } from '@/lib/push'
 
-export type TipoNotificacao = 'comunicado' | 'documento' | 'mensagem' | 'cadastro'
+/** Linha de `notificacao` (0027): gerada pelos gatilhos do banco. */
+interface NotificacaoBanco {
+  id: string
+  tipo: string
+  titulo: string
+  corpo: string
+  destino: string | null
+  urgente: boolean
+  lida_em: string | null
+  criado_em: string
+}
+
+const TIPOS: TipoNotificacao[] = ['comunicado', 'documento', 'mensagem', 'cadastro', 'onibus']
+const ABAS = SECOES.map((s) => s.id) as readonly string[]
+
+export type TipoNotificacao = 'comunicado' | 'documento' | 'mensagem' | 'cadastro' | 'onibus'
 
 export interface Notificacao {
   id: string
@@ -34,8 +50,10 @@ function lerLidas(): Set<string> {
  * secretaria, documento recusado, resposta da secretaria ou do motorista
  * e alteracao cadastral revisada.
  *
- * O "lido" e por aparelho (localStorage): nao ha tabela de leitura por
- * notificacao, e cada item nasce de uma fonte diferente.
+ * As notificacoes da tabela `notificacao` (validacao do cadastro,
+ * respostas, onibus proximo) chegam em tempo real pelo Realtime e guardam
+ * a leitura no banco. As demais fontes guardam o "lido" por aparelho
+ * (localStorage).
  */
 export function useNotificacoes(estudanteId: string | null) {
   const { comunicados } = useComunicados()
@@ -45,6 +63,49 @@ export function useNotificacoes(estudanteId: string | null) {
     { id: string; assunto: string; corpo: string; criado_em: string }[]
   >([])
   const [lidas, setLidas] = useState<Set<string>>(lerLidas)
+  const [doBanco, setDoBanco] = useState<NotificacaoBanco[]>([])
+
+  // Notificacoes geradas no banco + assinatura em tempo real.
+  useEffect(() => {
+    if (!estudanteId) return
+    let vivo = true
+    let canal: ReturnType<typeof supabase.channel> | null = null
+    ;(async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user || !vivo) return
+      const { data } = await supabase
+        .from('notificacao')
+        .select('id,tipo,titulo,corpo,destino,urgente,lida_em,criado_em')
+        .eq('perfil_id', user.id)
+        .order('criado_em', { ascending: false })
+        .limit(50)
+      if (vivo) setDoBanco((data as NotificacaoBanco[]) ?? [])
+
+      canal = supabase
+        .channel(`notificacoes:${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notificacao',
+            filter: `perfil_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const n = payload.new as NotificacaoBanco
+            setDoBanco((lista) => [n, ...lista.filter((x) => x.id !== n.id)])
+            mostrarNoAparelho(n.titulo, n.corpo)
+          },
+        )
+        .subscribe()
+    })()
+    return () => {
+      vivo = false
+      if (canal) supabase.removeChannel(canal)
+    }
+  }, [estudanteId])
 
   useEffect(() => {
     let vivo = true
@@ -69,6 +130,18 @@ export function useNotificacoes(estudanteId: string | null) {
 
   const itens = useMemo<Notificacao[]>(() => {
     const lista: Notificacao[] = []
+
+    for (const n of doBanco) {
+      lista.push({
+        id: `ntf:${n.id}`,
+        tipo: TIPOS.includes(n.tipo as TipoNotificacao) ? (n.tipo as TipoNotificacao) : 'comunicado',
+        titulo: n.titulo,
+        detalhe: n.corpo,
+        quando: n.criado_em,
+        destino: n.destino && ABAS.includes(n.destino) ? (n.destino as Tab) : undefined,
+        urgente: n.urgente,
+      })
+    }
 
     for (const c of comunicados) {
       lista.push({
@@ -120,11 +193,29 @@ export function useNotificacoes(estudanteId: string | null) {
     }
 
     return lista.sort((a, b) => +new Date(b.quando) - +new Date(a.quando))
-  }, [comunicados, docs, mensagens, alteracoes])
+  }, [doBanco, comunicados, docs, mensagens, alteracoes])
 
-  const naoLidas = itens.filter((i) => !lidas.has(i.id))
+  // As do banco ja lidas (em outro aparelho, inclusive) contam como lidas.
+  const lidasTotais = useMemo(() => {
+    const t = new Set(lidas)
+    for (const n of doBanco) if (n.lida_em) t.add(`ntf:${n.id}`)
+    return t
+  }, [lidas, doBanco])
+
+  const naoLidas = itens.filter((i) => !lidasTotais.has(i.id))
 
   const marcarTodasLidas = useCallback(() => {
+    const pendentes = doBanco.filter((n) => !n.lida_em).map((n) => n.id)
+    if (pendentes.length > 0) {
+      const agora = new Date().toISOString()
+      supabase
+        .from('notificacao')
+        .update({ lida_em: agora })
+        .in('id', pendentes)
+        .then(() =>
+          setDoBanco((lista) => lista.map((n) => (n.lida_em ? n : { ...n, lida_em: agora }))),
+        )
+    }
     const todas = new Set(itens.map((i) => i.id))
     setLidas(todas)
     try {
@@ -132,7 +223,7 @@ export function useNotificacoes(estudanteId: string | null) {
     } catch {
       /* sem storage: vale so nesta sessao */
     }
-  }, [itens])
+  }, [itens, doBanco])
 
-  return { itens, naoLidas: naoLidas.length, marcarTodasLidas, lidas }
+  return { itens, naoLidas: naoLidas.length, marcarTodasLidas, lidas: lidasTotais }
 }

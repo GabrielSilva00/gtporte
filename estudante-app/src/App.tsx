@@ -1,12 +1,11 @@
 import { useState } from 'react'
-import { ArrowLeft, Lock, Menu } from 'lucide-react'
+import { ArrowLeft, Lock } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useAcesso } from '@/hooks/useAcesso'
 import { TITULO_SECAO, type Tab } from '@/lib/navegacao'
 import { ToastContainer } from '@/components/Toast'
 import { BarraConexao } from '@/components/StatusConexao'
 import { SinoNotificacoes } from '@/components/SinoNotificacoes'
-import { MenuLateral } from '@/components/MenuLateral'
 import { Spinner } from '@/components/Spinner'
 import { Login } from '@/pages/Login'
 import { Inicio } from '@/pages/Inicio'
@@ -19,22 +18,22 @@ import { Perfil } from '@/pages/Perfil'
 import { CompletarCadastro } from '@/pages/CompletarCadastro'
 
 /**
- * Abas que dependem de documentacao aprovada. O cadastro pode ser
- * concluido com um documento so, entao ate a secretaria validar o aluno
- * fica com acesso parcial: ve o que precisa resolver, nao o que ainda
- * nao tem (rota, historico de viagens, contato com o motorista).
+ * Abas que so existem com o cadastro validado. Enquanto o aluno esta na
+ * fila de validacao ele usa o app — documentos, perfil, historico e
+ * conversa com a secretaria —, mas nenhum dado externo: rota, motorista,
+ * veiculo e paradas. O banco reforca a mesma regra (0027).
  */
-const ABAS_RESTRITAS: Tab[] = ['rota', 'historico', 'feedback']
+const ABAS_RESTRITAS: Tab[] = ['rota']
 
 function AguardandoValidacao({ documentos, onIr }: { documentos: number; onIr: (t: Tab) => void }) {
   return (
-    <div className="flex flex-col items-center px-8 pt-20 text-center">
+    <div className="flex flex-col items-center px-8 pt-24 text-center">
       <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-warn/10 text-warn">
         <Lock className="h-7 w-7" />
       </div>
       <p className="text-lg font-semibold">Aguardando validação</p>
       <p className="mt-2 text-sm text-muted">
-        Esta seção é liberada quando a secretaria aprovar sua documentação e você for alocado em
+        Esta seção é liberada quando a secretaria validar o seu cadastro e você for alocado em
         uma rota.
       </p>
       <p className="mt-3 text-xs text-faint">
@@ -53,7 +52,6 @@ function AppAutenticado() {
   const { perfil, estudanteId, logout, recarregar } = useAuth()
   const { situacao, loading: carregandoAcesso } = useAcesso(estudanteId)
   const [tab, setTab] = useState<Tab>('inicio')
-  const [menu, setMenu] = useState(false)
   // dentro da aba Rota: lista da semana ou detalhe do dia
   const [rotaAberta, setRotaAberta] = useState(false)
 
@@ -86,59 +84,47 @@ function AppAutenticado() {
     )
   }
 
-  const bloqueada = ABAS_RESTRITAS.includes(tab) && !situacao.acesso_liberado
+  const validado = situacao.acesso_liberado
+  const bloqueada = ABAS_RESTRITAS.includes(tab) && !validado
+  const naInicial = tab === 'inicio'
+
+  const voltar = () => (tab === 'rota' && rotaAberta ? setRotaAberta(false) : setTab('inicio'))
 
   return (
     <div className="min-h-screen">
-      <SinoNotificacoes estudanteId={estudanteId} onIr={setTab} />
-
-      {/* Cabecalho: na inicial abre o menu; nas demais telas volta para ela. */}
+      {/*
+        Cabecalho. Na inicial nao ha menu: so o titulo e o sino, na mesma
+        linha. Nas demais telas entra o botao de voltar para a inicial.
+      */}
       <header className="fixed inset-x-0 top-0 z-[80] flex items-center gap-2 border-b border-line/60 bg-surface/95 px-3 py-2 backdrop-blur-xl safe-t">
-        {tab === 'inicio' ? (
-          <button onClick={() => setMenu(true)} aria-label="Abrir menu" className="p-1.5">
-            <Menu className="h-5 w-5 text-ink" />
-          </button>
-        ) : (
-          <button
-            onClick={() => (tab === 'rota' && rotaAberta ? setRotaAberta(false) : setTab('inicio'))}
-            aria-label="Voltar"
-            className="p-1.5"
-          >
+        {!naInicial && (
+          <button onClick={voltar} aria-label="Voltar" className="-ml-1 p-1.5">
             <ArrowLeft className="h-5 w-5 text-ink" />
           </button>
         )}
-        <span className="text-sm font-bold">{TITULO_SECAO[tab]}</span>
-        {tab !== 'inicio' && (
-          <button onClick={() => setMenu(true)} aria-label="Abrir menu" className="ml-auto p-1.5">
-            <Menu className="h-5 w-5 text-muted" />
-          </button>
-        )}
+        <span className={`flex-1 truncate font-bold ${naInicial ? 'pl-1 text-lg' : 'text-sm'}`}>
+          {TITULO_SECAO[tab]}
+        </span>
+        <SinoNotificacoes estudanteId={estudanteId} onIr={setTab} destaque={naInicial} />
       </header>
 
-      <MenuLateral
-        aberto={menu}
-        ativa={tab}
-        bloqueadas={situacao.acesso_liberado ? [] : ABAS_RESTRITAS}
-        nome={perfil.nome}
-        prontuario={null}
-        onIr={setTab}
-        onFechar={() => setMenu(false)}
-        onSair={logout}
-      />
       {bloqueada ? (
         <AguardandoValidacao documentos={situacao.documentos_enviados} onIr={setTab} />
       ) : (
         <>
-          {tab === 'inicio' && <Inicio estudanteId={estudanteId} onIr={setTab} />}
+          {tab === 'inicio' && (
+            <Inicio
+              estudanteId={estudanteId}
+              validado={validado}
+              statusCadastro={situacao.status_documental}
+              onIr={setTab}
+            />
+          )}
           {tab === 'rota' &&
-        (rotaAberta ? (
-          <MinhaRota />
-        ) : (
-          <RotasSemana onAbrir={() => setRotaAberta(true)} />
-        ))}
+            (rotaAberta ? <MinhaRota /> : <RotasSemana onAbrir={() => setRotaAberta(true)} />)}
           {tab === 'documentos' && <Documentos estudanteId={estudanteId} />}
           {tab === 'historico' && <Historico estudanteId={estudanteId} />}
-          {tab === 'feedback' && <Conversas />}
+          {tab === 'feedback' && <Conversas validado={validado} />}
           {tab === 'perfil' && <Perfil perfil={perfil} estudanteId={estudanteId} onLogout={logout} />}
         </>
       )}

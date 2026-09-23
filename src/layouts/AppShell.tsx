@@ -53,7 +53,7 @@ export default function AppShell() {
   const { data: contadores } = useQuery({
     queryKey: ['contadores-nav'],
     queryFn: async () => {
-      const [docs, semRota, solicitacoes, mensagens] = await Promise.all([
+      const [docs, semRota, solicitacoes, mensagens, conversas] = await Promise.all([
         supabase.from('documento').select('id', { count: 'exact', head: true }).eq('status', 'pendente'),
         supabase
           .from('alocacao_estudante')
@@ -70,12 +70,17 @@ export default function AppShell() {
           .select('id', { count: 'exact', head: true })
           .eq('tipo', 'mensagem')
           .is('lida_em', null),
+        // conversas do app com a secretaria cuja última fala é do estudante
+        supabase.rpc('conversas_atendimento', { p_destino: 'secretaria' }),
       ])
       return {
         documentos: docs.count ?? 0,
         alocacao: semRota.count ?? 0,
         solicitacoes: solicitacoes.count ?? 0,
         mensagens: mensagens.count ?? 0,
+        conversas: ((conversas.data ?? []) as { aguardando: boolean; situacao: string }[]).filter(
+          (c) => c.aguardando && c.situacao !== 'encerrada',
+        ).length,
       }
     },
     refetchInterval: 60_000,
@@ -87,6 +92,7 @@ export default function AppShell() {
       documentos: contadores?.documentos,
       solicitacoes: contadores?.solicitacoes,
       mensagens: contadores?.mensagens,
+      conversas: contadores?.conversas,
     }),
     [contadores],
   )

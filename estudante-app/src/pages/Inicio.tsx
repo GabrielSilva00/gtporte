@@ -7,6 +7,7 @@ import {
   Clock,
   FileText,
   History,
+  Lock,
   MapPin,
   MessageCircle,
   QrCode,
@@ -55,7 +56,7 @@ const ATALHOS: { id: Tab; titulo: string; descricao: string; icone: typeof Bus; 
   {
     id: 'historico',
     titulo: 'Histórico',
-    descricao: 'Suas viagens dos últimos 30 dias',
+    descricao: 'Sua atividade dos últimos 30 dias',
     icone: History,
     cor: 'from-warn to-warn/70',
   },
@@ -68,7 +69,18 @@ const ATALHOS: { id: Tab; titulo: string; descricao: string; icone: typeof Bus; 
   },
 ]
 
-export function Inicio({ estudanteId, onIr }: { estudanteId: string; onIr: (t: Tab) => void }) {
+export function Inicio({
+  estudanteId,
+  validado,
+  statusCadastro,
+  onIr,
+}: {
+  estudanteId: string
+  /** Cadastro validado pela secretaria: sem isso, nada de rota nem motorista. */
+  validado: boolean
+  statusCadastro: 'pendente' | 'aprovado' | 'rejeitado' | null
+  onIr: (t: Tab) => void
+}) {
   const { rota: data, loading, refresh } = useMinhaRota()
   const { docs } = useDocumentos(estudanteId)
   const { vazia: gradeVazia, loading: carregandoGrade } = useGrade(estudanteId)
@@ -109,7 +121,7 @@ export function Inicio({ estudanteId, onIr }: { estudanteId: string; onIr: (t: T
   const fmtHora = (h: string | null) => (h ? h.slice(0, 5) : '')
 
   return (
-    <div className="space-y-4 px-4 pb-10 pt-16">
+    <div className="space-y-4 px-4 pb-10 pt-[4.5rem]">
       <div className="anim-in">
         <p className="text-sm text-muted">{saudacao},</p>
         <h1 className="text-2xl font-bold tracking-tight">
@@ -117,7 +129,21 @@ export function Inicio({ estudanteId, onIr }: { estudanteId: string; onIr: (t: T
         </h1>
       </div>
 
-      {est && est.status_documental !== 'aprovado' && (
+      {statusCadastro === 'rejeitado' && (
+        <button onClick={() => onIr('documentos')} className="aviso-err anim-in w-full text-left">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-err" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-err">Cadastro não validado</p>
+            <p className="mt-0.5 text-xs text-muted">
+              A secretaria encontrou pendências. Revise seus dados e documentos para liberar o
+              acesso completo.
+            </p>
+          </div>
+          <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-err" />
+        </button>
+      )}
+
+      {est && statusCadastro !== 'rejeitado' && est.status_documental !== 'aprovado' && (
         <button onClick={() => onIr('documentos')} className="aviso-warn anim-in w-full text-left">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warn" />
           <div className="flex-1">
@@ -127,7 +153,7 @@ export function Inicio({ estudanteId, onIr }: { estudanteId: string; onIr: (t: T
             <p className="mt-0.5 text-xs text-muted">
               {recusados.length > 0
                 ? `${recusados.map((d) => ROTULO_DOC[d.tipo]).join(', ')} recusado(s). Toque para reenviar.`
-                : 'Sua alocação depende da aprovação dos documentos.'}
+                : 'Seu cadastro está na fila de validação. Rota e motorista aparecem depois da aprovação.'}
             </p>
           </div>
           <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-warn" />
@@ -217,6 +243,14 @@ export function Inicio({ estudanteId, onIr }: { estudanteId: string; onIr: (t: T
             <ChevronRight className="h-3 w-3" />
           </button>
         </div>
+      ) : !validado ? (
+        <div className="card-flat anim-in flex items-center gap-3">
+          <Lock className="h-7 w-7 shrink-0 text-warn/70" />
+          <p className="text-xs text-muted">
+            Rota, motorista e grupo da rota são liberados quando a secretaria validar o seu
+            cadastro.
+          </p>
+        </div>
       ) : (
         <div className="card-flat anim-in flex items-center gap-3">
           <Bus className="h-8 w-8 shrink-0 text-faint/50" />
@@ -241,9 +275,15 @@ export function Inicio({ estudanteId, onIr }: { estudanteId: string; onIr: (t: T
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-[15px] font-bold">{a.titulo}</span>
-              <span className="block text-[11.5px] text-white/85">{a.descricao}</span>
+              <span className="block text-[11.5px] text-white/85">
+                {a.id === 'rota' && !validado ? 'Liberado após a validação' : a.descricao}
+              </span>
             </span>
-            <ChevronRight className="h-4 w-4 shrink-0 text-white/70" />
+            {a.id === 'rota' && !validado ? (
+              <Lock className="h-4 w-4 shrink-0 text-white/80" />
+            ) : (
+              <ChevronRight className="h-4 w-4 shrink-0 text-white/70" />
+            )}
           </button>
         ))}
       </div>
