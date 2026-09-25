@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <title>GTPORTE Estudante</title>
+    <!-- deploy-trigger: 1789511959 -->
     <script>
       // Aplica o tema antes do primeiro paint para nao piscar branco no escuro.
       (function () {
@@ -21,6 +22,30 @@
           }
         } catch (e) {}
       })()
+    </script>
+    <script>
+      // Limpa service workers de outros apps que compartilhem a mesma origem.
+      // Sem isso, o SW do painel admin (secretaria) pode servir a pagina errada.
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          regs.forEach(function(reg) {
+            // Se o SW ativo nao pertence ao app estudante, remove
+            if (reg.active && reg.active.scriptURL && !reg.active.scriptURL.includes('/estudante')) {
+              reg.unregister().then(function() {
+                // Limpa cache antigo tambem
+                caches.keys().then(function(names) {
+                  names.forEach(function(name) { caches.delete(name) })
+                })
+                // Recarrega uma vez para garantir que o app certo carregue
+                if (!sessionStorage.getItem('sw-cleaned')) {
+                  sessionStorage.setItem('sw-cleaned', '1')
+                  location.reload()
+                }
+              })
+            }
+          })
+        })
+      }
     </script>
   </head>
   <body class="antialiased font-sans">

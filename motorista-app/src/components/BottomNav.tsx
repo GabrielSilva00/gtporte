@@ -1,12 +1,13 @@
-import { Bus, Bell, FileText, ScanLine, User } from 'lucide-react'
+import { Bus, Bell, MessageCircle, ScanLine, User } from 'lucide-react'
 
-// Cinco abas e o limite confortavel numa tela de 360px; Historico e Mensagens
+// Cinco abas e o limite confortavel numa tela de 360px. Mensagens ganhou aba
+// propria (os alunos falam direto com o motorista); Historico e Documentos
 // ficam dentro do Perfil, que e onde o motorista vai fora da viagem.
 const tabs=[
   {id:'viagem',icon:Bus,label:'Viagem'},
   {id:'checkin',icon:ScanLine,label:'Check-in'},
   {id:'avisos',icon:Bell,label:'Avisos'},
-  {id:'documentos',icon:FileText,label:'Docs'},
+  {id:'mensagens',icon:MessageCircle,label:'Mensagens'},
   {id:'perfil',icon:User,label:'Perfil'},
 ] as const
 

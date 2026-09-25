@@ -35,6 +35,9 @@ export default function Universidades() {
     complemento: '',
     bairro: '',
     cep: '',
+    latitude: '',
+    longitude: '',
+    raio_aviso_m: '500',
   })
   const [formCidade, setFormCidade] = useState({ nome: '', uf: 'SP' })
 
@@ -90,6 +93,18 @@ export default function Universidades() {
         complemento: formUni.complemento.trim() || null,
         bairro: formUni.bairro.trim() || null,
         cep: formUni.cep.trim() || null,
+        latitude: formUni.latitude.trim() ? Number(formUni.latitude.replace(',', '.')) : null,
+        longitude: formUni.longitude.trim() ? Number(formUni.longitude.replace(',', '.')) : null,
+        raio_aviso_m: Number(formUni.raio_aviso_m) || 500,
+      }
+      if (
+        (payload.latitude !== null && (Number.isNaN(payload.latitude) || Math.abs(payload.latitude) > 90)) ||
+        (payload.longitude !== null && (Number.isNaN(payload.longitude) || Math.abs(payload.longitude) > 180))
+      ) {
+        throw new Error('Latitude ou longitude inválida. Use o formato -21.2089.')
+      }
+      if (payload.raio_aviso_m < 50 || payload.raio_aviso_m > 10000) {
+        throw new Error('O raio precisa ficar entre 50 e 10.000 metros.')
       }
       const resposta = editandoUni
         ? await supabase.from('universidade').update(payload).eq('id', editandoUni.id)
@@ -133,6 +148,9 @@ export default function Universidades() {
       complemento: '',
       bairro: '',
       cep: '',
+      latitude: '',
+      longitude: '',
+      raio_aviso_m: '500',
     })
     setModalUni(true)
   }
@@ -148,6 +166,9 @@ export default function Universidades() {
       complemento: u.complemento ?? '',
       bairro: u.bairro ?? '',
       cep: u.cep ?? '',
+      latitude: u.latitude != null ? String(u.latitude) : '',
+      longitude: u.longitude != null ? String(u.longitude) : '',
+      raio_aviso_m: String(u.raio_aviso_m ?? 500),
     })
     setModalUni(true)
   }
@@ -355,13 +376,57 @@ export default function Universidades() {
                 onChange={(e) =>
                   setFormUni({
                     ...formUni,
-                    cep: e.target.value.replace(/D/g, '').slice(0, 8).replace(/^(d{5})(d)/, '$1-$2'),
+                    cep: e.target.value.replace(/\D/g, '').slice(0, 8).replace(/^(\d{5})(\d)/, '$1-$2'),
                   })
                 }
                 placeholder="16050-000"
                 className="field font-mono"
               />
             </label>
+          </div>
+
+          <div className="rounded-field border border-edge p-3">
+            <div className="text-[12.5px] font-semibold">Raio de aviso do ônibus</div>
+            <p className="mb-2.5 mt-0.5 text-[11.5px] text-muted">
+              Quando o ônibus entra neste raio, os estudantes desta universidade recebem “o
+              motorista está próximo”; ao sair, os da próxima universidade da rota recebem “o
+              ônibus já está a caminho”. O raio aparece só no mapa do motorista. Sem
+              coordenadas, vale a posição da parada ligada à universidade.
+            </p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <label>
+                <span className="field-label">Latitude</span>
+                <input
+                  value={formUni.latitude}
+                  onChange={(e) => setFormUni({ ...formUni, latitude: e.target.value })}
+                  placeholder="-21.2089"
+                  inputMode="decimal"
+                  className="field font-mono"
+                />
+              </label>
+              <label>
+                <span className="field-label">Longitude</span>
+                <input
+                  value={formUni.longitude}
+                  onChange={(e) => setFormUni({ ...formUni, longitude: e.target.value })}
+                  placeholder="-50.4328"
+                  inputMode="decimal"
+                  className="field font-mono"
+                />
+              </label>
+              <label className="col-span-2 sm:col-span-1">
+                <span className="field-label">Raio (metros)</span>
+                <input
+                  type="number"
+                  min={50}
+                  max={10000}
+                  step={50}
+                  value={formUni.raio_aviso_m}
+                  onChange={(e) => setFormUni({ ...formUni, raio_aviso_m: e.target.value })}
+                  className="field font-mono"
+                />
+              </label>
+            </div>
           </div>
 
           <div>

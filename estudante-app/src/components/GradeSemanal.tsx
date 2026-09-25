@@ -74,10 +74,16 @@ export function GradeSemanal({
   grade,
   onChange,
   desabilitado,
+  pendentes = [],
+  vigente,
 }: {
   grade: MapaGrade
   onChange: (grade: MapaGrade) => void
   desabilitado?: boolean
+  /** Dias alterados que aguardam validacao da secretaria: ficam em laranja. */
+  pendentes?: number[]
+  /** Grade em vigor, para mostrar o valor anterior de um dia pendente. */
+  vigente?: MapaGrade
 }) {
   const mudar = (dia: number, campo: keyof DiaGrade, valor: boolean | string) =>
     onChange({ ...grade, [dia]: { ...grade[dia], [campo]: valor } })
@@ -87,12 +93,18 @@ export function GradeSemanal({
       {DIAS_SEMANA.map((d) => {
         const g = grade[d.numero] ?? { ativo: false, inicio: '', fim: '' }
         const invalido = g.ativo && !!g.inicio && !!g.fim && g.fim <= g.inicio
+        const pendente = pendentes.includes(d.numero)
+        const antes = vigente?.[d.numero]
 
         return (
           <div
             key={d.numero}
             className={`rounded-xl border p-3 transition-colors ${
-              g.ativo ? 'border-brand-500/40 bg-brand-500/5' : 'border-line/60 bg-raised/40'
+              pendente
+                ? 'border-warn/60 bg-warn/10'
+                : g.ativo
+                  ? 'border-brand-500/40 bg-brand-500/5'
+                  : 'border-line/60 bg-raised/40'
             }`}
           >
             <label className="flex items-center gap-3">
@@ -103,10 +115,25 @@ export function GradeSemanal({
                 onChange={(e) => mudar(d.numero, 'ativo', e.target.checked)}
                 className="h-5 w-5 rounded accent-[rgb(var(--c-brand))]"
               />
-              <span className={`text-sm font-semibold ${g.ativo ? '' : 'text-muted'}`}>
+              <span
+                className={`text-sm font-semibold ${pendente ? 'text-warn' : g.ativo ? '' : 'text-muted'}`}
+              >
                 {d.rotulo}
               </span>
+              {pendente && (
+                <span className="chip-warn ml-auto px-2 py-0.5 text-[10.5px]">
+                  Aguardando validação
+                </span>
+              )}
             </label>
+
+            {pendente && antes && (
+              <p className="mt-1.5 pl-8 text-[11px] text-warn">
+                Antes:{' '}
+                {antes.ativo && antes.inicio ? `${antes.inicio} – ${antes.fim}` : 'sem aula'}
+                {!g.ativo && ' · agora: sem aula'}
+              </p>
+            )}
 
             {g.ativo && (
               <div className="mt-3 flex items-center gap-2">
@@ -117,7 +144,7 @@ export function GradeSemanal({
                     value={g.inicio}
                     disabled={desabilitado}
                     onChange={(e) => mudar(d.numero, 'inicio', e.target.value)}
-                    className="field py-2.5"
+                    className={`field py-2.5 ${pendente ? 'border-warn/60 text-warn' : ''}`}
                   />
                 </label>
                 <span className="mt-5 text-faint">—</span>
@@ -128,7 +155,7 @@ export function GradeSemanal({
                     value={g.fim}
                     disabled={desabilitado}
                     onChange={(e) => mudar(d.numero, 'fim', e.target.value)}
-                    className="field py-2.5"
+                    className={`field py-2.5 ${pendente ? 'border-warn/60 text-warn' : ''}`}
                   />
                 </label>
               </div>

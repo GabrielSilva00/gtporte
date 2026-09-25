@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bus, ChevronDown, Clock, MapPin, Navigation, ScanLine, Users } from 'lucide-react'
-import { useRotas, usePassageiros, useSolicitacoesVolta, useTrocasRota, atualizarSituacao, registrarGPS, ROTULO_SIT, COR_SIT } from '@/hooks/useMotorista'
+import { Bus, ChevronDown, Clock, Map as IconeMapa, MapPin, Navigation, ScanLine, Users } from 'lucide-react'
+import { useRotas, usePassageiros, useSolicitacoesVolta, useTrocasRota, useMapaMotorista, atualizarSituacao, registrarGPS, ROTULO_SIT, COR_SIT } from '@/hooks/useMotorista'
 import type { SituacaoOp } from '@/hooks/useMotorista'
 import { Spinner } from '@/components/Spinner'
 import { toast } from '@/components/Toast'
+import { MapaMotorista } from '@/components/MapaMotorista'
 
 const SITS:SituacaoOp[]=['aguardando','em_rota','concluida']
+// Intervalo minimo entre duas posicoes gravadas e tempo maximo de rastreio.
+const INTERVALO_GPS_MS=15000
+const LIMITE_RASTREIO_MS=4*3600000
 
 /**
  * Painel da viagem do dia. O registro de presenca aluno a aluno mora na aba
@@ -24,11 +28,20 @@ export function Viagem({onIrParaCheckIn}:{onIrParaCheckIn:()=>void}){
   const [track,setTrack]=useState(false)
   const [busy,setBusy]=useState(false)
   const [decidindo,setDecidindo]=useState<string|null>(null)
-  const timers=useRef<{iv?:number;to?:number}>({})
+  const [posicao,setPosicao]=useState<{lat:number;lng:number}|null>(null)
+  const {dados:mapa,loading:carregandoMapa,refresh:atualizarMapa}=useMapaMotorista(rid)
+  const timers=useRef<{watch?:number;to?:number;ultimo:number}>({ultimo:0})
 
-  // O rastreamento roda em intervalos; sem esta limpeza ele continuaria
-  // enviando posicao depois que a tela sai do ar.
-  useEffect(()=>()=>{ if(timers.current.iv) clearInterval(timers.current.iv); if(timers.current.to) clearTimeout(timers.current.to) },[])
+  const pararGPS=()=>{
+    if(timers.current.watch!==undefined) navigator.geolocation.clearWatch(timers.current.watch)
+    if(timers.current.to) clearTimeout(timers.current.to)
+    timers.current={ultimo:0}
+    setTrack(false)
+  }
+
+  // Sem esta limpeza o aparelho continuaria enviando posicao depois que a
+  // tela sai do ar.
+  useEffect(()=>()=>{ if(timers.current.watch!==undefined) navigator.geolocation.clearWatch(timers.current.watch); if(timers.current.to) clearTimeout(timers.current.to) },[])
 
   if(lr) return <div className="flex min-h-[60vh] items-center justify-center"><Spinner className="h-8 w-8"/></div>
   if(!rota) return <div className="flex min-h-[60vh] flex-col items-center justify-center px-8 text-center">
@@ -42,21 +55,28 @@ export function Viagem({onIrParaCheckIn}:{onIrParaCheckIn:()=>void}){
 
   const mudarSit=async(s:SituacaoOp)=>{setBusy(true);try{await atualizarSituacao(rota.rota_id,s);toast(`Situação: ${ROTULO_SIT[s]}`);await rr()}catch(e){toast((e as Error).message,'err')}finally{setBusy(false)}}
 
+  /**
+   * Rastreamento continuo (watchPosition): o aparelho avisa a cada mudanca
+   * de posicao e gravamos no maximo uma a cada 15 s. Cada posicao gravada
+   * passa pelo gatilho de raio das universidades no banco, que dispara os
+   * avisos de "motorista proximo" e "onibus a caminho".
+   */
   const toggleGPS=()=>{
-    if(track){
-      if(timers.current.iv) clearInterval(timers.current.iv)
-      if(timers.current.to) clearTimeout(timers.current.to)
-      setTrack(false); return
-    }
+    if(track){ pararGPS(); return }
     if(!('geolocation' in navigator)){toast('Este aparelho não oferece GPS.','err');return}
+    const rotaId=rota.rota_id
     setTrack(true)
-    const enviar=()=>navigator.geolocation.getCurrentPosition(
-      p=>registrarGPS(rota.rota_id,p.coords.latitude,p.coords.longitude),
-      ()=>toast('Não foi possível ler a posição. Verifique a permissão de localização.','err'),
-      {enableHighAccuracy:true})
-    enviar()
-    timers.current.iv=window.setInterval(enviar,30000)
-    timers.current.to=window.setTimeout(()=>{ if(timers.current.iv) clearInterval(timers.current.iv); setTrack(false) },3600000)
+    timers.current.watch=navigator.geolocation.watchPosition(
+      p=>{
+        const agora=Date.now()
+        setPosicao({lat:p.coords.latitude,lng:p.coords.longitude})
+        if(agora-timers.current.ultimo<INTERVALO_GPS_MS) return
+        timers.current.ultimo=agora
+        registrarGPS(rotaId,p.coords.latitude,p.coords.longitude).then(ok=>{ if(ok) atualizarMapa() })
+      },
+      ()=>{ toast('Não foi possível ler a posição. Verifique a permissão de localização.','err'); pararGPS() },
+      {enableHighAccuracy:true,maximumAge:5000,timeout:20000})
+    timers.current.to=window.setTimeout(pararGPS,LIMITE_RASTREIO_MS)
   }
 
   const responder=async(id:string,aprovar:boolean)=>{
@@ -104,6 +124,16 @@ export function Viagem({onIrParaCheckIn}:{onIrParaCheckIn:()=>void}){
       <button onClick={toggleGPS} className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-all ${track?'bg-emerald-500/20 text-emerald-400 anim-pulse':'border border-white/10 text-white/50'}`}>
         <Navigation className="h-4 w-4"/>{track?'GPS ativo, enviando posição':'Ativar rastreamento GPS'}
       </button>
+    </div>
+
+    {/* Mapa com o raio de aviso de cada universidade */}
+    <div className="card space-y-3 anim-in">
+      <div className="flex items-center gap-2">
+        <IconeMapa className="h-4 w-4 text-gold-500"/>
+        <h3 className="text-sm font-semibold">Trajeto e raios de aviso</h3>
+      </div>
+      <MapaMotorista dados={mapa} carregando={carregandoMapa} posicao={posicao}/>
+      {!track&&<p className="text-[11px] text-white/40">Ative o rastreamento GPS para os alunos receberem o aviso de aproximação.</p>}
     </div>
 
     {/* Resumo do dia, com atalho para a aba de check-in */}

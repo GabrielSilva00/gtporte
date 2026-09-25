@@ -131,7 +131,15 @@ export function useSolicitacoesVolta(rotaId:string|null) {
 }
 
 export async function atualizarSituacao(rotaId:string, sit:SituacaoOp) { const{error}=await supabase.rpc('atualizar_situacao_rota',{p_rota_id:rotaId,p_situacao:sit}); if(error)throw new Error(erroMsg(error)) }
-export async function registrarGPS(rotaId:string, lat:number, lng:number) { try { await supabase.from('localizacao_rota').insert({rota_id:rotaId,latitude:lat,longitude:lng}) } catch {} }
+/**
+ * Grava a posicao do onibus. No banco, cada posicao passa pelo gatilho
+ * geofence_universidade (0027), que avisa os alunos quando o onibus entra
+ * ou sai do raio de uma universidade.
+ */
+export async function registrarGPS(rotaId:string, lat:number, lng:number) {
+  const {error}=await supabase.from('localizacao_rota').insert({rota_id:rotaId,latitude:lat,longitude:lng})
+  return !error
+}
 
 // ---- Check-in / Check-out ----
 export async function confirmarPresenca(estudanteId:string, trecho:Trecho, data:string) {
@@ -242,4 +250,99 @@ export function useTrocasRota() {
     if(error)throw new Error(erroMsg(error)); await refresh()
   }
   return {trocas,loading,decidir,refresh}
+}
+
+// ---- Conversas (0027) ----
+export interface ConversaMot {
+  id: string
+  tipo: 'direta' | 'grupo'
+  situacao: 'bot' | 'humano' | 'encerrada'
+  titulo: string
+  assunto: string | null
+  rota_id: string
+  rota: string
+  ultima_em: string
+  ultima_msg: string | null
+  /** A ultima fala e de outra pessoa: esperando resposta do motorista. */
+  aguardando: boolean
+}
+
+export interface MsgConversa {
+  id: string
+  autor_id: string | null
+  autor_nome: string | null
+  autor_tipo: string | null
+  eh_bot: boolean
+  corpo: string
+  criado_em: string
+}
+
+/**
+ * Conversas dos estudantes com o motorista e os grupos das rotas dele.
+ * Mensagem nova em qualquer uma chega pelo Realtime e recarrega a lista.
+ */
+export function useConversasMotorista() {
+  const [conversas,setConversas]=useState<ConversaMot[]>([]); const [loading,setLoading]=useState(true)
+  const refresh=useCallback(async()=>{
+    await supabase.rpc('garantir_grupos_das_rotas')
+    const {data}=await supabase.rpc('conversas_do_motorista')
+    setConversas((data as ConversaMot[])||[]); setLoading(false)
+  },[])
+  useEffect(()=>{
+    refresh()
+    const canal=supabase.channel('motorista-conversas')
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'conversa_mensagem'},()=>refresh())
+      .subscribe()
+    return ()=>{ supabase.removeChannel(canal) }
+  },[refresh])
+  return {conversas,loading,refresh}
+}
+
+export function useMensagensConversa(conversaId:string|null) {
+  const [msgs,setMsgs]=useState<MsgConversa[]>([]); const [loading,setLoading]=useState(true)
+  const [meuId,setMeuId]=useState<string|null>(null)
+  const refresh=useCallback(async()=>{
+    if(!conversaId){setMsgs([]);setLoading(false);return}
+    const {data:{user}}=await supabase.auth.getUser(); setMeuId(user?.id??null)
+    const {data,error}=await supabase.rpc('mensagens_da_conversa',{p_conversa_id:conversaId})
+    if(!error) setMsgs((data as MsgConversa[])||[])
+    setLoading(false)
+  },[conversaId])
+  useEffect(()=>{
+    refresh()
+    if(!conversaId) return
+    const canal=supabase.channel(`mot-conversa:${conversaId}`)
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'conversa_mensagem',filter:`conversa_id=eq.${conversaId}`},()=>refresh())
+      .subscribe()
+    return ()=>{ supabase.removeChannel(canal) }
+  },[conversaId,refresh])
+  const enviar=async(corpo:string)=>{
+    if(!conversaId||!corpo.trim())return
+    const {error}=await supabase.rpc('enviar_mensagem_conversa',{p_conversa_id:conversaId,p_corpo:corpo.trim()})
+    if(error)throw new Error(erroMsg(error)); await refresh()
+  }
+  const encerrar=async()=>{
+    if(!conversaId)return
+    const {error}=await supabase.rpc('encerrar_conversa',{p_conversa_id:conversaId})
+    if(error)throw new Error(erroMsg(error))
+  }
+  return {msgs,loading,meuId,enviar,encerrar}
+}
+
+// ---- Mapa do motorista (0027) ----
+export interface ParadaMapa { id:string; ordem:number; nome:string; endereco:string|null; latitude:number|null; longitude:number|null; universidade:string|null; minutos_partida:number|null }
+export interface UniversidadeMapa { id:string; nome:string; latitude:number|null; longitude:number|null; raio_m:number; ordem:number; entrou_em:string|null; alunos:number }
+export interface DadosMapa { paradas:ParadaMapa[]; universidades:UniversidadeMapa[]; veiculo:{latitude:number;longitude:number;registrado_em:string}|null; situacao:SituacaoOp|null }
+
+/** Paradas, universidades com o raio de aviso e a ultima posicao enviada. */
+export function useMapaMotorista(rotaId:string|null) {
+  const [dados,setDados]=useState<DadosMapa|null>(null); const [loading,setLoading]=useState(false)
+  const refresh=useCallback(async()=>{
+    if(!rotaId){setDados(null);return}
+    setLoading(true)
+    const {data}=await supabase.rpc('mapa_motorista',{p_rota_id:rotaId})
+    setDados((data as DadosMapa)??null); setLoading(false)
+  },[rotaId])
+  useEffect(()=>{ refresh(); const t=setInterval(refresh,30000); return ()=>clearInterval(t) },[refresh])
+  return {dados,loading,refresh}
 }

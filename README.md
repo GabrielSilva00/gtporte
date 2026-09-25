@@ -34,6 +34,13 @@ Implementação do relatório técnico **RT-TDS-2026-008 v0.3**, com os três pe
    | `supabase/migrations/0005_paineis.sql` | Avisos, situação operacional, auto-cadastro e funções dos painéis |
    | `supabase/migrations/0006_ajustes.sql` | Cidades da região, rota multiuniversidade, prontuário sequencial |
    | `supabase/migrations/0007_ajustes_ui.sql` | Código de rota gerado, cancelamento de presença, permissões por página, login próprio e canal de mensagens |
+   | `0008` … `0026` | Ajustes incrementais (cadastros, documentos, grade, alocação por dia, paradas, conversas) — rode na ordem numérica |
+   | `supabase/migrations/0027_conversas_motivos_geofence.sql` | Conversas sem chatbot com motivos, notificações, raio das universidades, acesso limitado até a validação, histórico de atividade e Realtime |
+
+   Depois da 0027, rode `supabase/testes/fluxo_estudante_secretaria.sql` para conferir
+   o fluxo estudante → secretaria (tudo é desfeito no fim). Notificações com o app
+   fechado e o raio das universidades estão em
+   [`docs/tempo-real-e-notificacoes.md`](docs/tempo-real-e-notificacoes.md).
 
    Com a CLI: `supabase link --project-ref <ref>` e `supabase db push`.
 
