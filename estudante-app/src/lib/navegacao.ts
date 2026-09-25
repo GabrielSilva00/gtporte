@@ -4,9 +4,9 @@ import { Bus, FileText, History, Home, MessageCircle, User } from 'lucide-react'
  * Secoes do aplicativo.
  *
  * A navegacao acontece pelos cards da tela inicial; nas demais telas o
- * cabecalho so oferece o botao de voltar. Nao ha menu lateral nem barra
- * inferior. Este modulo existe para o tipo e a lista nao dependerem de
- * nenhum componente de tela.
+ * cabecalho tem o botao de voltar e o menu lateral. Nao ha barra inferior.
+ * Este modulo existe para o tipo e a lista nao dependerem de nenhum
+ * componente de tela.
  */
 export const SECOES = [
   { id: 'inicio', icon: Home, label: 'Início' },

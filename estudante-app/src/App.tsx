@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, Lock } from 'lucide-react'
+import { ArrowLeft, Lock, Menu } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useAcesso } from '@/hooks/useAcesso'
 import { TITULO_SECAO, type Tab } from '@/lib/navegacao'
 import { ToastContainer } from '@/components/Toast'
 import { BarraConexao } from '@/components/StatusConexao'
 import { SinoNotificacoes } from '@/components/SinoNotificacoes'
+import { MenuLateral } from '@/components/MenuLateral'
 import { TelaCarregamento } from '@/components/TelaCarregamento'
 import { Login } from '@/pages/Login'
 import { Inicio } from '@/pages/Inicio'
@@ -52,6 +53,7 @@ function AppAutenticado({ onCarregando }: { onCarregando: (carregando: boolean) 
   const { perfil, estudanteId, logout, recarregar } = useAuth()
   const { situacao, loading: carregandoAcesso } = useAcesso(estudanteId)
   const [tab, setTab] = useState<Tab>('inicio')
+  const [menu, setMenu] = useState(false)
   // dentro da aba Rota: lista da semana ou detalhe do dia
   const [rotaAberta, setRotaAberta] = useState(false)
 
@@ -88,7 +90,7 @@ function AppAutenticado({ onCarregando }: { onCarregando: (carregando: boolean) 
     <div className="min-h-screen">
       {/*
         Cabecalho. Na inicial nao ha menu: so o titulo e o sino, na mesma
-        linha. Nas demais telas entra o botao de voltar para a inicial.
+        linha. Nas demais telas entram o botao de voltar e o menu lateral.
       */}
       <header className="fixed inset-x-0 top-0 z-[80] flex items-center gap-2 border-b border-line/60 bg-surface/95 px-3 py-2 backdrop-blur-xl safe-t">
         {!naInicial && (
@@ -100,7 +102,25 @@ function AppAutenticado({ onCarregando }: { onCarregando: (carregando: boolean) 
           {TITULO_SECAO[tab]}
         </span>
         <SinoNotificacoes estudanteId={estudanteId} onIr={setTab} destaque={naInicial} />
+        {!naInicial && (
+          <button onClick={() => setMenu(true)} aria-label="Abrir menu" className="-mr-1 p-1.5">
+            <Menu className="h-5 w-5 text-ink" />
+          </button>
+        )}
       </header>
+
+      <MenuLateral
+        aberto={menu && !naInicial}
+        ativa={tab}
+        bloqueadas={validado ? [] : ABAS_RESTRITAS}
+        nome={perfil.nome}
+        onIr={(t) => {
+          if (t === 'rota') setRotaAberta(false)
+          setTab(t)
+        }}
+        onFechar={() => setMenu(false)}
+        onSair={logout}
+      />
 
       {bloqueada ? (
         <AguardandoValidacao documentos={situacao.documentos_enviados} onIr={setTab} />
