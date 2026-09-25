@@ -10,12 +10,19 @@ const SAIDA_MS = 500
 
 type Fase = 'visivel' | 'saindo' | 'oculta'
 
-// gold-500 / gold-400 do tailwind.config.js; o app do motorista é só tema escuro (navy-900).
-const CORES: CoresCena = {
-  rastro: '#EAB308',
-  rastroClaro: '#FACC15',
-  faixa: '#FFFFFF',
-  sombra: '#000000',
+function corDoTema(variavel: string, reserva: string): string {
+  const valor = getComputedStyle(document.documentElement).getPropertyValue(variavel).trim()
+  return valor ? `rgb(${valor.split(/\s+/).join(',')})` : reserva
+}
+
+// Dourado do app e a cor do texto (branca no escuro, quase preta no claro); ver src/index.css.
+function coresDoTema(): CoresCena {
+  return {
+    rastro: corDoTema('--gold-500', '#EAB308'),
+    rastroClaro: corDoTema('--gold-400', '#FACC15'),
+    faixa: corDoTema('--ink', '#FFFFFF'),
+    sombra: '#000000',
+  }
 }
 
 function CenaVan({ onPronta, onFalha }: { onPronta: () => void; onFalha: () => void }) {
@@ -28,7 +35,7 @@ function CenaVan({ onPronta, onFalha }: { onPronta: () => void; onFalha: () => v
     import('@/components/carregamento/cenaVan')
       .then(({ montarCenaVan }) => {
         if (cancelado || !palco.current) return
-        desmontar = montarCenaVan(palco.current, CORES, 'Van do transporte universitário em movimento')
+        desmontar = montarCenaVan(palco.current, coresDoTema(), 'Van do transporte universitário em movimento')
         setPronta(true)
         onPronta()
       })

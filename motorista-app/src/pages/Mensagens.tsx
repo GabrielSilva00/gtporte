@@ -7,7 +7,7 @@ export function Mensagens(){
   const fmt=(d:string)=>new Date(d).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
   return <div className="px-4 pb-24 pt-4 space-y-4">
     <div className="flex items-center justify-between"><h2 className="text-lg font-bold">Mensagens</h2>
-      <button onClick={()=>setShow(true)} className="flex items-center gap-1.5 rounded-xl bg-gold-500 px-4 py-2.5 text-xs font-bold text-navy-900"><Plus className="h-4 w-4"/>Nova</button></div>
+      <button onClick={()=>setShow(true)} className="flex items-center gap-1.5 rounded-xl bg-gold-500 px-4 py-2.5 text-xs font-bold text-gold-ink"><Plus className="h-4 w-4"/>Nova</button></div>
     {show&&<div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={()=>setShow(false)}>
       <div className="w-full max-w-lg rounded-t-3xl bg-navy-800 p-6 pb-10 anim-in" onClick={e=>e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4"><h3 className="text-lg font-bold">Nova mensagem</h3><button onClick={()=>setShow(false)}><X className="h-5 w-5 text-white/40"/></button></div>

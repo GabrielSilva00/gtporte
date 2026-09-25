@@ -1,10 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bus, ChevronDown, Clock, Map as IconeMapa, MapPin, Navigation, ScanLine, Users } from 'lucide-react'
+import { Bus, ChevronDown, Clock, Map as IconeMapa, MapPin, Navigation, ScanLine, Users, Wand2 } from 'lucide-react'
 import { useRotas, usePassageiros, useSolicitacoesVolta, useTrocasRota, useMapaMotorista, atualizarSituacao, registrarGPS, ROTULO_SIT, COR_SIT } from '@/hooks/useMotorista'
 import type { SituacaoOp } from '@/hooks/useMotorista'
 import { Spinner } from '@/components/Spinner'
 import { toast } from '@/components/Toast'
 import { MapaMotorista } from '@/components/MapaMotorista'
+import { avaliarLeitura, situacaoSugerida, ESTADO_INICIAL, type EstadoMovimento } from '@/lib/movimento'
+
+const CHAVE_AUTO='gtporte-motorista:situacao-automatica'
+function lerAuto(){ try{ return localStorage.getItem(CHAVE_AUTO)!=='0' }catch{ return true } }
+// Depois de uma troca automatica, espera antes de trocar de novo: evita
+// ficar alternando num transito anda-e-para.
+const INTERVALO_AUTO_MS=2*60000
 
 const SITS:SituacaoOp[]=['aguardando','em_rota','concluida']
 // Intervalo minimo entre duas posicoes gravadas e tempo maximo de rastreio.
@@ -30,18 +37,35 @@ export function Viagem({onIrParaCheckIn}:{onIrParaCheckIn:()=>void}){
   const [decidindo,setDecidindo]=useState<string|null>(null)
   const [posicao,setPosicao]=useState<{lat:number;lng:number}|null>(null)
   const {dados:mapa,loading:carregandoMapa,refresh:atualizarMapa}=useMapaMotorista(rid)
-  const timers=useRef<{watch?:number;to?:number;ultimo:number}>({ultimo:0})
+  const timers=useRef<{watch?:number;to?:number;ultimo:number;avisoSinal:number}>({ultimo:0,avisoSinal:0})
+  const [auto,setAuto]=useState(lerAuto)
+  const movimento=useRef<{estado:EstadoMovimento;ultimaTroca:number}>({estado:ESTADO_INICIAL,ultimaTroca:0})
+  // O callback do GPS e criado uma vez; estes refs deixam ele ver o estado atual.
+  const atual=useRef<{situacao:SituacaoOp|null;auto:boolean;rotaId:string|null}>({situacao:null,auto:true,rotaId:null})
+  atual.current={situacao:rotas.find(r=>r.rota_id===(sel||rotas[0]?.rota_id))?.situacao_operacional??null,auto,rotaId:rid}
 
   const pararGPS=()=>{
     if(timers.current.watch!==undefined) navigator.geolocation.clearWatch(timers.current.watch)
     if(timers.current.to) clearTimeout(timers.current.to)
-    timers.current={ultimo:0}
+    timers.current={ultimo:0,avisoSinal:0}
     setTrack(false)
   }
 
   // Sem esta limpeza o aparelho continuaria enviando posicao depois que a
   // tela sai do ar.
   useEffect(()=>()=>{ if(timers.current.watch!==undefined) navigator.geolocation.clearWatch(timers.current.watch); if(timers.current.to) clearTimeout(timers.current.to) },[])
+
+  // Tela ligada enquanto o GPS rastreia: num app web o navegador para de ler
+  // a posicao quando a tela apaga. O sistema solta o bloqueio se o app sai
+  // da frente; ao voltar, pede de novo.
+  useEffect(()=>{
+    if(!track||!('wakeLock' in navigator)) return
+    let trava:WakeLockSentinel|null=null
+    const pedir=()=>{ if(document.visibilityState==='visible') navigator.wakeLock.request('screen').then(t=>{trava=t}).catch(()=>{/* bateria fraca ou sem suporte */}) }
+    pedir()
+    document.addEventListener('visibilitychange',pedir)
+    return ()=>{ document.removeEventListener('visibilitychange',pedir); void trava?.release() }
+  },[track])
 
   if(lr) return <div className="flex min-h-[60vh] items-center justify-center"><Spinner className="h-8 w-8"/></div>
   if(!rota) return <div className="flex min-h-[60vh] flex-col items-center justify-center px-8 text-center">
@@ -50,10 +74,26 @@ export function Viagem({onIrParaCheckIn}:{onIrParaCheckIn:()=>void}){
     <p className="mt-1 text-sm text-white/40">Peça ao administrador para vincular você a uma rota.</p>
   </div>
 
-  const cIda=pax.filter(p=>p.confirmou_ida).length
-  const cVolta=pax.filter(p=>p.confirmou_volta).length
+  const cIda=pax.filter(p=>p.embarcou_ida).length
+  const cVolta=pax.filter(p=>p.embarcou_volta).length
 
-  const mudarSit=async(s:SituacaoOp)=>{setBusy(true);try{await atualizarSituacao(rota.rota_id,s);toast(`Situação: ${ROTULO_SIT[s]}`);await rr()}catch(e){toast((e as Error).message,'err')}finally{setBusy(false)}}
+  const mudarSit=async(s:SituacaoOp)=>{setBusy(true);try{const r=await atualizarSituacao(rota.rota_id,s);toast(r==='gravado'?`Situação: ${ROTULO_SIT[s]}`:`Situação ${ROTULO_SIT[s]} salva no aparelho, envia quando voltar a internet`);if(r==='gravado')await rr()}catch(e){toast((e as Error).message,'err')}finally{setBusy(false)}}
+
+  const alternarAuto=()=>{ const v=!auto; setAuto(v); try{localStorage.setItem(CHAVE_AUTO,v?'1':'0')}catch{/* segue sem salvar */} }
+
+  /** Situacao automatica (lib/movimento.ts): andou -> Em rota; 5 min parado -> Aguardando. */
+  const avaliarMovimento=(p:GeolocationPosition)=>{
+    const r=avaliarLeitura(movimento.current.estado,{lat:p.coords.latitude,lng:p.coords.longitude,t:p.timestamp||Date.now(),velocidade:p.coords.speed,precisao:p.coords.accuracy})
+    movimento.current.estado=r.estado
+    const {situacao,auto:ligado,rotaId}=atual.current
+    if(!ligado||!situacao||!rotaId) return
+    const nova=situacaoSugerida(situacao,r.movimento)
+    if(!nova||Date.now()-movimento.current.ultimaTroca<INTERVALO_AUTO_MS) return
+    movimento.current.ultimaTroca=Date.now()
+    atualizarSituacao(rotaId,nova)
+      .then(()=>{ toast(`Situação atualizada sozinha: ${ROTULO_SIT[nova]}`); return rr() })
+      .catch(e=>toast((e as Error).message,'err'))
+  }
 
   /**
    * Rastreamento continuo (watchPosition): o aparelho avisa a cada mudanca
@@ -66,15 +106,26 @@ export function Viagem({onIrParaCheckIn}:{onIrParaCheckIn:()=>void}){
     if(!('geolocation' in navigator)){toast('Este aparelho não oferece GPS.','err');return}
     const rotaId=rota.rota_id
     setTrack(true)
+    movimento.current={estado:ESTADO_INICIAL,ultimaTroca:0}
     timers.current.watch=navigator.geolocation.watchPosition(
       p=>{
         const agora=Date.now()
         setPosicao({lat:p.coords.latitude,lng:p.coords.longitude})
+        avaliarMovimento(p)
+        // Sem rede a posicao e descartada: gravada depois, dispararia avisos
+        // de "onibus chegando" fora de hora (ver lib/filaOffline.ts).
+        if(!navigator.onLine) return
         if(agora-timers.current.ultimo<INTERVALO_GPS_MS) return
         timers.current.ultimo=agora
         registrarGPS(rotaId,p.coords.latitude,p.coords.longitude).then(ok=>{ if(ok) atualizarMapa() })
       },
-      ()=>{ toast('Não foi possível ler a posição. Verifique a permissão de localização.','err'); pararGPS() },
+      // So a permissao negada desliga o rastreamento. Sem sinal (tunel,
+      // garagem) ou tempo esgotado o aparelho continua tentando sozinho:
+      // antes qualquer falha passageira desligava o GPS sem o motorista notar.
+      e=>{
+        if(e.code===e.PERMISSION_DENIED){ toast('Sem permissão de localização. Libere nas configurações do aparelho.','err'); pararGPS(); return }
+        if(Date.now()-timers.current.avisoSinal>60000){ timers.current.avisoSinal=Date.now(); toast('Sinal de GPS fraco. O rastreamento continua ligado.','err') }
+      },
       {enableHighAccuracy:true,maximumAge:5000,timeout:20000})
     timers.current.to=window.setTimeout(pararGPS,LIMITE_RASTREIO_MS)
   }
@@ -116,13 +167,24 @@ export function Viagem({onIrParaCheckIn}:{onIrParaCheckIn:()=>void}){
 
       <div className="flex gap-2">{SITS.map(s=>
         <button key={s} disabled={busy||rota.situacao_operacional===s} onClick={()=>mudarSit(s)}
-          className={`flex-1 rounded-xl py-2.5 text-xs font-semibold transition-all ${rota.situacao_operacional===s?'bg-gold-500 text-navy-900':'border border-white/10 text-white/60 active:bg-white/10'}`}>
+          className={`flex-1 rounded-xl py-2.5 text-xs font-semibold transition-all ${rota.situacao_operacional===s?'bg-gold-500 text-gold-ink':'border border-white/10 text-white/60 active:bg-white/10'}`}>
           {ROTULO_SIT[s]}
         </button>)}
       </div>
 
       <button onClick={toggleGPS} className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-all ${track?'bg-emerald-500/20 text-emerald-400 anim-pulse':'border border-white/10 text-white/50'}`}>
         <Navigation className="h-4 w-4"/>{track?'GPS ativo, enviando posição':'Ativar rastreamento GPS'}
+      </button>
+
+      <button onClick={alternarAuto} role="switch" aria-checked={auto} className="flex w-full items-center gap-3 rounded-xl bg-white/5 px-3 py-2.5 text-left">
+        <Wand2 className={`h-4 w-4 flex-shrink-0 ${auto?'text-gold-500':'text-white/30'}`}/>
+        <span className="min-w-0 flex-1">
+          <span className="block text-xs font-semibold">Situação automática</span>
+          <span className="block text-[11px] text-white/40">{auto?(track?'Andou: Em rota. Parado 5 min: Aguardando.':'Liga junto com o rastreamento GPS.'):'Desligada: troque a situação nos botões.'}</span>
+        </span>
+        <span className={`relative h-6 w-10 flex-shrink-0 rounded-full transition-colors ${auto?'bg-gold-500':'bg-white/15'}`} aria-hidden="true">
+          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-navy-900 shadow transition-all ${auto?'left-[18px]':'left-0.5'}`}/>
+        </span>
       </button>
     </div>
 

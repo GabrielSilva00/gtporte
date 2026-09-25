@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Building2, MessageCircle, Send, UserRound, Users } from 'lucide-react'
-import { useConversasMotorista, useMensagensConversa, type ConversaMot } from '@/hooks/useMotorista'
+import { useMensagensConversa, type ConversaMot, type ConversasMotorista } from '@/hooks/useMotorista'
 import { Mensagens } from '@/pages/Mensagens'
 import { Spinner } from '@/components/Spinner'
 import { toast } from '@/components/Toast'
@@ -42,7 +42,7 @@ function ConversaAberta({ c, onVoltar }: { c: ConversaMot; onVoltar: () => void 
   }
 
   return (
-    <div className="flex h-[calc(100dvh-4.5rem)] flex-col">
+    <div className="flex h-[calc(100dvh-8rem-env(safe-area-inset-top))] flex-col">
       <div className="flex items-center gap-2.5 border-b border-white/[0.06] px-4 py-3">
         <button onClick={onVoltar} aria-label="Voltar" className="p-1">
           <ArrowLeft className="h-5 w-5" />
@@ -92,17 +92,17 @@ function ConversaAberta({ c, onVoltar }: { c: ConversaMot; onVoltar: () => void 
               <div key={m.id} className={`flex ${meu ? 'justify-end' : 'justify-start'}`}>
                 <div
                   className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 ${
-                    meu ? 'bg-gold-500 text-navy-900' : 'bg-white/[0.06]'
+                    meu ? 'bg-gold-500 text-gold-ink' : 'bg-white/[0.06]'
                   }`}
                 >
                   {/* No grupo, todas as mensagens levam o nome de quem enviou */}
                   {(grupo || !meu) && (
-                    <p className={`mb-0.5 text-[10.5px] font-semibold ${meu ? 'text-navy-900/70' : 'text-gold-400'}`}>
+                    <p className={`mb-0.5 text-[10.5px] font-semibold ${meu ? 'text-gold-ink/70' : 'text-gold-400'}`}>
                       {meu ? 'Você (motorista)' : m.autor_nome ?? 'Participante'}
                     </p>
                   )}
                   <p className="whitespace-pre-wrap text-sm leading-relaxed">{m.corpo}</p>
-                  <p className={`mt-1 text-[10px] ${meu ? 'text-navy-900/60' : 'text-white/30'}`}>
+                  <p className={`mt-1 text-[10px] ${meu ? 'text-gold-ink/60' : 'text-white/30'}`}>
                     {hora(m.criado_em)}
                   </p>
                 </div>
@@ -124,7 +124,7 @@ function ConversaAberta({ c, onVoltar }: { c: ConversaMot; onVoltar: () => void 
           onClick={mandar}
           disabled={busy || !texto.trim()}
           aria-label="Enviar"
-          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gold-500 text-navy-900 disabled:opacity-40"
+          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gold-500 text-gold-ink disabled:opacity-40"
         >
           {busy ? <Spinner className="h-4 w-4" /> : <Send className="h-4 w-4" />}
         </button>
@@ -138,8 +138,8 @@ function ConversaAberta({ c, onVoltar }: { c: ConversaMot; onVoltar: () => void 
  * o motivo escolhido no app), os grupos das rotas e os recados com a
  * secretaria.
  */
-export function Conversas() {
-  const { conversas, loading, refresh } = useConversasMotorista()
+export function Conversas({ dados, recadosNaoLidos }: { dados: ConversasMotorista; recadosNaoLidos: number }) {
+  const { conversas, loading, refresh, marcarLidaLocal } = dados
   const [aba, setAba] = useState<Aba>('alunos')
   const [aberta, setAberta] = useState<ConversaMot | null>(null)
 
@@ -157,12 +157,24 @@ export function Conversas() {
 
   const diretas = conversas.filter((c) => c.tipo === 'direta')
   const grupos = conversas.filter((c) => c.tipo === 'grupo')
-  const pendentes = diretas.filter((c) => c.aguardando && c.situacao !== 'encerrada').length
+  const naoLidas = (lista: ConversaMot[]) => lista.reduce((t, c) => t + (c.nao_lidas ?? 0), 0)
+  const contador: Record<Aba, number> = {
+    // Sem 0028 no banco nao ha contagem: vale "esperando resposta", como antes.
+    alunos: diretas.some((c) => c.nao_lidas != null)
+      ? naoLidas(diretas)
+      : diretas.filter((c) => c.aguardando && c.situacao !== 'encerrada').length,
+    grupos: naoLidas(grupos),
+    secretaria: recadosNaoLidos,
+  }
   const lista = aba === 'alunos' ? diretas : grupos
+
+  const abrir = (c: ConversaMot) => {
+    marcarLidaLocal(c.id)
+    setAberta(c)
+  }
 
   return (
     <div className="space-y-4 px-4 pb-24 pt-4">
-      <h2 className="text-lg font-bold">Mensagens</h2>
 
       <div className="flex rounded-xl bg-white/5 p-1">
         {(
@@ -176,17 +188,23 @@ export function Conversas() {
             key={id}
             onClick={() => setAba(id)}
             className={`relative flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold ${
-              aba === id ? 'bg-gold-500 text-navy-900' : 'text-white/50'
+              aba === id ? 'bg-gold-500 text-gold-ink' : 'text-white/50'
             }`}
           >
             <Icone className="h-3.5 w-3.5" />
             {rotulo}
-            {id === 'alunos' && pendentes > 0 && (
-              <span className="rounded-full bg-rose-500 px-1.5 text-[10px] text-white">{pendentes}</span>
+            {contador[id] > 0 && (
+              <span className="rounded-full bg-rose-500 px-1.5 text-[10px] text-[#fff]">{contador[id] > 99 ? '99+' : contador[id]}</span>
             )}
           </button>
         ))}
       </div>
+
+      {aba === 'grupos' && (
+        <p className="text-[11px] text-white/40">
+          Para avisar todos os alunos de uma rota, escreva no grupo dela: cada aluno recebe a notificação.
+        </p>
+      )}
 
       {aba === 'secretaria' ? (
         <div className="-mx-4 -mt-4">
@@ -208,13 +226,13 @@ export function Conversas() {
       ) : (
         <div className="space-y-2">
           {lista.map((c) => (
-            <button key={c.id} onClick={() => setAberta(c)} className="card flex w-full items-center gap-3 text-left">
+            <button key={c.id} onClick={() => abrir(c)} className="card flex w-full items-center gap-3 text-left">
               <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gold-500/10 text-gold-500">
                 {c.tipo === 'grupo' ? <Users className="h-5 w-5" /> : <UserRound className="h-5 w-5" />}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
-                  <p className={`truncate text-sm ${c.aguardando && c.tipo === 'direta' ? 'font-bold' : 'font-semibold'}`}>
+                  <p className={`truncate text-sm ${(c.nao_lidas ?? 0) > 0 || (c.aguardando && c.tipo === 'direta') ? 'font-bold' : 'font-semibold'}`}>
                     {c.titulo}
                   </p>
                   <span className="flex-shrink-0 text-[10px] text-white/30">{quando(c.ultima_em)}</span>
@@ -227,8 +245,17 @@ export function Conversas() {
                 )}
                 <p className="truncate text-xs text-white/40">{c.ultima_msg ?? c.rota}</p>
               </div>
-              {c.aguardando && c.tipo === 'direta' && c.situacao !== 'encerrada' && (
-                <span className="h-2 w-2 flex-shrink-0 rounded-full bg-gold-500" />
+              {(c.nao_lidas ?? 0) > 0 ? (
+                <span
+                  aria-label={`${c.nao_lidas} não lida${c.nao_lidas === 1 ? '' : 's'}`}
+                  className="flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full bg-gold-500 px-1.5 text-[11px] font-bold text-gold-ink"
+                >
+                  {c.nao_lidas! > 99 ? '99+' : c.nao_lidas}
+                </span>
+              ) : (
+                c.aguardando && c.tipo === 'direta' && c.situacao !== 'encerrada' && (
+                  <span className="h-2 w-2 flex-shrink-0 rounded-full bg-gold-500" />
+                )
               )}
             </button>
           ))}

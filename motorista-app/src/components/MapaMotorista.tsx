@@ -102,7 +102,9 @@ export function MapaMotorista({
 
     // Enquadra uma vez; depois o motorista mexe no mapa a vontade.
     if (!enquadrado.current && pontos.length > 0) {
-      mapa.fitBounds(L.latLngBounds(pontos).pad(0.2), { maxZoom: 15 })
+      // Sem animacao: trocar de aba no meio do zoom animado removia o mapa
+      // antes do fim da transicao e o Leaflet quebrava (_leaflet_pos).
+      mapa.fitBounds(L.latLngBounds(pontos).pad(0.2), { maxZoom: 15, animate: false })
       enquadrado.current = true
     }
   }, [dados, posicao])

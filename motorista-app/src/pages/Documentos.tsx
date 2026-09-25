@@ -36,7 +36,7 @@ export function Documentos() {
   return <div className="px-4 pb-24 pt-4 space-y-4">
     <div className="flex items-center justify-between">
       <h2 className="text-lg font-bold">Meus Documentos</h2>
-      <button onClick={()=>setShow(true)} className="flex items-center gap-1.5 rounded-xl bg-gold-500 px-4 py-2.5 text-xs font-bold text-navy-900"><Plus className="h-4 w-4"/>Enviar</button>
+      <button onClick={()=>setShow(true)} className="flex items-center gap-1.5 rounded-xl bg-gold-500 px-4 py-2.5 text-xs font-bold text-gold-ink"><Plus className="h-4 w-4"/>Enviar</button>
     </div>
 
     {faltando.length>0&&<div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3">

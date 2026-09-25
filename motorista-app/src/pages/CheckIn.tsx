@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
-import { Bus, Check, ChevronDown, QrCode, RefreshCw, Search, Undo2, UserCheck, X } from 'lucide-react'
-import { useRotas, usePassageiros, confirmarPresenca, cancelarPresenca, hoje, type Pax, type Trecho } from '@/hooks/useMotorista'
+import { Bus, Check, ChevronDown, CloudOff, QrCode, RefreshCw, Search, Smartphone, Undo2, UserCheck, X } from 'lucide-react'
+import { useRotas, usePassageiros, registrar, hoje, type Pax, type Trecho } from '@/hooks/useMotorista'
 import { combina, prontuarioDoQR } from '@/lib/qr'
 import { LeitorQR } from '@/components/LeitorQR'
 import { Spinner } from '@/components/Spinner'
@@ -10,33 +10,37 @@ export function CheckIn() {
   const {rotas,loading:lr}=useRotas()
   const [sel,setSel]=useState<string|null>(null)
   const rota=rotas.find(r=>r.rota_id===sel)||rotas[0]||null
-  const {pax,loading:lp,refresh}=usePassageiros(rota?.rota_id||null)
+  const {pax,loading:lp,refresh,offline}=usePassageiros(rota?.rota_id||null)
 
   const [trecho,setTrecho]=useState<Trecho>('ida')
   const [busca,setBusca]=useState('')
   const [qr,setQr]=useState(false)
   const [ocupado,setOcupado]=useState<string|null>(null)
   const [desfazer,setDesfazer]=useState<{pax:Pax;trecho:Trecho}|null>(null)
-  const [motivo,setMotivo]=useState('')
 
-  const confirmou=useCallback((p:Pax)=>trecho==='ida'?p.confirmou_ida:p.confirmou_volta,[trecho])
+  // "Feito" aqui e o embarque registrado pelo motorista; a confirmacao que o
+  // aluno fez pelo app aparece so como aviso ("confirmou no app").
+  const confirmou=useCallback((p:Pax)=>trecho==='ida'?p.embarcou_ida:p.embarcou_volta,[trecho])
 
   const checar=useCallback(async(p:Pax)=>{
     setOcupado(p.estudante_id)
     try{
-      const r=await confirmarPresenca(p.estudante_id,trecho,hoje())
-      toast(`${p.nome.split(' ')[0]}: ${r.mensagem}`)
-      await refresh()
+      const r=await registrar({tipo:'confirmar',estudanteId:p.estudante_id,nome:p.nome,trecho,data:hoje()})
+      toast(r==='gravado'?`${p.nome.split(' ')[0]}: embarque na ${trecho} registrado`:`${p.nome.split(' ')[0]}: salvo no aparelho, envia quando voltar a internet`)
+      if(r==='gravado') await refresh()
     }catch(e){ toast((e as Error).message,'err') }
     finally{ setOcupado(null) }
   },[trecho,refresh])
 
   const confirmarDesfazer=async()=>{
-    if(!desfazer||!motivo.trim()) return
-    setOcupado(desfazer.pax.estudante_id)
+    if(!desfazer) return
+    const {pax:p,trecho:t}=desfazer
+    setOcupado(p.estudante_id)
     try{
-      const r=await cancelarPresenca(desfazer.pax.estudante_id,desfazer.trecho,motivo.trim(),hoje())
-      toast(r.mensagem); await refresh(); setDesfazer(null); setMotivo('')
+      const r=await registrar({tipo:'desfazer',estudanteId:p.estudante_id,nome:p.nome,trecho:t,data:hoje()})
+      toast(r==='gravado'?'Embarque desfeito':'Salvo no aparelho, envia quando voltar a internet')
+      if(r==='gravado') await refresh()
+      setDesfazer(null)
     }catch(e){ toast((e as Error).message,'err') }
     finally{ setOcupado(null) }
   }
@@ -81,9 +85,13 @@ export function CheckIn() {
     </div>}
 
     <div className="flex items-baseline justify-between">
-      <h2 className="text-lg font-bold">Check-in de passageiros</h2>
+      <h2 className="text-sm font-semibold text-white/50">Passageiros de hoje</h2>
       <span className="text-xs text-white/40">{feitos}/{pax.length}</span>
     </div>
+
+    {offline&&<div className="flex items-center gap-2 rounded-xl bg-amber-500/10 px-3 py-2.5 text-xs text-amber-400">
+      <CloudOff className="h-4 w-4 flex-shrink-0"/>Sem internet: lista salva no aparelho. Os check-ins ficam guardados e são enviados quando a conexão voltar.
+    </div>}
 
     {/* Trecho */}
     <div className="flex gap-2">
@@ -130,6 +138,13 @@ export function CheckIn() {
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">{p.nome}</p>
             <p className="truncate text-xs text-white/40">{p.prontuario}{p.universidade||p.curso?` · ${p.universidade||p.curso}`:''}</p>
+            {(trecho==='ida'?p.pendente_ida:p.pendente_volta)
+              ?<p className="mt-0.5 flex items-center gap-1 text-[10px] font-semibold text-amber-400"><CloudOff className="h-3 w-3"/>Aguardando internet para enviar</p>
+              :(trecho==='ida'?p.cancelou_ida:p.cancelou_volta)
+              ?<p className="mt-0.5 text-[10px] font-semibold text-rose-400">Cancelou a {trecho} pelo app</p>
+              :!ok&&(trecho==='ida'?p.checkin_aluno_ida:p.checkin_aluno_volta)
+              ?<p className="mt-0.5 flex items-center gap-1 text-[10px] font-semibold text-emerald-400"><Smartphone className="h-3 w-3"/>Confirmou no app</p>
+              :null}
           </div>
         </button>
         {ok
@@ -141,20 +156,19 @@ export function CheckIn() {
       </div>
      })}</div>}
 
-    {/* Check-out: o banco exige motivo para cancelar uma presenca */}
-    {desfazer&&<div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={()=>{setDesfazer(null);setMotivo('')}}>
-      <div className="w-full max-w-lg rounded-t-3xl bg-navy-800 p-6 pb-10 anim-in" onClick={e=>e.stopPropagation()}>
+    {/* Desfazer embarque: nao e cancelamento, a confirmacao do aluno pelo app continua valendo */}
+    {desfazer&&<div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={()=>setDesfazer(null)}>
+      <div className="w-full max-w-lg rounded-t-3xl bg-navy-800 p-6 pb-10 anim-in" onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="titulo-desfazer">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-bold">Desfazer check-in</h3>
-          <button onClick={()=>{setDesfazer(null);setMotivo('')}} aria-label="Fechar"><X className="h-5 w-5 text-white/40"/></button>
+          <h3 id="titulo-desfazer" className="text-lg font-bold">Desfazer embarque</h3>
+          <button onClick={()=>setDesfazer(null)} aria-label="Fechar"><X className="h-5 w-5 text-white/40"/></button>
         </div>
-        <div className="mb-4 rounded-xl bg-rose-500/10 p-3 text-sm text-rose-400">
-          Cancelar a {desfazer.trecho} de <strong>{desfazer.pax.nome}</strong>
-        </div>
-        <label className="mb-1.5 block text-xs font-medium text-white/50">Motivo (obrigatório)</label>
-        <textarea className="input-dark min-h-[80px] resize-none" placeholder="Ex: aluno desembarcou antes da partida" value={motivo} onChange={e=>setMotivo(e.target.value)} autoFocus/>
-        <button onClick={confirmarDesfazer} disabled={!motivo.trim()||!!ocupado} className="btn-red mt-4 flex items-center justify-center gap-2">
-          {ocupado?<Spinner/>:<><X className="h-4 w-4"/>Confirmar</>}
+        <p className="mb-4 rounded-xl bg-rose-500/10 p-3 text-sm text-rose-400">
+          Tirar o registro de embarque na {desfazer.trecho} de <strong>{desfazer.pax.nome}</strong>?
+        </p>
+        <p className="mb-4 text-xs text-white/50">Use quando marcou o aluno errado ou ele desceu antes da partida. Se ele tinha confirmado pelo app, essa confirmação continua.</p>
+        <button onClick={confirmarDesfazer} disabled={!!ocupado} className="btn-red flex items-center justify-center gap-2">
+          {ocupado?<Spinner/>:<><Undo2 className="h-4 w-4"/>Desfazer embarque</>}
         </button>
       </div>
     </div>}

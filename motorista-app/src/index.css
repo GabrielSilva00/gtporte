@@ -1,8 +1,16 @@
 @tailwind base;@tailwind components;@tailwind utilities;
+/* Paleta em canais RGB (ver tailwind.config.js). Escuro e o padrao; a
+   classe "claro" no <html> troca para o tema claro (hooks/useTema.ts). */
+:root{--ink:255 255 255;--navy-900:15 23 42;--navy-800:30 41 59;--navy-700:51 65 85;--gold-400:250 204 21;--gold-500:234 179 8;--emerald-400:52 211 153;--emerald-500:16 185 129;--blue-400:96 165 250;--blue-500:59 130 246;--rose-400:251 113 133;--rose-500:244 63 94;--amber-400:251 191 36;--amber-500:245 158 11;color-scheme:dark}
+/* No claro os tons 400 escurecem: sao usados como texto e o 400 original some no fundo branco. */
+html.claro{--ink:15 23 42;--navy-900:241 245 249;--navy-800:255 255 255;--navy-700:226 232 240;--gold-400:161 98 7;--gold-500:202 138 4;--emerald-400:4 120 87;--blue-400:29 78 216;--rose-400:190 18 60;--amber-400:180 83 9;color-scheme:light}
+html.claro .card{box-shadow:0 1px 2px rgb(15 23 42 / .06),0 4px 16px -8px rgb(15 23 42 / .12)}
+/* Camadas que ficam sempre escuras (leitor de QR, tela de carregamento). */
+.sempre-escuro{--ink:255 255 255;--navy-900:15 23 42;--navy-800:30 41 59;--gold-500:234 179 8;color-scheme:dark}
 @layer base { *{-webkit-tap-highlight-color:transparent} html{height:-webkit-fill-available} body{min-height:100vh;min-height:-webkit-fill-available;overscroll-behavior:none} ::-webkit-scrollbar{width:0;height:0} input,select,textarea{font-size:16px !important} }
 @layer components {
   .safe-b{padding-bottom:max(1rem,env(safe-area-inset-bottom))}
-  .btn-gold{@apply w-full rounded-2xl bg-gold-500 px-6 py-4 text-center text-sm font-bold uppercase tracking-widest text-navy-900 transition-all active:scale-[0.97]}
+  .btn-gold{@apply w-full rounded-2xl bg-gold-500 px-6 py-4 text-center text-sm font-bold uppercase tracking-widest text-gold-ink transition-all active:scale-[0.97]}
   .btn-outline{@apply w-full rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center text-sm font-semibold text-white transition-all active:scale-[0.97]}
   .btn-red{@apply w-full rounded-2xl bg-rose-500/20 px-6 py-4 text-center text-sm font-bold text-rose-400 transition-all active:scale-[0.97]}
   .card{@apply rounded-2xl border border-white/[0.06] bg-navy-800/80 p-4 backdrop-blur}

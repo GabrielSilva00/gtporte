@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { gravarCache, lerCache, limparCacheLocal } from '@/lib/cacheLocal'
+import { itensDaFila, limparFila } from '@/lib/filaOffline'
 import type { Session } from '@supabase/supabase-js'
 
 export interface Perfil { id:string; nome:string; tipo:string; login:string|null }
@@ -34,8 +36,12 @@ export function useAuth() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Sem rede, o app abre com o perfil lido da ultima vez neste aparelho:
+  // sem isso a falha da consulta caia na tela "este acesso nao e de motorista".
   async function fetchPerfil(uid:string) {
-    const {data} = await supabase.from('perfil').select('id,nome,tipo,login').eq('id',uid).maybeSingle()
+    const {data,error} = await supabase.from('perfil').select('id,nome,tipo,login').eq('id',uid).maybeSingle()
+    if(error){ setPerfil(lerCache<Perfil>(`perfil:${uid}`)); setLoading(false); return }
+    if(data) gravarCache(`perfil:${uid}`,data)
     setPerfil(data); setLoading(false)
   }
 
@@ -45,7 +51,19 @@ export function useAuth() {
     if(error) throw new Error(error.message==='Invalid login credentials'?'Login ou senha incorretos.':error.message)
   }
 
-  async function logout() { await supabase.auth.signOut(); setPerfil(null); setSession(null) }
+  /**
+   * Sair apaga do aparelho o que era deste motorista: listas guardadas, a
+   * fila offline e as respostas da API no cache do service worker. Com
+   * registros ainda nao enviados, pergunta antes.
+   */
+  async function logout() {
+    const pendentes=itensDaFila().length
+    if(pendentes>0&&!window.confirm(`${pendentes} registro${pendentes===1?'':'s'} feito${pendentes===1?'':'s'} sem internet ainda não ${pendentes===1?'foi enviado':'foram enviados'}. Se sair agora, ${pendentes===1?'ele será perdido':'eles serão perdidos'}. Sair mesmo assim?`)) return
+    await supabase.auth.signOut({scope:'local'})
+    limparFila(); limparCacheLocal()
+    try{ await caches.delete('api') }catch{ /* sem Cache API */ }
+    setPerfil(null); setSession(null)
+  }
 
   return { session, perfil, loading, isMotorista: perfil?.tipo==='motorista', login, logout }
 }

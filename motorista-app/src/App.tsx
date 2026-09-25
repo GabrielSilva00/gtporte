@@ -1,14 +1,19 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { useAuth, type Perfil as TipoPerfil } from '@/hooks/useAuth'
 import { supabaseConfigurado } from '@/lib/supabase'
-import { BottomNav, type Tab } from '@/components/BottomNav'
-import { ToastContainer } from '@/components/Toast'
+import { ABAS, type Destino, type SubPerfil, type Tab } from '@/lib/navegacao'
+import { inscreverFila, itensDaFila } from '@/lib/filaOffline'
+import { aoRecusarOperacao, contarNaoLidas, sincronizarFila, useConversasMotorista, useRecadosNaoLidos } from '@/hooks/useMotorista'
+import { useTema } from '@/hooks/useTema'
+import { BottomNav } from '@/components/BottomNav'
+import { Cabecalho } from '@/components/Cabecalho'
+import { ToastContainer, toast } from '@/components/Toast'
 import { TelaCarregamento } from '@/components/TelaCarregamento'
 import { Login } from '@/pages/Login'
 import { Viagem } from '@/pages/Viagem'
 import { CheckIn } from '@/pages/CheckIn'
-import { Avisos } from '@/pages/Avisos'
+import { Rotas } from '@/pages/Rotas'
 import { Conversas } from '@/pages/Conversas'
 import { Perfil } from '@/pages/Perfil'
 
@@ -21,22 +26,67 @@ function Aviso({titulo,texto,acao}:{titulo:string;texto:string;acao?:{label:stri
   </div>
 }
 
+/**
+ * Envia a fila offline quando a rede volta, ao abrir o app e a cada 30 s
+ * enquanto houver algo guardado. Registro recusado pelo banco (ex.: aluno
+ * trocou de rota) vira aviso na tela.
+ */
+function useSincronizacao() {
+  const fila = useSyncExternalStore(inscreverFila, itensDaFila, itensDaFila)
+  useEffect(() => {
+    aoRecusarOperacao((op, msg) => {
+      const quem = op.tipo === 'situacao' ? 'Situação da viagem' : `${op.tipo === 'confirmar' ? 'Embarque' : 'Desfazer embarque'} de ${op.nome.split(' ')[0]}`
+      toast(`${quem} não foi aceito: ${msg}`, 'err')
+    })
+    const enviar = () => {
+      sincronizarFila().then((n) => { if (n > 0) toast(`${n} registro${n === 1 ? '' : 's'} feito${n === 1 ? '' : 's'} sem internet enviado${n === 1 ? '' : 's'}`) })
+    }
+    enviar()
+    window.addEventListener('online', enviar)
+    return () => window.removeEventListener('online', enviar)
+  }, [])
+  useEffect(() => {
+    if (fila.length === 0) return
+    const t = setInterval(() => { if (navigator.onLine) void sincronizarFila() }, 30000)
+    return () => clearInterval(t)
+  }, [fila.length])
+  return fila.length
+}
+
 function AppAutenticado({perfil,logout}:{perfil:TipoPerfil;logout:()=>void}) {
   const [tab, setTab] = useState<Tab>('viagem')
+  const [sub, setSub] = useState<SubPerfil>(null)
+  const naFila = useSincronizacao()
+  const conversas = useConversasMotorista()
+  const { naoLidos: recados, refresh: atualizarRecados } = useRecadosNaoLidos()
+  const naoLidas = contarNaoLidas(conversas.conversas) + recados
+
+  // Ao sair de Mensagens, o contador da secretaria reflete o que foi lido la.
+  useEffect(() => { if (tab !== 'mensagens') void atualizarRecados() }, [tab, atualizarRecados])
+
+  const irPara = useCallback((d: Destino) => {
+    if (d === 'documentos' || d === 'historico') { setSub(d); setTab('perfil') }
+    else { setSub(null); setTab(d) }
+    window.scrollTo(0, 0)
+  }, [])
+
+  const titulo = tab === 'perfil' && sub === 'historico' ? 'Histórico' : tab === 'perfil' && sub === 'documentos' ? 'Documentos' : ABAS.find((a) => a.id === tab)!.titulo
 
   return (
     <div className="mx-auto min-h-screen max-w-lg">
+      <Cabecalho titulo={titulo} naFila={naFila} onIr={irPara} />
       {tab === 'viagem' && <Viagem onIrParaCheckIn={()=>setTab('checkin')} />}
       {tab === 'checkin' && <CheckIn />}
-      {tab === 'avisos' && <Avisos />}
-      {tab === 'mensagens' && <Conversas />}
-      {tab === 'perfil' && <Perfil perfil={perfil} onLogout={logout} />}
-      <BottomNav active={tab} onChange={setTab} />
+      {tab === 'rotas' && <Rotas />}
+      {tab === 'mensagens' && <Conversas dados={conversas} recadosNaoLidos={recados} />}
+      {tab === 'perfil' && <Perfil perfil={perfil} onLogout={logout} sub={sub} onSub={setSub} />}
+      <BottomNav active={tab} onChange={(t) => irPara(t)} naoLidas={naoLidas} />
     </div>
   )
 }
 
 export default function App() {
+  useTema()
   // Um unico useAuth: duas instancias mantinham sessoes independentes, cada uma
   // com sua propria subscription de onAuthStateChange.
   const { session, perfil, loading, isMotorista, login, logout } = useAuth()

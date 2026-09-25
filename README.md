@@ -88,15 +88,18 @@ Sem o `.env` a aplicação abre em uma tela de configuração explicando o que f
 
 São três portões: os testes unitários, o compilador e o CI.
 
-Os testes rodam em [Vitest](https://vitest.dev) e cobrem as funções puras dos dois projetos — 37
+Os testes rodam em [Vitest](https://vitest.dev) e cobrem as funções puras dos dois projetos — 56
 casos ao todo. Não exigem banco nem rede: as regras de negócio moram em PL/pgSQL e são garantidas
-pelas policies e pelas funções do Postgres.
+pelas policies e pelas funções do Postgres (os roteiros SQL em `supabase/testes/` conferem essas funções num banco real).
 
 | Arquivo | Casos | O que verifica |
 |---|---|---|
 | `src/lib/format.test.ts` | 18 | Iniciais do avatar e cor estável por nome; formatação de hora e data; percentual de ocupação, inclusive divisão por zero; faixas de cor verde/âmbar/vermelho; dias até o vencimento de um documento |
 | `src/lib/supabase.test.ts` | 8 | `emailDeAcesso`, que traduz login em e-mail no cadastro de acesso; tradução das mensagens de erro do Postgres (campo único, bloqueio de RLS); caminho do arquivo do motorista no storage, cuja segunda pasta é o que a policy verifica |
 | `motorista-app/src/lib/qr.test.ts` | 11 | Leitura do prontuário no QR do aluno — código puro, dentro de uma URL ou com ruído em volta; busca do passageiro por código ou por nome, sem exigir acentuação |
+| `motorista-app/src/lib/filaOffline.test.ts` | 5 | Fila de registros feitos sem internet: confirmar e desfazer do mesmo aluno se anulam, situação da viagem vale a última, envio para no erro de rede e descarta o que o banco recusou |
+| `motorista-app/src/lib/movimento.test.ts` | 8 | Situação automática pelo GPS: parado 5 min, parada curta não conta, duas leituras para "andando", salto do sinal e leitura imprecisa ignorados |
+| `motorista-app/src/hooks/useMotorista.test.ts` | 6 | Detalhe da viagem (foi / check-in sem embarque / cancelou) e a lista de check-in com os registros ainda na fila |
 
 Rode com `npm test`, na raiz e dentro de `motorista-app/`:
 

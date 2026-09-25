@@ -63,7 +63,7 @@ export function LeitorQR({onLer,onFechar}:{onLer:(texto:string)=>void;onFechar:(
     return ()=>{ parado=true; cancelAnimationFrame(frame); stream?.getTracks().forEach(t=>t.stop()) }
   },[onLer])
 
-  return <div className="fixed inset-0 z-50 flex flex-col bg-black">
+  return <div className="sempre-escuro fixed inset-0 z-50 flex flex-col bg-black">
     <div className="flex items-center justify-between px-4 py-3 text-white">
       <p className="text-sm font-semibold">Aponte para o QR do aluno</p>
       <button onClick={onFechar} aria-label="Fechar leitor" className="rounded-lg p-2 active:bg-white/10"><X className="h-5 w-5"/></button>

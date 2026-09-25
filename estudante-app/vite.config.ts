@@ -18,6 +18,7 @@ export default defineConfig({
       // Sem service worker em desenvolvimento: senao o precache passa a
       // frente do dev server e as alteracoes nao aparecem.
       devOptions: { enabled: false },
+      includeAssets: ['apple-touch-icon.png'],
       manifest: {
         name: 'GTPORTE Estudante',
         short_name: 'Estudante',
@@ -29,7 +30,8 @@ export default defineConfig({
         scope: '/',
         icons: [
           { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {

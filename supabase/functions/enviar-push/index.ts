@@ -10,7 +10,7 @@
 //   SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY ja existem no ambiente da funcao.
 //
 // Gerar o par VAPID uma vez: npx web-push generate-vapid-keys
-// A chave publica tambem vai no app do estudante: VITE_VAPID_PUBLIC_KEY.
+// A chave publica tambem vai nos apps do estudante e do motorista: VITE_VAPID_PUBLIC_KEY.
 
 import webpush from 'npm:web-push@3.6.7'
 import { createClient } from 'npm:@supabase/supabase-js@2'
