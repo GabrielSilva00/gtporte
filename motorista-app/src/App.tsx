@@ -4,7 +4,7 @@ import { useAuth, type Perfil as TipoPerfil } from '@/hooks/useAuth'
 import { supabaseConfigurado } from '@/lib/supabase'
 import { BottomNav, type Tab } from '@/components/BottomNav'
 import { ToastContainer } from '@/components/Toast'
-import { Spinner } from '@/components/Spinner'
+import { TelaCarregamento } from '@/components/TelaCarregamento'
 import { Login } from '@/pages/Login'
 import { Viagem } from '@/pages/Viagem'
 import { CheckIn } from '@/pages/CheckIn'
@@ -50,7 +50,7 @@ export default function App() {
     <>
       <ToastContainer />
       {loading ? (
-        <div className="flex min-h-screen items-center justify-center"><Spinner className="h-8 w-8" /></div>
+        <TelaCarregamento />
       ) : !session ? (
         <Login onLogin={login} />
       ) : !isMotorista ? (

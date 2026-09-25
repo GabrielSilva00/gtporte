@@ -7,7 +7,7 @@ import { ToastContainer } from '@/components/Toast'
 import { BarraConexao } from '@/components/StatusConexao'
 import { SinoNotificacoes } from '@/components/SinoNotificacoes'
 import { MenuLateral } from '@/components/MenuLateral'
-import { Spinner } from '@/components/Spinner'
+import { TelaCarregamento } from '@/components/TelaCarregamento'
 import { Login } from '@/pages/Login'
 import { Inicio } from '@/pages/Inicio'
 import { MinhaRota } from '@/pages/MinhaRota'
@@ -59,9 +59,7 @@ function AppAutenticado() {
 
   if (!perfil) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Spinner className="h-8 w-8" />
-      </div>
+      <TelaCarregamento />
     )
   }
 
@@ -80,9 +78,7 @@ function AppAutenticado() {
 
   if (carregandoAcesso) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Spinner className="h-8 w-8" />
-      </div>
+      <TelaCarregamento />
     )
   }
 
@@ -155,9 +151,7 @@ export default function App() {
       <BarraConexao />
       <ToastContainer />
       {loading ? (
-        <div className="flex min-h-screen items-center justify-center">
-          <Spinner className="h-8 w-8" />
-        </div>
+        <TelaCarregamento />
       ) : !session ? (
         criandoConta ? (
           // Cadastro completo antes de existir conta: e-mail e senha sao
