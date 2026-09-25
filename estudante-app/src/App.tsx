@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowLeft, Lock } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useAcesso } from '@/hooks/useAcesso'
@@ -48,18 +48,20 @@ function AguardandoValidacao({ documentos, onIr }: { documentos: number; onIr: (
   )
 }
 
-function AppAutenticado() {
+function AppAutenticado({ onCarregando }: { onCarregando: (carregando: boolean) => void }) {
   const { perfil, estudanteId, logout, recarregar } = useAuth()
   const { situacao, loading: carregandoAcesso } = useAcesso(estudanteId)
   const [tab, setTab] = useState<Tab>('inicio')
   // dentro da aba Rota: lista da semana ou detalhe do dia
   const [rotaAberta, setRotaAberta] = useState(false)
 
-  if (!perfil) {
-    return (
-      <TelaCarregamento />
-    )
-  }
+  const carregando = !perfil || (!!estudanteId && carregandoAcesso)
+  useEffect(() => onCarregando(carregando), [carregando, onCarregando])
+  // Ao sair (logout), o próximo login recomeça carregando.
+  useEffect(() => () => onCarregando(true), [onCarregando])
+
+  // A camada de carregamento da raiz cobre a tela enquanto isso.
+  if (!perfil) return <div className="min-h-screen" />
 
   // Conta sem registro em `estudante`: o cadastro vem antes de qualquer
   // aba (RF01). Sem ele nao ha documentos, historico nem alocacao.
@@ -74,11 +76,7 @@ function AppAutenticado() {
     )
   }
 
-  if (carregandoAcesso) {
-    return (
-      <TelaCarregamento />
-    )
-  }
+  if (carregandoAcesso) return <div className="min-h-screen" />
 
   const validado = situacao.acesso_liberado
   const bloqueada = ABAS_RESTRITAS.includes(tab) && !validado
@@ -131,14 +129,14 @@ function AppAutenticado() {
 export default function App() {
   const { session, loading, login } = useAuth()
   const [criandoConta, setCriandoConta] = useState(false)
+  const [carregandoApp, setCarregandoApp] = useState(true)
 
   return (
     <>
       <BarraConexao />
       <ToastContainer />
-      {loading ? (
-        <TelaCarregamento />
-      ) : !session ? (
+      <TelaCarregamento carregando={loading || (!!session && carregandoApp)} />
+      {loading ? null : !session ? (
         criandoConta ? (
           // Cadastro completo antes de existir conta: e-mail e senha sao
           // o ultimo passo, e a conta so nasce no fim.
@@ -151,7 +149,7 @@ export default function App() {
           <Login onLogin={login} onCriarConta={() => setCriandoConta(true)} />
         )
       ) : (
-        <AppAutenticado />
+        <AppAutenticado onCarregando={setCarregandoApp} />
       )}
     </>
   )

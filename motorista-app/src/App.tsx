@@ -49,9 +49,8 @@ export default function App() {
   return (
     <>
       <ToastContainer />
-      {loading ? (
-        <TelaCarregamento />
-      ) : !session ? (
+      <TelaCarregamento carregando={loading} />
+      {loading ? null : !session ? (
         <Login onLogin={login} />
       ) : !isMotorista ? (
         // Perfil ausente ou de outro tipo: antes ficava em spinner infinito, sem saida.
